@@ -11,9 +11,6 @@ import websockets
 #Data imports
 import json
 
-#Gui imports
-from PyQt5 import QtGui, QtCore
-
 #Address of the other machine it is connected to
 global pairMachine
 
