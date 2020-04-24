@@ -81,10 +81,11 @@ class cloudlink() {
                 self.isRunning = true;
                 console.log("CloudLink API v" + vers + " | Connected to socket successfully.");
             };
-        } else {
+        };
+        else {
             console.log("CloudLink API v" + vers + " | Socket already open, no action taken.");
             return "Socket already open, no action taken.";
-        }
+        };
     }
 
     closeSocket() {
@@ -94,10 +95,11 @@ class cloudlink() {
             console.log("CloudLink API v" + vers + " | Socket closed successfully.");
             this.isRunning = false;
             return "Socket closed successfully.";
-        } else {
+        };
+        else {
             console.log("CloudLink API v" + vers + " | Socket already closed, no action taken.");
             return "Socket already closed, no action taken.";
-        }
+        };
     }
 
     getSocketState() {
@@ -109,9 +111,10 @@ class cloudlink() {
                 this.mWS.send(args.DATA);
                 return "Sent data successfully.";
             }
-        } else {
+        };
+        else {
             return "Socket not open, no action taken.";
-        }
+        };
     }
 
     fetchData(args) {
@@ -123,9 +126,10 @@ class cloudlink() {
                 self.socketData = String(event.data);
                 self.socketData = self.socketData.slice(1, -1);
             };
-        } else {
+        };
+        else {
             return "Socket not open, no action taken.";
-        }
+        };
     }
 
     getSocketData() {
