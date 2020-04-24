@@ -114,13 +114,6 @@ class cloudlink() {
 
     sendData(args) {
         if (this.isRunning === true) {
-            // Check if we are still connected
-            var response = this.mWS.readyState;
-            if (response == 2 || response == 3) {
-                this.isRunning = false;
-                console.log("CloudLink API v" + vers + " | Socket closed unexpectedly.");
-                return "Socket closed unexpectedly.";
-            } else {
                 this.mWS.send(args.DATA);
                 return "Sent data successfully.";
             }
@@ -144,20 +137,7 @@ class cloudlink() {
     }
 
     getSocketData() {
-        if (this.isRunning === true) {
-            // Check if we are still connected
-            var response = this.mWS.readyState;
-            if (response == 2 || response == 3) {
-                this.isRunning = false;
-                console.log("CloudLink API v" + vers + " | Socket closed unexpectedly.");
-                return "";
-            } else {
-                return this.socketData; // Return the data
-            }
-        } else {
-            return this.socketData; // Just report the data we currently have
-        }
-
+        return this.socketData;
     }
 }
 
