@@ -50,11 +50,15 @@ class cloudlink{
                 {
                     opcode: 'openSocket',
                     blockType: Scratch.BlockType.COMMAND,
-                    text: 'Connect to socket [WS]',
+                    text: 'Connect to socket [WS] and set my ID to [ID]',
 		    arguments: {
 			WS: {
 			type: Scratch.ArgumentType.STRING,
 			defaultValue: 'ws://localhost:3000/',
+			},
+			ID: {
+			type: Scratch.ArgumentType.STRING,
+			defaultValue: 'username',
 			}
 		    }
                 },
@@ -115,6 +119,7 @@ class cloudlink{
     		console.log("CloudLink API v" + vers + " | Opening socket...");
     		this.mWS = new WebSocket(WS);
     		const self = this;
+		self.ID = args.ID;
     		this.mWS.onerror = function(){
     			self.isRunning = false;
     			console.log("CloudLink API v" + vers + " | Failed to connect to socket.");
