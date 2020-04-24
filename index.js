@@ -152,9 +152,4 @@ class cloudlink{
 }
 
 Scratch.extensions.register(new cloudlink());
-
-if (window.Worker) {
-	console.log('Hm, looks like we are a worker.');
-};
-
 console.log("CloudLink API v" + vers + " | Ready!");
