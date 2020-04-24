@@ -8,7 +8,7 @@ const blockIconURI = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAABQCAYA
 
 const menuIconURI = blockIconURI;
 
-class cloudlink() {
+class cloudlink {
     constructor(runtime, extensionId) {
         this.isRunning = false;
         this.socketData = "";
@@ -110,7 +110,6 @@ class cloudlink() {
         if (this.isRunning == true) {
                 this.mWS.send(args.DATA);
                 return "Sent data successfully.";
-            }
         };
         else {
             return "Socket not open, no action taken.";
