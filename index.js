@@ -56,7 +56,7 @@ class cloudlink{
                     text: 'Disconnect from socket',
                 },
                 {
-                    opcode: 'sendData',
+                    opcode: 'sendDataGlobalStream',
                     blockType: Scratch.BlockType.COMMAND,
                     text: 'Send [DATA] through socket global stream',
                     arguments: {
@@ -99,7 +99,7 @@ class cloudlink{
     closeSocket () {
         if (this.isRunning == true) {
     		console.log("CloudLink API v" + vers + " | Closing socket...");
-    		this.mWS.close(1000,'script closure');
+    		this.mWS.close(1000,'The script told me to disconnect :(');
 		console.log("CloudLink API v" + vers + " | Socket closed successfully.");
     		this.isRunning = false;
 		return "Socket closed successfully.";
@@ -121,9 +121,9 @@ class cloudlink{
    		return this.isRunning;
    	}
 
-   	sendData (args) {
+   	sendDataGlobalStream (args) {
    		if (this.isRunning == true) {
-   			this.mWS.send(args.DATA);
+   			this.mWS.send('@a␤' + args.DATA);
 			return "Sent data successfully.";
    		}
 		else {
@@ -133,7 +133,7 @@ class cloudlink{
 
    	fetchData (args) {
    		if (this.isRunning == true) {
-   			this.mWS.send("%_fetch");
+   			this.mWS.send("%_fetch␤@a");
    			const self = this;
    			//Load response
    			var message = this.mWS.onmessage = function(event){
