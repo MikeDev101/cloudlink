@@ -12,7 +12,7 @@ const menuIconURI = blockIconURI;
 class cloudlink{
     constructor (runtime, extensionId) {
         this.isRunning = false;
-        this.socketData = "";
+        this.socketDataGlobalStream = "";
         this.runtime = runtime;
     }
 
@@ -137,8 +137,8 @@ class cloudlink{
    			const self = this;
    			//Load response
    			var message = this.mWS.onmessage = function(event){
-   				self.socketData = String(event.data);
-				self.socketData = self.socketData.slice(1, -1)
+   				self.socketDataGlobalStream = String(event.data);
+				self.socketDataGlobalStream = self.socketDataGlobalStream.slice(1, -1)
    			};
    		}
 		else {
@@ -147,7 +147,7 @@ class cloudlink{
    	}
 
    	getSocketData () {
-   		return this.socketData;
+   		return this.socketDataGlobalStream;
    	}
 }
 
