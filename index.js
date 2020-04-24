@@ -123,7 +123,7 @@ class cloudlink{
 
    	sendDataGlobalStream (args) {
    		if (this.isRunning == true) {
-   			this.mWS.send('@a␤' + args.DATA);
+   			this.mWS.send('@a\n' + args.DATA);
 			return "Sent data successfully.";
    		}
 		else {
@@ -133,7 +133,7 @@ class cloudlink{
 
    	fetchData (args) {
    		if (this.isRunning == true) {
-   			this.mWS.send("%_fetch␤@a");
+   			this.mWS.send("%_fetch\n@a");
    			const self = this;
    			//Load response
    			var message = this.mWS.onmessage = function(event){
