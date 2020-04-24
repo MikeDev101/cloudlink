@@ -69,7 +69,7 @@ class cloudlink() {
 
     openSocket(args) {
         const WS = args.WS;
-        if (this.isRunning === false) {
+        if (this.isRunning == false) {
             console.log("CloudLink API v" + vers + " | Opening socket...");
             this.mWS = new WebSocket(WS);
             const self = this;
@@ -88,7 +88,7 @@ class cloudlink() {
     }
 
     closeSocket() {
-        if (this.isRunning === true) {
+        if (this.isRunning == true) {
             console.log("CloudLink API v" + vers + " | Closing socket...");
             this.mWS.close(1000, 'script closure');
             console.log("CloudLink API v" + vers + " | Socket closed successfully.");
@@ -101,19 +101,11 @@ class cloudlink() {
     }
 
     getSocketState() {
-        if (this.isRunning) {
-            // Check if we are still connected
-            var response = this.mWS.readyState;
-            if (response == 2 || response == 3) {
-                this.isRunning = false;
-                console.log("CloudLink API v" + vers + " | Socket closed unexpectedly.")
-            }
-        }
         return this.isRunning;
     }
 
     sendData(args) {
-        if (this.isRunning === true) {
+        if (this.isRunning == true) {
                 this.mWS.send(args.DATA);
                 return "Sent data successfully.";
             }
@@ -123,7 +115,7 @@ class cloudlink() {
     }
 
     fetchData(args) {
-        if (this.isRunning === true) {
+        if (this.isRunning == true) {
             this.mWS.send("%_fetch");
             const self = this;
             // Load response
