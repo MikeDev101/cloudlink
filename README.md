@@ -14,4 +14,4 @@ All blocks are self-explained, and easy to use. Simply fill-in the blanks (urls,
 ### Server.py
 Simply run the server, and it will automatically start running! Simple as that. By default, it runs through ws://localhost:3000/, but you can reconfigure it within the python file. To expose the server to the world, simply port foward the ip and port, or use a reverse proxy (I recommend ngrok!).
 
-## Click [here](https://sheeptester.github.io/scratch-gui/?url=https://mikedev101.github.io/cloudlink/index.js) to try the extension.
+## Click [here](https://sheeptester.github.io/scratch-gui/?url=https://mikedev101.github.io/cloudlink/cloudlink.js) to try the extension.
