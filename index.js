@@ -30,19 +30,19 @@ class cloudlink{
             color3: '#043444',
             blocks: [
                 {
-                    opcode: 'getSocketData',
+                    opcode: 'getSocketDataGlobalStream',
                     blockType: Scratch.BlockType.REPORTER,
-                    text: 'Socket data',
+                    text: 'Socket data (Global stream)',
                 },
                 {
                     opcode: 'getSocketState',
                     blockType: Scratch.BlockType.BOOLEAN,
-                    text: 'Socket connected?',
+                    text: 'Is the socket connected?',
                 },
                 {
                     opcode: 'openSocket',
                     blockType: Scratch.BlockType.COMMAND,
-                    text: 'Connect to socket [WS] ',
+                    text: 'Connect to socket [WS]',
 		    arguments: {
 			WS: {
 			type: Scratch.ArgumentType.STRING,
@@ -146,7 +146,7 @@ class cloudlink{
 		}
    	}
 
-   	getSocketData () {
+   	getSocketDataGlobalStream () {
    		return this.socketDataGlobalStream;
    	}
 }
