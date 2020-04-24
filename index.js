@@ -42,7 +42,7 @@ class cloudlink{
                 {
                     opcode: 'openSocket',
                     blockType: Scratch.BlockType.COMMAND,
-                    text: 'Connect to socket [WS]',
+                    text: 'Connect to socket [WS] ',
 		    arguments: {
 			WS: {
 			type: Scratch.ArgumentType.STRING,
@@ -58,7 +58,7 @@ class cloudlink{
                 {
                     opcode: 'sendData',
                     blockType: Scratch.BlockType.COMMAND,
-                    text: 'Send through socket [DATA]',
+                    text: 'Send [DATA] through socket global stream',
                     arguments: {
                         DATA: {
                             type: Scratch.ArgumentType.STRING,
@@ -69,7 +69,7 @@ class cloudlink{
                 {
                     opcode: 'fetchData',
                     blockType: Scratch.BlockType.COMMAND,
-                    text: 'Fetch socket data',
+                    text: 'Fetch socket data from global stream',
                 },
             ],
         };
@@ -152,4 +152,9 @@ class cloudlink{
 }
 
 Scratch.extensions.register(new cloudlink());
+
+if (window.Worker) {
+	console.log('Hm, looks like we are a worker.');
+};
+
 console.log("CloudLink API v" + vers + " | Ready!");
