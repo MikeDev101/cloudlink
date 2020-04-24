@@ -105,8 +105,8 @@ class cloudlink{
 		return "Socket closed successfully.";
     	}
     	else{
-    		console.log("CloudLink API v" + vers + " | Socket not open, no action taken.");
-		return "Socket not open, no action taken.";
+    		console.log("CloudLink API v" + vers + " | Attempted to close socket, but socket already closed.");
+		return "Socket already closed, no action taken.";
     	}
     }
 
