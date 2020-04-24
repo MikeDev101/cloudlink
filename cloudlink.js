@@ -1,5 +1,5 @@
 // MikeDEV's CloudLink API
-// Version 0.1.5 - Built upon KingdomPi's Scratch-websockets repo.
+// Version 0.1.6 - Built upon KingdomPi's Scratch-websockets repo.
 // See https://github.com/KingdomPy/scratch_websockets/blob/master/index.js for the original script!
 // DO NOT USE ON OLDER WEB BROWSERS! CloudLink is designed to run best on a modern web browser.
 
