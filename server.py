@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #MikeDEV's CloudLink Server
-#Version 1.5
+#Version 1.5e1
 
 #Define our stream links, first is the public stream link.
 publicStream = ""
@@ -10,11 +10,38 @@ privateStreamsNames = []
 privateStreamsData = []
 #Data is where, well, the data is.
 
-#Import the libraries we need.
-import asyncio
-import random
-import websockets
-import json
+platformlibraryloaded = True
+
+try:
+    #Import the libraries we need.
+    import asyncio
+except:
+    print('Error while loading asyncio!\nserver.py haulted.')
+    while True:
+        pass
+try:
+    import random
+except:
+    print('Error while loading random!\nserver.py haulted.')
+    while True:
+        pass
+try:
+    import websockets
+except:
+    print('Error while loading websockets!\nserver.py haulted.')
+    while True:
+        pass
+try:
+    import json
+except:
+    print('Error while loading json!\nserver.py haulted.')
+    while True:
+        pass
+try:
+    import platform
+except:
+    platformlibraryloaded = False
+    print('Error while loading platform!\nHowever this is a optional library, so we are gonna ignore it.')
 
 #Address of the other machine it is connected to, but tbh I really don't know what this does.
 global pairMachine
@@ -58,6 +85,18 @@ async def client(websocket, path):
                     privateStreamsData[privateStreamsNames.index(splitdata[0])] = str(splitdata[1])
         except:
             pass
+
+
+if platformlibraryloaded:
+    print("="*40, "System Information", "="*40)
+    uname = platform.uname()
+    print(f"System: {uname.system}")
+    print(f"Node Name: {uname.node}")
+    print(f"Release: {uname.release}")
+    print(f"Version: {uname.version}")
+    print(f"Machine: {uname.machine}")
+    print(f"Processor: {uname.processor}")
+    print("="*100 + "\n")
 
 print("MikeDEV's CloudLink Server v1.5\nNow listening for requests on port 3000.\n")
 server = websockets.serve(client, '127.0.0.1', 3000)
