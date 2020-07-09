@@ -12,7 +12,7 @@ class cloudlink {
         this.runtime = runtime;
         this.sData = "";
         this.isRunning = false;
-        this.status = "ready";
+        this.status = "Ready";
     }
 
     static get STATE_KEY() {
@@ -81,7 +81,7 @@ class cloudlink {
             this.wss = new WebSocket(WSS);
             this.wss.onopen = function(e) {
                     self.isRunning = true;
-                    self.status = "connected";
+                    self.status = "Connected";
                     console.log("CloudLink API v" + vers + " | Connected to server.");
             };
             this.wss.onmessage = function(event) {
@@ -91,11 +91,11 @@ class cloudlink {
             this.wss.onclose = function(event) {
                 if (event.wasClean) {
                     self.isRunning = false;
-                    self.status = "disconnected, OK";
+                    self.status = "Disconnected, OK";
                     console.log("CloudLink API v" + vers + " | Server has been cleanly disconnected. :)");
                 } else {
                     self.isRunning = false;
-                    self.status = "disconnected, ERR";
+                    self.status = "Disconnected, ERR";
                     console.log("CloudLink API v" + vers + " | Server unexpectedly disconnected. :(");
                 };
             };
@@ -107,9 +107,10 @@ class cloudlink {
     closeSocket() {
         const self = this;
         if (this.isRunning == true) {
+            this.wss.send("<%ds>\n") // send disconnect command in header before shutting down link
             this.wss.close(1000);
             self.isRunning = false;
-            self.status = "disconnected, OK";
+            self.status = "Disconnected, OK";
             return ("Connection closed.");
         } else {
             return ("Connection already closed.");
@@ -122,7 +123,7 @@ class cloudlink {
 
     sendData(args) {
    		if (this.isRunning == true) {
-   			this.wss.send(args.DATA);
+   			this.wss.send("<%ps>\n" + args.DATA); // begin packet data with public stream idenifier in the header
 			return "Sent data successfully.";
    		}
 		else {
