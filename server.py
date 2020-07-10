@@ -96,6 +96,6 @@ print("MikeDEV's CloudLink Server v" + vers + "\nNow listening for requests on p
 cl_server = websockets.serve(server, "localhost", 3000)
 print(str(socket.gethostbyname(socket.gethostname())))
 
-while true:
+while True:
     asyncio.get_event_loop().run_until_complete(cl_server)
     asyncio.get_event_loop().run_forever()
