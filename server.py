@@ -79,16 +79,12 @@ async def server(websocket, path):
                     print("[ i ] Disconnecting user:", str(data[1]))
                     USERNAMES.remove(str(data[1]))
                     STREAMS.pop(str(data[1]))
-                    print("[ i ] Username list now has:", str(USERNAMES))
-                else:
-                    print("[ i ] A user disconnected.")
                 await unregister(websocket)
                 await update_username_lists()
             elif data[0] == "<%sn>": # Append username command
                 print("[ i ] User connected:", data[1])
                 USERNAMES.append(str(data[1]))
                 STREAMS[str(data[1])] = ""
-                print("[ i ] Username list now has:", str(USERNAMES))
                 await update_username_lists()
             else: # Generic unknown command response
                 print("[ ! ] Error: Unknown command:", str(data))
