@@ -6,6 +6,7 @@ vers = "1.8"
 import asyncio
 import json
 import websockets
+import socket
 
 STREAMS = {"gs": ""} #Define data streams, will improve upon this design later
 USERS = set() #create unorganized, non-indexed set of users
@@ -93,6 +94,8 @@ async def server(websocket, path):
 
 print("MikeDEV's CloudLink Server v" + vers + "\nNow listening for requests on port 3000.\n")
 cl_server = websockets.serve(server, "localhost", 3000)
+print(str(socket.gethostbyname(socket.gethostname())))
 
-asyncio.get_event_loop().run_until_complete(cl_server)
-asyncio.get_event_loop().run_forever()
+while true:
+    asyncio.get_event_loop().run_until_complete(cl_server)
+    asyncio.get_event_loop().run_forever()
