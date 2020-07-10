@@ -26,7 +26,7 @@ class cloudlink {
     getInfo() {
         return {
             id: 'cloudlink',
-            name: 'CloudLink (Test)',
+            name: ('CloudLink v' + vers),
             blockIconURI: blockIconURI,
             color1: '#054c63',
             color2: '#054c63',
