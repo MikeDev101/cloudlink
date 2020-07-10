@@ -92,7 +92,7 @@ async def server(websocket, path):
     except:
         await unregister(websocket) # If all things fork up, kill the connection
 
-print("MikeDEV's CloudLink Server v" + vers + "\nNow listening for requests on port " + PORT + ".\n")
+print("MikeDEV's CloudLink Server v" + vers + "\nNow listening for requests on port " + str(PORT) + ".\n")
 cl_server = websockets.serve(server, "localhost", PORT)
 
 while True:
