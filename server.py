@@ -6,13 +6,8 @@ vers = "1.8"
 import asyncio
 import json
 import websockets
-import os
-import socket
-from flask import Flask, render_template
-from flask_sockets import Sockets
 
-PORT = int(os.environ['PORT'])
-
+PORT = 3000 #Default port
 STREAMS = {"gs": ""} #Define data streams, will improve upon this design later
 USERS = set() #create unorganized, non-indexed set of users
 USERNAMES = [] #create organized, indexable list of users
@@ -99,7 +94,6 @@ async def server(websocket, path):
 
 print("MikeDEV's CloudLink Server v" + vers + "\nNow listening for requests on port " + PORT + ".\n")
 cl_server = websockets.serve(server, "localhost", PORT)
-print("Possible hostname: " + str(socket.gethostbyname(socket.gethostname())))
 
 while True:
     asyncio.get_event_loop().run_until_complete(cl_server)
