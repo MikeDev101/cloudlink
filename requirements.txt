@@ -1,2 +1,4 @@
-websockets
-asyncio
+Flask
+Flask-Sockets
+Gunicorn
+redis
