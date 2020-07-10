@@ -1,4 +1,0 @@
-Flask
-Flask-Sockets
-Gunicorn
-redis
