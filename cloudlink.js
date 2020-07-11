@@ -62,6 +62,21 @@ class cloudlink {
                     text: 'Connected?',
                 },
                 {
+                    opcode: 'parseJSON',
+                    blockType: Scratch.BlockType.REPORTER,
+                    text: '[PATH] of [JSON_STRING]',
+                    arguments: {
+                        PATH: {
+                            type: Scratch.ArgumentType.STRING,
+                            defaultValue: 'fruit/apples'
+                        },
+                        JSON_STRING: {
+                            type: Scratch.ArgumentType.STRING,
+                            defaultValue: '{"fruit": {"apples": 2, "bananas": 3}, "total_fruit": 5}'
+                        }
+                    }
+                },
+                {
                     opcode: 'openSocket',
                     blockType: Scratch.BlockType.COMMAND,
                     text: 'Connect to [WSS]',
@@ -202,8 +217,8 @@ class cloudlink {
     sendPData(args) {
         if (myName != "") {
             if (this.isRunning == true) {
-               this.wss.send("<%ps>\n" + myName + "\n" + args.ID + "\n" + args.DATA); // begin packet data with global stream idenifier in the header
-               return "Sent data successfully.";
+                this.wss.send("<%ps>\n" + myName + "\n" + args.ID + "\n" + args.DATA); // begin packet data with global stream idenifier in the header
+                return "Sent data successfully.";
             } else {
                 return "Connection closed, no action taken.";
             }
@@ -244,6 +259,29 @@ class cloudlink {
         } else {
             return "Username already set!";
         };
+    }
+    parseJSON({
+        PATH,
+        JSON_STRING
+    }) {
+        try {
+            const path = PATH.toString().split('/').map(prop => decodeURIComponent(prop));
+            if (path[0] === '') path.splice(0, 1);
+            if (path[path.length - 1] === '') path.splice(-1, 1);
+            let json;
+            try {
+                json = JSON.parse(' ' + JSON_STRING);
+            } catch (e) {
+                return e.message;
+            }
+            path.forEach(prop => json = json[prop]);
+            if (json === null) return 'null';
+            else if (json === undefined) return '';
+            else if (typeof json === 'object') return JSON.stringify(json);
+            else return json.toString();
+        } catch (err) {
+            return '';
+        }
     }
 }
 
