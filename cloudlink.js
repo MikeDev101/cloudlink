@@ -15,7 +15,7 @@ class cloudlink {
         this.sGData = "";
         this.sPData = "";
         this.isRunning = false;
-        this.status = "Ready";
+        this.status = 0; //Ready value
         this.userNames = "";
     }
 
@@ -136,13 +136,13 @@ class cloudlink {
         const WSS = args.WSS; // Begin the main updater scripts
         if (this.isRunning == false) {
             const self = this;
-            self.status = "Connecting";
-            console.log("CloudLink API v" + vers + " | Attempting connection to server...");
+            self.status = 1;
+            console.log("CloudLink API v" + vers + " | Establishing connection...");
             this.wss = new WebSocket(WSS);
             this.wss.onopen = function(e) {
                 self.isRunning = true;
-                self.status = "Connected";
-                console.log("CloudLink API v" + vers + " | Connected to server.");
+                self.status = 2; // Connected OK value
+                console.log("CloudLink API v" + vers + " | Connected.");
             };
             this.wss.onmessage = function(event) {
                 var obj = JSON.parse(event.data);
@@ -166,8 +166,8 @@ class cloudlink {
                     self.userNames = "";
                     self.sGData = "";
                     self.sPData = "";
-                    self.status = "Disconnected, OK";
-                    console.log("CloudLink API v" + vers + " | Server has been cleanly disconnected. :)");
+                    self.status = 3; // Disconnected OK value
+                    console.log("CloudLink API v" + vers + " | Disconnected. :)");
                 } else {
                     self.isRunning = false;
                     self.isRunning = false;
@@ -175,8 +175,8 @@ class cloudlink {
                     self.userNames = "";
                     self.sGData = "";
                     self.sPData = "";
-                    self.status = "Disconnected, ERR";
-                    console.log("CloudLink API v" + vers + " | Server unexpectedly disconnected. :(");
+                    self.status = 4; // Connection lost value
+                    console.log("CloudLink API v" + vers + " | Lost connection to the server. :(");
                 };
             };
         } else {
@@ -194,7 +194,7 @@ class cloudlink {
             self.userNames = "";
             self.sGData = "";
             self.sPData = "";
-            self.status = "Disconnected, OK";
+            self.status = 3; // Disconnected OK value
             return ("Connection closed.");
         } else {
             return ("Connection already closed.");
