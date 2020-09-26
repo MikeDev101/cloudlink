@@ -8,14 +8,14 @@ CloudLink is a websocket extension for Scratch 3.0, which allows MMOs, Web Brows
 Origial concept created in 2018.
 Rewritten in 2020.
 
-Latest version (1.8a) was released in September 26, 2020.
+Latest version (1.8b) was released in September 26, 2020.
 
 For more details about CloudLink, please visit
 https://github.com/MikeDev101/cloudlink
 
 """
 
-vers = "1.8a"
+vers = "1.8b"
 
 import asyncio
 import json
@@ -63,9 +63,21 @@ def prepare_usernames(): # Generate primitive array of usernames
         }
     return json.dumps(z)
 
+def refresh_usernames(): # Request every client's username request
+    z = {
+        "type":"ru",
+        "data":""
+        }
+    return json.dumps(z)
+
 async def update_username_lists():
     if USERS:
         message = prepare_usernames() #Send username list to all clients
+        await asyncio.wait([user.send(message) for user in USERS])
+        
+async def refresh_username_lists():
+    if USERS:
+        message = refresh_usernames() #Send username list to all clients
         await asyncio.wait([user.send(message) for user in USERS])
 
 async def register(websocket): #Create client session
@@ -101,6 +113,10 @@ async def server(websocket, path):
                 USERNAMES.append(str(data[1]))
                 STREAMS[str(data[1])] = ""
                 await update_username_lists()
+            elif data[0] == "<%rf>": # Refresh user list
+                USERNAMES = []
+                await update_username_lists()
+                await refresh_username_lists()
             else: # Generic unknown command response
                 print("[ ! ] Error: Unknown command:", str(data))
     except:
