@@ -318,12 +318,12 @@ class cloudlink {
         return gotNewPrivateData;
     }
     resetGotNewGlobalData() {
-        if (gotNewGlobalData = true) {
+        if (gotNewGlobalData == true) {
             gotNewGlobalData = false;
         };
     }
     resetGotNewPrivateData() {
-        if (gotNewPrivateData = true) {
+        if (gotNewPrivateData == true) {
             gotNewPrivateData = false;
         };
     }
