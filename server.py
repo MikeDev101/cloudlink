@@ -1,7 +1,7 @@
 """
 
 MikeDEV's CloudLink Server
-Version 1.8a
+Version 1.8b
 
 CloudLink is a websocket extension for Scratch 3.0, which allows MMOs, Web Browsers, BBSs, chats, and more, all using Scratch 3.0. It's cloud variables, but better. 
 
