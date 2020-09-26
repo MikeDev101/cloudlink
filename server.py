@@ -24,6 +24,8 @@ import sys
 
 PORT = 3000
 
+global USERNAMES
+
 STREAMS = {"gs": ""} #Define data streams, will improve upon this design later
 USERS = set() #create unorganized, non-indexed set of users
 USERNAMES = [] #create organized, indexable list of users
@@ -51,7 +53,9 @@ def state_event_private(uname): #Prepare data to be sent to specific clients on 
 async def notify_state_private(e):
     if USERS:
         message = state_event_private(e) #Send private data to every client, only one client will store the data, others will ignore
-        await asyncio.wait([user.send(message) for user in USERS])
+        #await asyncio.wait([user.send(message) for user in USERS])
+        for user in USERS:
+          await asyncio.wait([user.send(message)])
 
 def prepare_usernames(): # Generate primitive array of usernames
     y = ""
@@ -63,22 +67,18 @@ def prepare_usernames(): # Generate primitive array of usernames
         }
     return json.dumps(z)
 
-def refresh_usernames(): # Request every client's username request
-    z = {
-        "type":"ru",
-        "data":""
-        }
-    return json.dumps(z)
-
 async def update_username_lists():
     if USERS:
         message = prepare_usernames() #Send username list to all clients
-        await asyncio.wait([user.send(message) for user in USERS])
-        
+        #await asyncio.wait([user.send(message) for user in USERS])
+        for user in USERS:
+          await asyncio.wait([user.send(message)])
+
 async def refresh_username_lists():
     if USERS:
-        message = refresh_usernames() #Send username list to all clients
-        await asyncio.wait([user.send(message) for user in USERS])
+      message = '{"type":"ru","data":""}'
+      for user in USERS:
+        await asyncio.wait([user.send(message)])
 
 async def register(websocket): #Create client session
     USERS.add(websocket)
@@ -87,6 +87,7 @@ async def unregister(websocket): #End client session
     USERS.remove(websocket)
 
 async def server(websocket, path):
+    global USERNAMES
     await register(websocket)
     await notify_state_global()
     await update_username_lists()
@@ -114,12 +115,14 @@ async def server(websocket, path):
                 STREAMS[str(data[1])] = ""
                 await update_username_lists()
             elif data[0] == "<%rf>": # Refresh user list
+                print("[ i ] Refreshing user list...")
                 USERNAMES = []
                 await update_username_lists()
                 await refresh_username_lists()
             else: # Generic unknown command response
                 print("[ ! ] Error: Unknown command:", str(data))
-    except:
+    except Exception as e:
+        print("[ i ] Whoops! Something went wrong. Here's the error:", e)
         await unregister(websocket) # If all things fork up, kill the connection
 
 print("MikeDEV's CloudLink API Server v" + vers + "\nNow listening for requests on port " + str(PORT) + ".\n")
