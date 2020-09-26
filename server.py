@@ -1,7 +1,7 @@
 #MikeDEV's CloudLink Server
-#Version 1.8
+#Version 1.8a
 
-vers = "1.8"
+vers = "1.8a"
 
 import asyncio
 import json
@@ -93,9 +93,12 @@ async def server(websocket, path):
     except:
         await unregister(websocket) # If all things fork up, kill the connection
 
-print("MikeDEV's CloudLink Server v" + vers + "\nNow listening for requests on port " + str(PORT) + ".\n")
+print("MikeDEV's CloudLink API Server v" + vers + "\nNow listening for requests on port " + str(PORT) + ".\n")
 cl_server = websockets.serve(server, "localhost", PORT)
 
 while True:
-    asyncio.get_event_loop().run_until_complete(cl_server)
-    asyncio.get_event_loop().run_forever()
+    try:
+        asyncio.get_event_loop().run_until_complete(cl_server)
+        asyncio.get_event_loop().run_forever()
+    except KeyboardInterrupt:
+        print("[ i ] Stopping the CloudLink API server...")
