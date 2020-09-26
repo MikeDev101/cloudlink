@@ -183,10 +183,6 @@ class cloudlink {
                     };
                 } else if (obj["type"] == "ul") {
                     self.userNames = String(obj["data"]);
-                } else if (obj["type"] == "ru") {
-                    if (myName != "") {
-                        this.wss.send("<%sn>\n" + myName)
-                    };
                 } else {
                     console.log("CloudLink API v" + vers + " | Error! Unknown command: " + String(obj));
                 };
