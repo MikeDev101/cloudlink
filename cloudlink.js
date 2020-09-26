@@ -1,5 +1,5 @@
 // MikeDEV's CloudLink API
-// Version 1.1b - Built upon KingdomPi's Scratch-websockets repo.
+// Version 1.1c - Built upon KingdomPi's Scratch-websockets repo.
 // See https://github.com/KingdomPy/scratch_websockets/blob/master/index.js for the original script!
 // DO NOT USE ON OLDER WEB BROWSERS! CloudLink is designed to run best on a modern web browser.
 const vers = '1.1c';
@@ -151,11 +151,6 @@ class cloudlink {
                     blockType: Scratch.BlockType.COMMAND,
                     text: 'Reset Got New Data (Private)',
                 },
-                {
-                    opcode: 'refreshConnectedUsersList',
-                    blockType: Scratch.BlockType.COMMAND,
-                    text: 'Refresh User List',
-                },
             ],
         };
     }
@@ -183,6 +178,9 @@ class cloudlink {
                     };
                 } else if (obj["type"] == "ul") {
                     self.userNames = String(obj["data"]);
+                } else if (obj["type"] == "ru") {
+                    if myName != "":
+                        this.wss.send("<%sn>\n" + myName)
                 } else {
                     console.log("CloudLink API v" + vers + " | Error! Unknown command: " + String(obj));
                 };
@@ -320,14 +318,6 @@ class cloudlink {
     }
     resetGotNewPrivateData() {
         gotNewPrivateData = false;
-    }
-    refreshConnectedUsersList() {
-        if (this.isRunning == true) {
-            this.wss.send("<%rf>\n"); // begin packet data with global stream idenifier in the header
-            return "Request sent.";
-        } else {
-            return "Connection closed, no action taken.";
-        }
     }
 }
 
