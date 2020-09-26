@@ -151,6 +151,11 @@ class cloudlink {
                     blockType: Scratch.BlockType.COMMAND,
                     text: 'Reset Got New Data (Private)',
                 },
+                {
+                    opcode: 'refreshUserList',
+                    blockType: Scratch.BlockType.COMMAND,
+                    text: 'Refresh User List',
+                },
             ],
         };
     }
@@ -319,6 +324,14 @@ class cloudlink {
     }
     resetGotNewPrivateData() {
         gotNewPrivateData = false;
+    }
+    refreshUserList() {
+        if (this.isRunning == true) {
+            this.wss.send("<%rf>\n"); // begin packet data with global stream idenifier in the header
+            return "Sent request successfully.";
+        } else {
+            return "Connection closed, no action taken.";
+        }
     }
 }
 
