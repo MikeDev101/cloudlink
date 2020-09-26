@@ -6,6 +6,7 @@ vers = "1.8a"
 import asyncio
 import json
 import websockets
+import sys
 
 PORT = 3000
 
@@ -56,10 +57,8 @@ async def update_username_lists():
 async def register(websocket): #Create client session
     USERS.add(websocket)
 
-
 async def unregister(websocket): #End client session
     USERS.remove(websocket)
-
 
 async def server(websocket, path):
     await register(websocket)
@@ -100,5 +99,6 @@ while True:
     try:
         asyncio.get_event_loop().run_until_complete(cl_server)
         asyncio.get_event_loop().run_forever()
-    except KeyboardInterrupt:
+    except:
         print("[ i ] Stopping the CloudLink API server...")
+        sys.exit()
