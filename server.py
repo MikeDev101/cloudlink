@@ -1,18 +1,12 @@
 """
-
 MikeDEV's CloudLink Server
 Version 1.8b
-
 CloudLink is a websocket extension for Scratch 3.0, which allows MMOs, Web Browsers, BBSs, chats, and more, all using Scratch 3.0. It's cloud variables, but better. 
-
 Origial concept created in 2018.
 Rewritten in 2020.
-
 Latest version (1.8b) was released in September 26, 2020.
-
 For more details about CloudLink, please visit
 https://github.com/MikeDev101/cloudlink
-
 """
 
 vers = "1.8b"
@@ -76,7 +70,11 @@ async def update_username_lists():
 
 async def refresh_username_lists():
     if USERS:
-      message = '{"type":"ru","data":""}'
+      z = {
+          "type":"ru",
+          "data":""
+          }
+      message = json.dumps(z)
       for user in USERS:
         await asyncio.wait([user.send(message)])
 
@@ -124,6 +122,9 @@ async def server(websocket, path):
     except Exception as e:
         print("[ i ] Whoops! Something went wrong. Here's the error:", e)
         await unregister(websocket) # If all things fork up, kill the connection
+        USERNAMES = [] # Force update of usernames in the server
+        await update_username_lists()
+        await refresh_username_lists()
 
 print("MikeDEV's CloudLink API Server v" + vers + "\nNow listening for requests on port " + str(PORT) + ".\n")
 cl_server = websockets.serve(server, "localhost", PORT)
