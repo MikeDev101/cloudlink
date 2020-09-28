@@ -121,24 +121,26 @@ def on_error(ws, error):
 def on_close(ws):
   print("[OK] Disconnected.")
 
-def closer():
-  input()
-  print("[ i ] Disconnecting...")
-  ws.send("<%ds>\n%MS%")
-  ws.close()
-  sys.exit()
+#def closer():
+#  input()
+#  print("[ i ] Disconnecting...")
+#  ws.send("<%ds>\n%MS%")
+#  ws.close()
+#  sys.exit()
 
 def on_open(ws):
   ws.send("<%sn>\n%MS%")
   print("[OK] Connected to CloudLink API.")
-  exiter = threading.Thread(target=closer)
-  exiter.start()
+  #exiter = threading.Thread(target=closer)
+  #exiter.start()
 
 if __name__ == "__main__":
   try:
     ws = websocket.WebSocketApp(ip, on_message = on_message, on_error = on_error, on_close = on_close)
     ws.on_open = on_open
     ws.run_forever()
+    while True: #prevent Heroku from closing
+      pass
   except:
     print("[ i ] Exiting server...")
     ws.send("<%ds>\n%MS%")
