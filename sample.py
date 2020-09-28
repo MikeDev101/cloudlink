@@ -1,4 +1,6 @@
-""" Sample CloudLink Server
+""" 
+
+Sample CloudLink Server
 
 This is a sample project designed to communicate with a CloudLink API server.
 
@@ -18,39 +20,107 @@ import time
 import sys
 
 if "-ip" in sys.argv:
-  ip = str(sys.argv[2])
+  tmp_ip = sys.argv
+  tmp_ip.index('-ip')
+  ip = str(sys.argv[tmp_ip+1])
   print("[ i ] Connecting to CloudLink API server using IP:", ip)
 else:
   print('[ i ] No CloudLink API server IP defined! (hint: use "-ip wss://your.ip.here:port.") Using defaults...')
-  ip = "ws://127.0.0.1:3000/"
+  ip = "wss://9f016d3d6e02.ngrok.io/"
+  
+datafile = "userdata.json"
 
 def user_IO_handler(cmd, user, data):
   print('[ i ] User "'+user+'": '+cmd+'...')
+  # Reload userdata file
+  with open(datafile) as json_file:
+    userdata = json.load(json_file)
   time.sleep(0.05) # Delay to keep connection stable if using ultra-low latency connections
-  if cmd == "PING":
+  if cmd == "GET_USER_DATA":
+    if data in userdata['users']:
+      try:
+        raw_userdata = (userdata['data'])[data]
+        ws.send("<%ps>\n%MS%\n"+user+"\n"+str(raw_userdata))
+      except Exception as e:
+        print("[ ! ] Error on user thread: attempted to handle "+cmd+" for user",str(user),"but an exception occured:",str(e))
+        ws.send("<%ps>\n%MS%\n"+user+"\n0110;2;100;")
+    else:
+      ws.send("<%ps>\n%MS%\n"+user+"\n111;3;101;")
+
+  elif cmd == "LOGIN":
+    if user in userdata['users']:
+      try:
+        raw_userdata = (userdata['data'])[user]
+        raw_userdata = raw_userdata.split(";")
+        if not len(raw_userdata) == 3:
+          del raw_userdata[3]
+        raw_userdata[1] = "1"
+        tmp = ""
+        for x in raw_userdata:
+          tmp = tmp + x + ";"
+        (userdata['data'])[user] = tmp
+        with open(datafile, "w") as outfile:
+          json.dump(userdata, outfile)
+        ws.send("<%ps>\n%MS%\n"+user+"\n1")
+      except Exception as e:
+        print("[ ! ] Error on user thread: attempted to handle "+cmd+" for user",str(user),"but an exception occured:",str(e))
+        ws.send("<%ps>\n%MS%\n"+user+"\n2")
+    else:
+      ws.send("<%ps>\n%MS%\n"+user+"\n0")
+
+  elif cmd == "LOGOUT":
+    if user in userdata['users']:
+      try:
+        raw_userdata = (userdata['data'])[user]
+        raw_userdata = raw_userdata.split(";")
+        if not len(raw_userdata) == 3:
+          del raw_userdata[3]
+        raw_userdata[1] = "0"
+        tmp = ""
+        for x in raw_userdata:
+          tmp = tmp + x + ";"
+        (userdata['data'])[user] = tmp
+        with open(datafile, "w") as outfile:
+          json.dump(userdata, outfile)
+        ws.send("<%ps>\n%MS%\n"+user+"\n1")
+      except Exception as e:
+        print("[ ! ] Error on user thread: attempted to handle "+cmd+" for user",str(user),"but an exception occured:",str(e))
+        ws.send("<%ps>\n%MS%\n"+user+"\n2")
+    else:
+      ws.send("<%ps>\n%MS%\n"+user+"\n0")
+
+  elif cmd == "REGISTER":
+    if not user in userdata['users']:
+      try:
+        userdata['users'].append(user)
+        (userdata['data'])[user] = "0000;0;000;"
+        with open(datafile, "w") as outfile:
+          json.dump(userdata, outfile)
+        ws.send("<%ps>\n%MS%\n"+user+"\n1")
+      except Exception as e:
+        print("[ ! ] Error on user thread: attempted to handle "+cmd+" for user",str(user),"but an exception occured:",str(e))
+        ws.send("<%ps>\n%MS%\n"+user+"\n2")
+    else:
+      ws.send("<%ps>\n%MS%\n"+user+"\n0")
+
+  elif cmd == "PING":
     try:
-      # Place any code you need here
-      # If there's an error, the exception will be handled in the code below...
-      ws.send("<%ps>\n%MS%\n"+user+"\n") # Return value to client
+      ws.send("<%ps>\n%MS%\n"+user+"\n1")
     except Exception as e:
       print("[ ! ] Error on user thread: attempted to handle "+cmd+" for user",str(user),"but an exception occured:",str(e))
-      ws.send("<%ps>\n%MS%\n"+user+"\n") # Return error to client
+      ws.send("<%ps>\n%MS%\n"+user+"\n0")
 
 def on_message(ws, message):
-  pTmp = json.loads(message) # Convert the message from str. to a dict. object
-  
+  pTmp = json.loads(message)
   # Spawn user thread to handle the I/O from the websockets.
-  
-  if str(pTmp["type"]) == "ru": #Refresh userlist return, DO NOT REMOVE
+  if str(pTmp["type"]) == "ru":
     ws.send("<%sn>\n%MS%")
   else:
     if __name__ == "__main__":
-      uTmp = json.loads(pTmp['data']) #Read the json-encoded packet, and spawn a thread to handle it
-      
+      uTmp = json.loads(pTmp['data'])
       uCMD = uTmp['cmd']
       uID = uTmp['id']
       uData = uTmp['data']
-      
       tr = threading.Thread(target=user_IO_handler, args=(uCMD, uID, uData))
       tr.start()
 
@@ -69,8 +139,8 @@ def closer():
 def on_open(ws):
   ws.send("<%sn>\n%MS%")
   print("[OK] Connected to CloudLink API.")
-  closer = threading.Thread(target=closer) #For environments that can accept keyboard input, pressing return stops the server and safely disconnects it from the API server.
-  closer.start()
+  exiter = threading.Thread(target=closer)
+  exiter.start()
 
 if __name__ == "__main__":
   try:
@@ -78,7 +148,7 @@ if __name__ == "__main__":
     ws.on_open = on_open
     ws.run_forever()
   except:
-    print("[ i ] Exiting sample server...")
+    print("[ i ] Exiting server...")
     ws.send("<%ds>\n%MS%")
     ws.close()
     sys.exit()
