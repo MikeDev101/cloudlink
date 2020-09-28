@@ -19,13 +19,7 @@ import threading
 import time
 import sys
 
-if "-ip" in sys.argv:
-  ip = str(sys.argv[1])
-  print("[ i ] Connecting to CloudLink API server using IP:", ip)
-else:
-  print('[ i ] No CloudLink API server IP defined! (hint: use "-ip wss://your.ip.here:port.") Using defaults...')
-  ip = "wss://9f016d3d6e02.ngrok.io/"
-  
+ip = "wss://9f016d3d6e02.ngrok.io/"
 datafile = "userdata.json"
 
 def user_IO_handler(cmd, user, data):
