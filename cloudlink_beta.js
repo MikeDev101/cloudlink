@@ -18,6 +18,7 @@ const log = Scratch.log;
 class cloudlink {
   constructor (runtime){
     this.runtime = runtime;
+    this.gotNewEvent = false;
   }
 
   getInfo (){
@@ -33,7 +34,7 @@ class cloudlink {
         {
           opcode: 'onEvent',
           blockType: BlockType.HAT,
-          isEdgeActivated: false,
+          isEdgeActivated: this.gotNewEvent,
           arguments: {
             eventID: {
               type: ArgumentType.STRING
@@ -46,9 +47,11 @@ class cloudlink {
           blockType: BlockType.COMMAND,
           arguments: {
             serverIP: {
+              defaultValue: 'ws://127.0.0.1:3000/',
               type: ArgumentType.STRING
             },
             linkID: {
+              defaultValue: 'Link A',
               type: ArgumentType.STRING
             }
           },
@@ -59,6 +62,7 @@ class cloudlink {
           blockType: BlockType.REPORTER,
           arguments: {
             linkID: {
+              defaultValue: 'Link A',
               type: ArgumentType.STRING
             }
           },
@@ -69,23 +73,28 @@ class cloudlink {
           blockType: BlockType.BOOLEAN,
           arguments: {
             linkID: {
+              defaultValue: 'Link A',
               type: ArgumentType.STRING
             }
           },
-          text: 'Is Link ID [linkID] Connected?'
+          text: 'Is Link ID: [linkID] Connected?'
         },
         {
           opcode: 'sendPacket',
           blockType: BlockType.COMMAND,
           arguments: {
             packetData: {
+              defaultValue: 'Hello, World!',
               type: ArgumentType.STRING
             },
             linkID: {
+              defaultValue: 'Link A',
               type: ArgumentType.STRING
             },
             streamType: {
-              type: ArgumentType.STRING
+              defaultValue: 0,
+              type: ArgumentType.NUMBER,
+              menu: 'streamType'
             }
           },
           text: 'Send Data: [packetData] to Link ID: [linkID] on [streamType] Stream'
@@ -103,7 +112,12 @@ class cloudlink {
           },
           text: 'Send Request [requestType] to Link ID: [linkID]'
         }
-      ]
+      ],
+      menus: {
+        streamType: {
+          items: ['Global', 'Private']
+        }
+      }
     }
   }
 
