@@ -20,9 +20,7 @@ import time
 import sys
 
 if "-ip" in sys.argv:
-  tmp_ip = sys.argv
-  tmp_ip.index('-ip')
-  ip = str(sys.argv[tmp_ip+1])
+  ip = str(sys.argv[1])
   print("[ i ] Connecting to CloudLink API server using IP:", ip)
 else:
   print('[ i ] No CloudLink API server IP defined! (hint: use "-ip wss://your.ip.here:port.") Using defaults...')
