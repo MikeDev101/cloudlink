@@ -365,7 +365,7 @@ gotNewDataOnLink (args){
       return ""
     }
   } else {
-  return "ERROR"
+  return ""
   }
 }
   
