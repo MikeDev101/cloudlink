@@ -230,8 +230,29 @@ getLinksList (args){
 
 connectToServer (args){
   const serverIP = args.serverIP;
+  const self = this;
   // TODO: Spawn main websocket connection
-  return;
+  console.log("CloudLink API v" + vers + " | Connecting...");
+  if (this.isRunning == false) {
+    // TODO: Add new object to links dictionary, spawn connection
+    
+    this.wss = new WebSocket(serverIP);
+    
+    // TODO: Set link status to 1 (Connecting state)
+    
+    this.wss.onopen = function(e) {
+      self.isRunning = true;
+      // TODO: Update link to 2 (Connected state)
+      console.log("CloudLink API v" + vers + " | Connected. ");
+    this.wss.onmessage = function(event) {
+      // TODO: handle packet data
+    }
+    this.wss.onclose = function(event) {
+      // TODO: Update link to 3 (Disconnected OK state) or 4 (Disconnected ERR state)
+    };
+  } else {
+    return "Connection already established!"
+  }
 }
 
 connectToLink (args){
