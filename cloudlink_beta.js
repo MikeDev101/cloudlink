@@ -246,10 +246,12 @@ getLinkData (args){
   const streamType = args.streamType;
   if (this.linkIDs.indexOf(linkID) != -1) {
     console.log(streamType)
-    if (streamType == 0) {
+    if (streamType == "Global") {
       return this.globalData[(this.linkIDs.indexOf(linkID))]
-    } else {
+    } else if (streamType == "Private") {
       return this.privateData[(this.linkIDs.indexOf(linkID))]
+    } else {
+      return "E: An error occured while reading const streamType!"
     }
   } else {
   return "E: Link not found or disconnected!"
