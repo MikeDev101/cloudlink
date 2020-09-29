@@ -93,15 +93,20 @@ class cloudlink {
           text: 'Is [linkID] Connected?'
         },
         {
-          opcode: 'getNewDataOnLink', // Returns true if a link receives new data on it's global/private data streams.
+          opcode: 'gotNewDataOnLink', // Returns true if a link receives new data on it's global/private data streams.
           blockType: BlockType.BOOLEAN,
           arguments: {
             linkID: {
               defaultValue: 'Link A',
               type: ArgumentType.STRING
+            },
+            streamType: {
+              defaultValue: '',
+              type: ArgumentType.NUMBER,
+              menu: 'streamType'
             }
           },
-          text: 'Got new data from [linkID]?'
+          text: 'Got new [streamType] data from [linkID]?'
         },
         {
           opcode: 'connectToServer', // Spawns the main WebSocket session.
@@ -309,10 +314,21 @@ setMyUserID (args){
   
   return;
 }
-getNewDataOnLink (args){
+
+gotNewDataOnLink (args){
   const linkID = args.linkID;
-  
-  return;
+  const streamType = args.streamType;
+  if (this.linkIDs.indexOf(linkID) != -1) {
+    if (streamType == "Global") {
+      return this.linkStates[linkID])['newG']
+    } else if (streamType == "Private") {
+      return this.linkStates[linkID])['newP']
+    } else {
+      return ""
+    }
+  } else {
+  return "ERROR"
+  }
 }
 }
 
