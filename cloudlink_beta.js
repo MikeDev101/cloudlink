@@ -245,6 +245,7 @@ getLinkData (args){
   const linkID = args.linkID;
   const streamType = args.streamType;
   if (this.linkIDs.indexOf(linkID) != -1) {
+    console.log(streamType)
     if (streamType == 0) {
       return this.globalData[(this.linkIDs.indexOf(linkID))]
     } else {
