@@ -18,13 +18,13 @@ const log = Scratch.log;
 class cloudlink {
   constructor (runtime){
     this.runtime = runtime;
+    this.isRunning = false; // Defines if the primary WebSocket connection is established.
     this.myUserID = []; // List for storing client's user IDs to multiple connection streams.
     this.userIDList = ['%MS%;']; // List for storing user IDs from multiple connection streams.
     this.globalData = ['Apple']; // List for indexing websocket connection streams, a link's GLOBAL data stream.
     this.privateData = ['Banana']; // List for indexing websocket connection streams, a link's PRIVATE data stream.
-    this.linkIDs = ['Link A']; // List for indexing multiple websocket connection streams.
-    this.links = []; // List for accessing websocket connection objects.
-    this.linkStates = {'Link A':2}; // Dictionary for indexing multiple websocket connection states.
+    this.linkIDs = ['Link A', 'Link B']; // List for indexing multiple link connection streams.
+    this.linkStates = {'Link A':{'status':2, 'newG':true, 'newP':false}, 'Link B':{'status':3, 'newG':false, 'newP':false}}; // Dictionary for indexing multiple link connection states.
   }
 
   getInfo (){
@@ -104,19 +104,26 @@ class cloudlink {
           text: 'Got new data from [linkID]?'
         },
         {
-          opcode: 'connectToServer', // Spawns a new WebSocket object in the Links list, adds a new Link ID to the Link ID list, and spawns a connection.
+          opcode: 'connectToServer', // Spawns the main WebSocket session.
           blockType: BlockType.COMMAND,
           arguments: {
             serverIP: {
               defaultValue: 'ws://127.0.0.1:3000/',
               type: ArgumentType.STRING
             },
+          },
+          text: 'Connect to Server [serverIP]'
+        },
+        {
+          opcode: 'connectToLink', // Connects to a server linked with the currently connected API server.
+          blockType: BlockType.COMMAND,
+          arguments: {
             linkID: {
-              defaultValue: 'Link A',
+              defaultValue: '',
               type: ArgumentType.STRING
             }
           },
-          text: 'Connect to [serverIP] as [linkID]'
+          text: 'Connect to Link [linkID]'
         },
         {
           opcode: 'setMyUserID', // If a connection is established successfully on a link, this sets the client's User ID on that link, which enables private data streams.
@@ -208,7 +215,7 @@ getUserIDListOfLink (args){
   if (this.linkIDs.indexOf(linkID) != -1) {
     return this.userIDList[(this.linkIDs.indexOf(linkID))]
   } else {
-  return "E: Link not found or disconnected!"
+  return "ERROR"
   }
 }
 
@@ -218,43 +225,47 @@ getLinksList (args){
 
 connectToServer (args){
   const serverIP = args.serverIP;
+  // TODO: Spawn main websocket connection
+  return;
+}
+
+connectToLink (args){
   const linkID = args.linkID;
-  // TODO: Figure out how to add a websocket object to a list
+  // TODO: Check if a link (software server connected to the API locally) exists on the API server, and connect to it.
   return;
 }
 
 getStatusOfLink (args){
   const linkID = args.linkID;
   if (this.linkIDs.indexOf(linkID) != -1) {
-    return this.linkStates[linkID]
+    return (this.linkStates[linkID])['status']
   } else {
-  return "E: Link not found or disconnected!"
+  return "ERROR"
   }
 }
 
 isLinkConnected (args){
   const linkID = args.linkID;
   if (this.linkIDs.indexOf(linkID) != -1) {
-    return (this.linkStates[linkID] == 2)
+    return ((this.linkStates[linkID])['status'] == 2)
   } else {
   return false
   }
 }
-  
+
 getLinkData (args){
   const linkID = args.linkID;
   const streamType = args.streamType;
   if (this.linkIDs.indexOf(linkID) != -1) {
-    console.log(streamType)
     if (streamType == "Global") {
       return this.globalData[(this.linkIDs.indexOf(linkID))]
     } else if (streamType == "Private") {
       return this.privateData[(this.linkIDs.indexOf(linkID))]
     } else {
-      return "E: An error occured while reading const streamType!"
+      return ""
     }
   } else {
-  return "E: Link not found or disconnected!"
+  return ""
   }
 }
 
