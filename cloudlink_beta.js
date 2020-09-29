@@ -19,12 +19,12 @@ class cloudlink {
   constructor (runtime){
     this.runtime = runtime;
     this.isRunning = false; // Defines if the primary WebSocket connection is established.
-    this.myUserID = ['Mike', 'E1']; // List for storing client's user IDs to multiple connection streams.
-    this.userIDList = ['%MS%;', '%MS%;LOL']; // List for storing user IDs from multiple connection streams.
-    this.globalData = ['Apple', 'Foo']; // List for indexing websocket connection streams, a link's GLOBAL data stream.
-    this.privateData = ['Banana', 'Bar']; // List for indexing websocket connection streams, a link's PRIVATE data stream.
-    this.linkIDs = ['Link A', 'Link B']; // List for indexing multiple link connection streams.
-    this.linkStates = {'Link A':{'status':2, 'newG':true, 'newP':false}, 'Link B':{'status':3, 'newG':false, 'newP':false}}; // Dictionary for indexing multiple link connection states.
+    this.myUserID = []; // List for storing client's user IDs to multiple connection streams.
+    this.userIDList = []; // List for storing user IDs from multiple connection streams.
+    this.globalData = []; // List for indexing websocket connection streams, a link's GLOBAL data stream.
+    this.privateData = []; // List for indexing websocket connection streams, a link's PRIVATE data stream.
+    this.linkIDs = ''; // String array for indexing multiple link connection streams, provided by the API server.
+    this.linkStates = {}; // Dictionary for indexing multiple link connection states.
   }
 
   getInfo (){
@@ -124,7 +124,7 @@ class cloudlink {
           blockType: BlockType.COMMAND,
           arguments: {
             linkID: {
-              defaultValue: '',
+              defaultValue: 'Link A',
               type: ArgumentType.STRING
             }
           },
