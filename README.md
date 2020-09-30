@@ -2,6 +2,8 @@
 
 CloudLink is an API for Scratch 3. It's basically cloud variables, but better.
 
+![cl_arch.png](https://cdn.glitch.com/2d2fd699-1471-4a63-af1a-c7b7677c8b13%2Fcl_arch.png)
+
 ## How it works
 
 CloudLink connects to a hosted server, either on the localhost or through reverse proxy services such as pagekite or ngrok. 
