@@ -261,10 +261,11 @@ connectToServer (args){
       // Update state to 2 (Connected) if OK
       self.linkStates['Default Link']['status'] = 2;
       console.log("CloudLink API v" + vers + " | Connected. ");
+    };
     this.wss.onmessage = function(event) {
       var obj = JSON.parse(event.data);
       // TODO: Update values when a message is received
-    }
+    };
     this.wss.onclose = function(event) {
       if (event.wasClean) { // Check if the disconnect was clean
         // Reset new data values and set status to 3 (Disconnected OK)
@@ -286,9 +287,11 @@ connectToServer (args){
 connectToLink (args){
   const linkID = args.linkID;
   if (this.isRunning == true) {
+    return;
     // TODO: Check if a link (software server connected to the API locally) exists on the API server, and connect to it.
   } else {
     return 'Oops, the WebSocket is not connected. Run the "Connect to Server" block to connect!';
+  }
 }
 
 getStatusOfLink (args){
