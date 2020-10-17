@@ -2,7 +2,7 @@
 // See https://github.com/KingdomPy/scratch_websockets/blob/master/index.js for the original script!
 // DO NOT USE ON OLDER WEB BROWSERS! CloudLink is designed to run best on a modern web browser.
 
-const vers = '1.1';
+const vers = 'S1.1';
 
 var myName = "";
 var gotNewGlobalData = false;
