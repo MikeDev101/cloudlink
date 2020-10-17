@@ -1,3 +1,0 @@
-websocket
-websockets
-websocket_client
