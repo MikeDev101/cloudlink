@@ -1,15 +1,13 @@
 """
 MikeDEV's CloudLink Server
-Version 1.8b
 CloudLink is a websocket extension for Scratch 3.0, which allows MMOs, Web Browsers, BBSs, chats, and more, all using Scratch 3.0. It's cloud variables, but better. 
 Origial concept created in 2018.
 Rewritten in 2020.
-Latest version (1.8b) was released in September 26, 2020.
 For more details about CloudLink, please visit
 https://github.com/MikeDev101/cloudlink
 """
 
-vers = "1.8b"
+vers = "1.1"
 
 import asyncio
 import json
