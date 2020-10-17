@@ -2,17 +2,21 @@
 
 ## Supported Versions
 
-At this time, Release 1.x is the latest supported version. Any older build of the client or the server.py is unsupported.
+Our version system has been updated, all client and server version numbers starting on Oct. 16 2020 will be uniform. The format for our version #s follow:
 
-| Client  | Supported?         |
-| ------- | ------------------ |
-| 1.x     | :white_check_mark: |
-| < 1.x   | :x:                |
+| Label    | Type              |
+| -------- | ------------------|
+| B#.#     | Beta Release      |
+| S#.#     | Stable Release    |
+| No S or B before Version # | Legacy Release    |
 
-| Server  | Supported?         |
+At this time, Release S1.1 is the latest supported version. Any older build of the client or the server.py is unsupported.
+
+| Version  | Supported?         |
 | ------- | ------------------ |
-| 1.8     | :white_check_mark: |
-| < 1.8   | :x:                |
+| B2.0     | :white_check_mark: (May be unstable) |
+| S1.1     | :white_check_mark: |
+| < 1.1   | :x: (Considered Legacy, and will not be updated, but software made using legacy versions are fully compatible with newer versions)|
 
 ## Reporting a Vulnerability
 
