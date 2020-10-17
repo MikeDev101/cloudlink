@@ -14,7 +14,7 @@ At this time, Release S1.1 is the latest supported version. Any older build of t
 
 | Version  | Supported?         |
 | ------- | ------------------ |
-| B2.0     | :white_check_mark: (May be unstable) |
+| B2.0     | :x: (Not available due to being incomplete) |
 | S1.1     | :white_check_mark: |
 | < 1.1   | :x: (Considered Legacy, and will not be updated, but software made using legacy versions are fully compatible with newer versions)|
 
