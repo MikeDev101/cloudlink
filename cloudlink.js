@@ -302,7 +302,7 @@ class cloudlink {
 		};
 	}
 	refreshUserList() {
-		if (this.isRunning == true) {
+		if (isRunning == true) {
 			this.wss.send("<%rf>\n"); // begin packet data with global stream idenifier in the header
 			return "Sent request successfully.";
 		} else {
