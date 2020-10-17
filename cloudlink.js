@@ -7,14 +7,15 @@ const vers = 'S1.1';
 var myName = "";
 var gotNewGlobalData = false;
 var gotNewPrivateData = false;
+var sGData = "";
+var sPData = "";
+var isRunning = false;
+var sys_status = 0;
+var userNames = "";
+
 class cloudlink {
 	constructor(runtime, extensionId) {
 		this.runtime = runtime;
-		this.sGData = "";
-		this.sPData = "";
-		this.isRunning = false;
-		this.status = 0; // Ready value
-		this.userNames = "";
 	}
 	static get STATE_KEY() {
 		return 'Scratch.websockets';
@@ -143,28 +144,28 @@ class cloudlink {
 	}
 	openSocket(args) {
 		const WSS = args.WSS; // Begin the main updater scripts
-		if (this.isRunning == false) {
+		if (isRunning == false) {
 			const self = this;
-			self.status = 1;
+			sys_status = 1;
 			console.log("Establishing connection...");
 			this.wss = new WebSocket(WSS);
 			this.wss.onopen = function(e) {
-				self.isRunning = true;
-				self.status = 2; // Connected OK value
+				isRunning = true;
+				sys_status = 2; // Connected OK value
 				console.log("Connected.");
 			};
 			this.wss.onmessage = function(event) {
 				var obj = JSON.parse(event.data);
 				if (obj["type"] == "gs") {
-					self.sGData = String(obj["data"]);
+					sGData = String(obj["data"]);
 					gotNewGlobalData = true;
 				} else if (obj["type"] == "ps") {
 					if (String(obj["id"]) == String(myName)) {
-						self.sPData = String(obj["data"]);
+						sPData = String(obj["data"]);
 						gotNewPrivateData = true;
 					};
 				} else if (obj["type"] == "ul") {
-					self.userNames = String(obj["data"]);
+					userNames = String(obj["data"]);
 				} else if (obj["type"] == "ru") {
 					if (myName != "") {
 						self.wss.send("<%sn>\n" + myName)
@@ -174,18 +175,18 @@ class cloudlink {
 				};
 			};
 			this.wss.onclose = function(event) {
-				self.userNames = "";
-				self.sGData = "";
-				self.sPData = "";
-				self.isRunning = false;
+				userNames = "";
+				sGData = "";
+				sPData = "";
+				isRunning = false;
 				gotNewGlobalData = false;
 				gotNewPrivateData = false;
 				myName = "";
 				if (event.wasClean) {
-					self.status = 3; // Disconnected OK value
+					sys_status = 3; // Disconnected OK value
 					console.log("Disconnected.");
 				} else {
-					self.status = 4; // Connection lost value
+					sys_status = 4; // Connection lost value
 					console.log("Lost connection to the server.");
 				};
 			};
@@ -195,27 +196,27 @@ class cloudlink {
 	} // end the updater scripts
 	closeSocket() {
 		const self = this;
-		if (this.isRunning == true) {
+		if (isRunning == true) {
 			this.wss.send("<%ds>\n" + myName); // send disconnect command in header before shutting down link
 			this.wss.close(1000);
-			self.isRunning = false;
+			isRunning = false;
 			myName = "";
 			gotNewGlobalData = false;
 			gotNewPrivateData = false;
-			self.userNames = "";
-			self.sGData = "";
-			self.sPData = "";
-			self.status = 3; // Disconnected OK value
+			userNames = "";
+			sGData = "";
+			sPData = "";
+			sys_status = 3; // Disconnected OK value
 			return ("Connection closed.");
 		} else {
 			return ("Connection already closed.");
 		};
 	}
 	getSocketState() {
-		return this.isRunning;
+		return isRunning;
 	}
 	sendGData(args) {
-		if (this.isRunning == true) {
+		if (isRunning == true) {
 			this.wss.send("<%gs>\n" + myName + "\n" + args.DATA); // begin packet data with global stream idenifier in the header
 			return "Sent data successfully.";
 		} else {
@@ -224,7 +225,7 @@ class cloudlink {
 	}
 	sendPData(args) {
 		if (myName != "") {
-			if (this.isRunning == true) {
+			if (isRunning == true) {
 				this.wss.send("<%ps>\n" + myName + "\n" + args.ID + "\n" + args.DATA); // begin packet data with global stream idenifier in the header
 				return "Sent data successfully.";
 			} else {
@@ -235,23 +236,23 @@ class cloudlink {
 		};
 	}
 	getGData() {
-		return this.sGData;
+		return sGData;
 	}
 	getPData() {
-		return this.sPData;
+		return sPData;
 	}
 	getStatus() {
-		return this.status;
+		return sys_status;
 	}
 	getCNames() {
-		return this.userNames;
+		return userNames;
 	}
 	getMyName() {
 		return myName;
 	}
 	setMyName(args) {
 		if (myName == "") {
-			if (this.isRunning == true) {
+			if (isRunning == true) {
 				this.wss.send("<%sn>\n" + args.NAME); // begin packet data with setname command in the header
 				myName = args.NAME;
 				return "Set username on server successfully.";
