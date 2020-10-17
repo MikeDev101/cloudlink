@@ -7,7 +7,7 @@ For more details about CloudLink, please visit
 https://github.com/MikeDev101/cloudlink
 """
 
-vers = "1.1"
+vers = "S1.1"
 
 import asyncio
 import json
