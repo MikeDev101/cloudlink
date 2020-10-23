@@ -55,18 +55,10 @@ def on_error(ws, error):
 def on_close(ws):
   print("[OK] Disconnected.")
 
-def closer():
-  input()
-  print("[ i ] Disconnecting...")
-  ws.send("<%ds>\n%"+servname+"%")
-  ws.close()
-  sys.exit()
-
 def on_open(ws):
   ws.send("<%sn>\n%"+servname+"%")
   print("[OK] Connected to CloudLink API.")
-  closer = threading.Thread(target=closer) #For environments that can accept keyboard input, pressing return stops the server and safely disconnects it from the API server.
-  closer.start()
+  print("[ i ] To terminate this application, simply stop the main server.")
 
 if __name__ == "__main__":
   try:
