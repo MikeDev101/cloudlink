@@ -58,7 +58,7 @@ def on_close(ws):
 def closer():
   input()
   print("[ i ] Disconnecting...")
-  ws.send("<%ds>\n%MS%")
+  ws.send("<%ds>\n%"+servname+"%")
   ws.close()
   sys.exit()
 
