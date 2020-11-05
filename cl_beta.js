@@ -4,7 +4,7 @@
 // See https://github.com/KingdomPy/scratch_websockets/blob/master/index.js for the original script!
 // DO NOT USE ON OLDER WEB BROWSERS! CloudLink is designed to run best on a modern web browser.
 
-const vers = 'B2.4';
+const vers = 'B2.5';
 console.log("[CloudLink] Loading 1/3: Initializing the extension...")
 
 // Booleans for signifying an update to the global or private data streams, as well as the disk and coin data.
@@ -84,32 +84,16 @@ class cloudlink {
 					},
 				},
 			}, {
-				opcode: 'getSocketState',
-				blockType: Scratch.BlockType.BOOLEAN,
-				text: 'Connected?',
-			}, {
-				opcode: 'isNewGlobalData',
-				blockType: Scratch.BlockType.BOOLEAN,
-				text: 'Got New Global Data?',
-			}, {
-				opcode: 'isNewPrivateData',
-				blockType: Scratch.BlockType.BOOLEAN,
-				text: 'Got New Private Data?',
-			}, {
 				opcode: 'getComState',
 				blockType: Scratch.BlockType.BOOLEAN,
-				text: 'Connected to [com]?',
+				text: '[com]?',
 				arguments: {
 					com: {
 						type: Scratch.ArgumentType.STRING,
 						menu: 'coms',
-						defaultValue: 'Server',
+						defaultValue: 'Connected to Server',
 					},
 				},
-			}, {
-				opcode: 'getAuthState',
-				blockType: Scratch.BlockType.BOOLEAN,
-				text: 'Logged in?',
 			}, {
 				opcode: 'getNewTrade',
 				blockType: Scratch.BlockType.BOOLEAN,
@@ -301,7 +285,7 @@ class cloudlink {
 					items: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
 				},
 				coms: {
-					items: ["Server", "CloudAccount", "CloudCoin", "CloudDisk"],
+					items: ["Connected to Server", "Connected to CloudAccount", "Connected to CloudCoin", "Connected to CloudDisk", "Logged in"],
 				},
 				coinmenu: {
 					items: ['Spend', 'Earn'],
@@ -457,33 +441,37 @@ class cloudlink {
 			return ("Connection already closed.");
 		};
 	};
-	getSocketState() {
-		return isRunning;
-	};
 	getComState(args) {
-		if (args.com == "Server") {
+		if (args.com == "Connected to Server") {
 			return isRunning;
 		}
-		if (args.com == "CloudCoin") {
+		if (args.com == "Connected to CloudCoin") {
 			if (isRunning) {
 				return (userNames.indexOf('%CC%') >= 0);
 			} else {
 				return false;
 			};
 		}
-		if (args.com == "CloudDisk") {
+		if (args.com == "Connected to CloudDisk") {
 			if (isRunning) {
 				return (userNames.indexOf('%CD%') >= 0);
 			} else {
 				return false;
 			};
 		}
-		if (args.com == "CloudAccount") {
+		if (args.com == "Connected to CloudAccount") {
 			if (isRunning) {
 				return (userNames.indexOf('%CA%') >= 0);
 			} else {
 				return false;
 			};
+		}
+		if (args.com == "Logged in") {
+			if (isRunning) {
+				return isAuth;
+			} else {
+				return false;
+			}
 		}
 		else {
 			return false;
@@ -666,9 +654,6 @@ class cloudlink {
 	//	};
 	//};
 	// CLOUDACCOUNT OPCODES
-	getAuthState() {
-		return isAuth;
-	};
 	doAcc(args) {
 		if (args.ACCMODE == "Login") { 
 			if (isRunning) {
