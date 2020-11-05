@@ -36,6 +36,8 @@ var accMode = "";
 
 // Variables for storing CloudDisk data
 var diskData = '';
+var runningFtp = false;
+var ftpData = '';
 
 console.log("[CloudLink] Loading 2/3: Loading the extension...")
 // CloudLink Extension + CloudCoin and CloudDisk API interface.
@@ -57,34 +59,6 @@ class cloudlink {
 			menuIconURI: 'data:image/svg+xml;base64,PHN2ZyB2ZXJzaW9uPSIxLjEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHdpZHRoPSI0OC45OTk3NSIgaGVpZ2h0PSI0OC45OTk3NSIgdmlld0JveD0iMCwwLDQ4Ljk5OTc1LDQ4Ljk5OTc1Ij48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjE1LjUwMDEyLC0xNTUuNTAwMTIpIj48ZyBkYXRhLXBhcGVyLWRhdGE9InsmcXVvdDtpc1BhaW50aW5nTGF5ZXImcXVvdDs6dHJ1ZX0iIGZpbGwtcnVsZT0ibm9uemVybyIgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2Utd2lkdGg9IjQiIHN0cm9rZS1taXRlcmxpbWl0PSIxMCIgc3Ryb2tlLWRhc2hhcnJheT0iIiBzdHJva2UtZGFzaG9mZnNldD0iMCIgc3R5bGU9Im1peC1ibGVuZC1tb2RlOiBub3JtYWwiPjxwYXRoIGQ9Ik0yMTcuNTAwMTMsMTgwYzAsLTEyLjQyNjM0IDEwLjA3MzUzLC0yMi40OTk4OCAyMi40OTk4OCwtMjIuNDk5ODhjMTIuNDI2MzQsMCAyMi40OTk4NywxMC4wNzM1MyAyMi40OTk4NywyMi40OTk4OGMwLDEyLjQyNjM0IC0xMC4wNzM1MywyMi40OTk4OCAtMjIuNDk5ODcsMjIuNDk5ODhjLTEyLjQyNjM0LDAgLTIyLjQ5OTg4LC0xMC4wNzM1MyAtMjIuNDk5ODgsLTIyLjQ5OTg4eiIgZGF0YS1wYXBlci1kYXRhPSJ7JnF1b3Q7b3JpZ1BvcyZxdW90OzpudWxsfSIgZmlsbD0iIzA1NGM2MyIgc3Ryb2tlLWxpbmVjYXA9ImJ1dHQiIHN0cm9rZS1saW5lam9pbj0ibWl0ZXIiLz48ZyBkYXRhLXBhcGVyLWRhdGE9InsmcXVvdDtvcmlnUG9zJnF1b3Q7Om51bGx9IiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxwYXRoIGQ9Ik0yMzAuMjc1MiwxODAuMDY3NjJjNS42NjYyMSwtNC43MTk1NCAxMy44OTQ1MywtNC43MTk1NCAxOS41NjA3NCwwIi8+PHBhdGggZD0iTTIyNS4zMDE2NiwxNzUuMTM1NzZjOC40MDAxMSwtNy40MDQ0NiAyMC45OTY1NiwtNy40MDQ0NiAyOS4zOTY2OCwwIi8+PHBhdGggZD0iTTIzNS4xNzkyOCwxODUuMDEzMzhjMi44OTA4MSwtMi4wNTM3OCA2Ljc2NDUzLC0yLjA1Mzc4IDkuNjU1MzQsMCIvPjxwYXRoIGQ9Ik0yNDAuMDEzODksMTkwLjQxNzU5aC0wLjAxMzg5Ii8+PC9nPjwvZz48L2c+PC9zdmc+',
 			blocks: [
 			{
-				opcode: 'getVersion',
-				blockType: Scratch.BlockType.REPORTER,
-				text: 'Version',
-			},{
-				opcode: 'getGData',
-				blockType: Scratch.BlockType.REPORTER,
-				text: 'Global Data',
-			}, {
-				opcode: 'getPData',
-				blockType: Scratch.BlockType.REPORTER,
-				text: 'Private Data',
-			}, {
-				opcode: 'getStatus',
-				blockType: Scratch.BlockType.REPORTER,
-				text: 'Status',
-			}, {
-				opcode: 'getCNames',
-				blockType: Scratch.BlockType.REPORTER,
-				text: 'Connected Users',
-			}, {
-				opcode: 'getMyName',
-				blockType: Scratch.BlockType.REPORTER,
-				text: 'My Username',
-			}, {
-				opcode: 'returnResultOfTrade',
-				blockType: Scratch.BlockType.REPORTER,
-				text: 'Result of trade',
-			}, {
 				opcode: 'parseJSON',
 				blockType: Scratch.BlockType.REPORTER,
 				text: '[PATH] of [JSON_STRING]',
@@ -190,30 +164,6 @@ class cloudlink {
 					},
 				},
 			},  {
-				opcode: 'readData',
-				blockType: Scratch.BlockType.COMMAND,
-				text: 'Read data on slot [slot]',
-				arguments: {
-					slot: {
-						type: Scratch.ArgumentType.NUMBER,
-						menu: 'diskSlot',
-					},
-				},
-			}, {
-				opcode: 'writeData',
-				blockType: Scratch.BlockType.COMMAND,
-				text: 'Write data [data] to slot [slot]',
-				arguments: {
-					data: {
-						type: Scratch.ArgumentType.STRING,
-						defaultValue: 'abc123',
-					},
-					slot: {
-						type: Scratch.ArgumentType.NUMBER,
-						menu: 'diskSlot',
-					},
-				},
-			}, {
 				opcode: 'setMyName',
 				blockType: Scratch.BlockType.COMMAND,
 				text: 'Set [NAME] as username',
@@ -238,6 +188,59 @@ class cloudlink {
 				opcode: 'refreshUserList',
 				blockType: Scratch.BlockType.COMMAND,
 				text: 'Refresh User List',
+			}, {
+				opcode: 'getFTPFileList',
+				blockType: Scratch.BlockType.COMMAND,
+				text: 'Get a List of Files for FTP',
+			}, 
+			{
+				opcode: 'getFTPFileInfo',
+				blockType: Scratch.BlockType.COMMAND,
+				text: 'Get file [fname] info for FTP',
+				arguments: {
+					fname: {
+						type: Scratch.ArgumentType.STRING,
+						defaultValue: 'sample.txt',
+					},
+				},
+			}, {
+				opcode: 'initFTP',
+				blockType: Scratch.BlockType.COMMAND,
+				text: 'Download file [fname] from FTP',
+				arguments: {
+					fname: {
+						type: Scratch.ArgumentType.STRING,
+						defaultValue: 'sample.txt',
+					},
+				},
+			}, {
+				opcode: 'abortFTP',
+				blockType: Scratch.BlockType.COMMAND,
+				text: 'Abort FTP'
+			}, {
+				opcode: 'readData',
+				blockType: Scratch.BlockType.COMMAND,
+				text: 'Read data on slot [slot]',
+				arguments: {
+					slot: {
+						type: Scratch.ArgumentType.NUMBER,
+						menu: 'diskSlot',
+					},
+				},
+			}, {
+				opcode: 'writeData',
+				blockType: Scratch.BlockType.COMMAND,
+				text: 'Write data [data] to slot [slot]',
+				arguments: {
+					data: {
+						type: Scratch.ArgumentType.STRING,
+						defaultValue: 'abc123',
+					},
+					slot: {
+						type: Scratch.ArgumentType.NUMBER,
+						menu: 'diskSlot',
+					},
+				},
 			}, {
 				opcode: 'doAcc',
 				blockType: Scratch.BlockType.COMMAND,
@@ -290,25 +293,7 @@ class cloudlink {
 						defaultValue: 'A name',
 					},
 				},
-			}, //{
-				//opcode: 'sendCMD',
-				//blockType: Scratch.BlockType.COMMAND,
-				//text: 'Send command [cmd] with data [data] to ID [user]',
-				//arguments: {
-				//	cmd: {
-				//		type: Scratch.ArgumentType.STRING,
-				//		defaultValue: 'PING',
-				//	},
-				//	data: {
-				//		type: Scratch.ArgumentType.STRING,
-				//		defaultValue: ' ',
-				//	},
-				//	user: {
-				//		type: Scratch.ArgumentType.STRING,
-				//		defaultValue: 'A name',
-				//	},
-				//},
-			//},
+			},
 			],
 			menus: {
 				diskSlot: {
@@ -328,7 +313,7 @@ class cloudlink {
 					items: ['Global', 'Private', 'Account', 'Coin', 'Disk'],
 				},
 				reportermenu: {
-					items: ['Global Data', 'Private Data', 'Account Data', 'Disk Data', 'Coin Data', 'Link Status', 'Usernames', 'My Username', 'Version'],
+					items: ['Global Data', 'Private Data', 'Account Data', 'Disk Data', 'FTP Data', 'Coin Data', 'Link Status', 'Usernames', 'My Username', 'Version'],
 				},
 				accmenu: {
 					items: ['Login', 'Register'],
@@ -364,6 +349,16 @@ class cloudlink {
 					if (String(obj["id"]) == String(myName)) {
 						diskData = String(obj["data"]);
 						gotDiskData = true;
+					};
+				} else if (obj["type"] == "ftp") {
+					if (String(obj["id"]) == String(myName)) {
+						if (runningFtp) {
+							if (String(obj['data']) != "<TX>") {
+								ftpData = String(String(ftpData) + String(obj["data"]));
+							} else {
+								runningFtp = false;
+							};
+						};
 					};
 				} else if (obj["type"] == "ca") {
 					if (String(obj["id"]) == String(myName)) {
@@ -418,6 +413,8 @@ class cloudlink {
 				accountData = "";
 				accMode = "";
 				isAuth = false;
+				runningFtp = false;
+				ftpData = '';
 				if (event.wasClean) {
 					sys_status = 3; // Disconnected OK value
 					console.log("[CloudLink] Disconnected.");
@@ -453,6 +450,8 @@ class cloudlink {
 			accMode = "";
 			isAuth = false;
 			sys_status = 3; // Disconnected OK value
+			runningFtp = false;
+			ftpData = '';
 			return ("Connection closed.");
 		} else {
 			return ("Connection already closed.");
@@ -539,6 +538,9 @@ class cloudlink {
 		if (args.MENU == "Version") {
 			return vers;
 		}; 
+		if (args.MENU == "FTP Data") {
+			return ftpData;
+		}
 	};
 	returnIsNewData(args) {
 		if (args.TYPE == "Global") {
@@ -660,33 +662,6 @@ class cloudlink {
 	//		return "Connection closed, no action taken.";
 	//	};
 	//};
-	isNewGlobalData() {
-		return gotNewGlobalData;
-	};
-	isNewPrivateData() {
-		return gotNewPrivateData;
-	};
-	getVersion() {
-		return vers
-	};
-	getGData() {
-		return sGData;
-	};
-	getPData() {
-		return sPData;
-	};
-	getStatus() {
-		return sys_status;
-	};
-	getCNames() {
-		return userNames;
-	};
-	getMyName() {
-		return myName;
-	};
-	getSocketState() {
-		return isRunning;
-	};
 	// CLOUDACCOUNT OPCODES
 	getAuthState() {
 		return isAuth;
@@ -786,9 +761,69 @@ class cloudlink {
 		};
 	};
 	tradeCoins(args) {
-		return;
+		return "This block doesn't work yet. Sorry!"
 	};
 	// CLOUDDISK OPCODES
+	getFTPFileList(){
+		if (isRunning) {
+			if (isAuth) {
+				this.wss.send("<%ftp>\n" + myName + '\n%CD%\n{"cmd":"GETLIST","id":"'+ myName+'", "data":""}\n');
+				return "Sent request successfully.";
+			} else {
+				return "Not Logged In!";
+			};
+		} else {
+			return "Connection closed, no action taken.";
+		};
+	};
+	getFTPFileInfo(args){
+		if (isRunning) {
+			if (isAuth) {
+				this.wss.send("<%ftp>\n" + myName + '\n%CD%\n{"cmd":"GETINFO","id":"'+ myName+'", "data":"'+args.fname+'"}\n');
+				return "Sent request successfully.";
+			} else {
+				return "Not Logged In!";
+			};
+		} else {
+			return "Connection closed, no action taken.";
+		};
+	};
+	initFTP(args){
+		if (isRunning) {
+			if (isAuth) {
+				if (!runningFtp){
+					ftpData = '';
+					this.wss.send("<%ftp>\n" + myName + '\n%CD%\n{"cmd":"GET","id":"'+ myName+'", "data":"'+args.fname+'"}\n');
+					runningFtp = true;
+					return "Sent request successfully.";
+				} else {
+					return "Already running FTP!";
+				}
+			} else {
+				return "Not Logged In!";
+			};
+		} else {
+			return "Connection closed, no action taken.";
+		};
+	};
+	abortFTP(){
+		if (isRunning) {
+			if (isAuth) {
+				if (runningFtp){
+					this.wss.send("<%ftp>\n" + myName + '\n%CD%\n{"cmd":"ABORT","id":"'+ myName+'", "data":""}\n');
+					runningFtp = false;
+					ftpData = '';
+					return "Sent request successfully.";
+				} else {
+					return "Stopped FTP!"
+				}
+			} else {
+				return "Not Logged In!";
+			};
+		} else {
+			return "Connection closed, no action taken.";
+		};
+	};
 	readData(args) {
 		if (isRunning == true) {
 			if (myName != "") {
