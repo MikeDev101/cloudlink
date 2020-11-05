@@ -457,6 +457,9 @@ class cloudlink {
 			return ("Connection already closed.");
 		};
 	};
+	getSocketState() {
+		return isRunning;
+	};
 	getComState(args) {
 		if (args.com == "Server") {
 			return isRunning;
