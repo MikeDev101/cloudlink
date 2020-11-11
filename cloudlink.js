@@ -3,6 +3,7 @@
 // DO NOT USE ON OLDER WEB BROWSERS! CloudLink is designed to run best on a modern web browser.
 
 const vers = 'S1.1';
+const defIP = "wss://026b92bcc7b7.ngrok.io/";
 
 var myName = "";
 var gotNewGlobalData = false;
@@ -86,7 +87,7 @@ class cloudlink {
 				arguments: {
 					WSS: {
 						type: Scratch.ArgumentType.STRING,
-						defaultValue: 'ws://127.0.0.1:3000/',
+						defaultValue: defIP,
 					},
 				},
 			}, {
