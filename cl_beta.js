@@ -5,6 +5,7 @@
 // DO NOT USE ON OLDER WEB BROWSERS! CloudLink is designed to run best on a modern web browser.
 
 const vers = 'B2.5';
+const defIP = "wss://026b92bcc7b7.ngrok.io/";
 console.log("[CloudLink] Loading 1/3: Initializing the extension...")
 
 // Booleans for signifying an update to the global or private data streams, as well as the disk and coin data.
@@ -116,7 +117,7 @@ class cloudlink {
 				arguments: {
 					WSS: {
 						type: Scratch.ArgumentType.STRING,
-						defaultValue: 'ws://127.0.0.1:3000/',
+						defaultValue: defIP,
 					},
 				},
 			}, {
