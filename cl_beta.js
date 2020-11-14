@@ -4,8 +4,9 @@
 // See https://github.com/KingdomPy/scratch_websockets/blob/master/index.js for the original script!
 // DO NOT USE ON OLDER WEB BROWSERS! CloudLink is designed to run best on a modern web browser.
 
-const vers = 'B2.5';
+const vers = 'B2.6';
 console.log("[CloudLink] Loading 1/3: Initializing the extension...")
+defIP = "wss://91f71231e2c9.ngrok.io";
 
 // Booleans for signifying an update to the global or private data streams, as well as the disk and coin data.
 var gotNewGlobalData = false; 
@@ -112,7 +113,7 @@ class cloudlink {
 				arguments: {
 					WSS: {
 						type: Scratch.ArgumentType.STRING,
-						defaultValue: 'ws://127.0.0.1:3000/',
+						defaultValue: defIP,
 					},
 				},
 			}, {
