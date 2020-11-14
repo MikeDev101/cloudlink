@@ -5,7 +5,6 @@
 // DO NOT USE ON OLDER WEB BROWSERS! CloudLink is designed to run best on a modern web browser.
 
 const vers = 'B2.5';
-const defIP = "wss://026b92bcc7b7.ngrok.io/";
 console.log("[CloudLink] Loading 1/3: Initializing the extension...")
 
 // Booleans for signifying an update to the global or private data streams, as well as the disk and coin data.
@@ -92,13 +91,9 @@ class cloudlink {
 					com: {
 						type: Scratch.ArgumentType.STRING,
 						menu: 'coms',
-						defaultValue: 'Connected to Server',
+						defaultValue: 'Connected',
 					},
 				},
-			}, {
-				opcode: 'getNewTrade',
-				blockType: Scratch.BlockType.BOOLEAN,
-				text: 'New Trade Request?',
 			}, {
 				opcode: 'returnIsNewData',
 				blockType: Scratch.BlockType.BOOLEAN,
@@ -117,7 +112,7 @@ class cloudlink {
 				arguments: {
 					WSS: {
 						type: Scratch.ArgumentType.STRING,
-						defaultValue: defIP,
+						defaultValue: 'ws://127.0.0.1:3000/',
 					},
 				},
 			}, {
@@ -159,6 +154,10 @@ class cloudlink {
 					},
 				},
 			}, {
+				opcode: 'refreshUserList',
+				blockType: Scratch.BlockType.COMMAND,
+				text: 'Refresh User List',
+			}, {
 				opcode: 'resetNewData',
 				blockType: Scratch.BlockType.COMMAND,
 				text: 'Reset Got New [TYPE] Data',
@@ -169,10 +168,6 @@ class cloudlink {
 						defaultValue: 'Global',
 					},
 				},
-			}, {
-				opcode: 'refreshUserList',
-				blockType: Scratch.BlockType.COMMAND,
-				text: 'Refresh User List',
 			}, {
 				opcode: 'getFTPFileList',
 				blockType: Scratch.BlockType.COMMAND,
@@ -250,6 +245,10 @@ class cloudlink {
 				blockType: Scratch.BlockType.COMMAND,
 				text: 'Check Account',
 			}, {
+				opcode: 'checkBal',
+				blockType: Scratch.BlockType.COMMAND,
+				text: 'Check Balance',
+			}, {
 				opcode: 'setCoins',
 				blockType: Scratch.BlockType.COMMAND,
 				text: '[coinmode] [coins] coins',
@@ -286,7 +285,7 @@ class cloudlink {
 					items: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
 				},
 				coms: {
-					items: ["Connected to Server", "Connected to CloudAccount", "Connected to CloudCoin", "Connected to CloudDisk", "Logged in"],
+					items: ["Connected", "Account API Connected", "Coin API Connected", "Disk API Connected", "Logged in","Username Synced"],
 				},
 				coinmenu: {
 					items: ['Spend', 'Earn'],
@@ -295,10 +294,10 @@ class cloudlink {
 					items: ['Spend', 'Earn', 'Trade'],
 				},
 				datamenu: {
-					items: ['Global', 'Private', 'Account', 'Coin', 'Disk'],
+					items: ['Global', 'Private', 'Account', 'Coin', 'Disk', 'Trade'],
 				},
 				reportermenu: {
-					items: ['Global Data', 'Private Data', 'Account Data', 'Disk Data', 'FTP Data', 'Coin Data', 'Link Status', 'Usernames', 'My Username', 'Version'],
+					items: ['Global Data', 'Private Data', 'Account Data', 'Disk Data', 'FTP Data', 'Coin Data', 'Trade Return', 'Link Status', 'Usernames', 'My Username', 'Version'],
 				},
 				accmenu: {
 					items: ['Login', 'Register'],
@@ -443,40 +442,45 @@ class cloudlink {
 		};
 	};
 	getComState(args) {
-		if (args.com == "Connected to Server") {
+		if (args.com == "Connected") {
 			return isRunning;
-		}
-		if (args.com == "Connected to CloudCoin") {
+		} if (args.com == "Coin API Connected") {
 			if (isRunning) {
 				return (userNames.indexOf('%CC%') >= 0);
 			} else {
 				return false;
 			};
-		}
-		if (args.com == "Connected to CloudDisk") {
+		} if (args.com == "Disk API Connected") {
 			if (isRunning) {
 				return (userNames.indexOf('%CD%') >= 0);
 			} else {
 				return false;
 			};
-		}
-		if (args.com == "Connected to CloudAccount") {
+		} if (args.com == "Account API Connected") {
 			if (isRunning) {
 				return (userNames.indexOf('%CA%') >= 0);
 			} else {
 				return false;
 			};
-		}
-		if (args.com == "Logged in") {
+		} if (args.com == "Logged in") {
 			if (isRunning) {
 				return isAuth;
 			} else {
 				return false;
+			};
+		} if (args.com == "Username Synced") {
+			if (isRunning) {
+				if (myName != '') {
+					return (userNames.indexOf(String(myName)) >= 0);
+				} else {
+					return false;
+				}
+			} else {
+				return false;
 			}
-		}
-		else {
+		} else {
 			return false;
-		}
+		};
 	};
 	sendGData(args) {
 		if (isRunning) {
@@ -532,7 +536,10 @@ class cloudlink {
 		}; 
 		if (args.MENU == "FTP Data") {
 			return ftpData;
-		}
+		};
+		if (args.MENU == "Trade Return") {
+			return tradeReturn;
+		};
 	};
 	returnIsNewData(args) {
 		if (args.TYPE == "Global") {
@@ -549,6 +556,9 @@ class cloudlink {
 		};
 		if (args.TYPE == "Disk") {
 			return gotDiskData;
+		};
+		if (args.TYPE == "Trade") {
+			return gotNewTrade;
 		};
 	}
 	setMyName(args) {
@@ -603,6 +613,14 @@ class cloudlink {
 			return '';
 		}
 	};
+	refreshUserList() {
+		if (isRunning == true) {
+			this.wss.send("<%rf>\n"); // begin packet data with global stream idenifier in the header
+			return "Sent request successfully.";
+		} else {
+			return "Connection closed, no action taken.";
+		}
+	};
 	resetNewData(args) {
 		if (args.TYPE == "Global") {
 			if (gotNewGlobalData == true) {
@@ -629,14 +647,6 @@ class cloudlink {
 				gotCoinData = false;
 			};
 		};
-	};
-	refreshUserList() {
-		if (isRunning == true) {
-			this.wss.send("<%rf>\n"); // begin packet data with global stream idenifier in the header
-			return "Sent request successfully.";
-		} else {
-			return "Connection closed, no action taken.";
-		}
 	};
 	//sendCMD(args) {
 	//	if (isRunning) {
@@ -698,6 +708,7 @@ class cloudlink {
 	};
 	checkAcc() {
 		if (isRunning) {
+				gotAccountData = false;
 				this.wss.send("<%ps>\n" + myName + '\n%CA%\n{"cmd":"CHECK","id":"'+ myName+'", "data":""}\n');
 				return "Sent request successfully.";
 			} else {
@@ -705,11 +716,21 @@ class cloudlink {
 		};
 	};
 	// CLOUDCOIN OPCODES
-	getNewTrade() {
-		return gotNewTrade;
-	};
-	returnResultOfTrade() {
-		return tradeReturn;
+	checkBal() {
+		if (myName != "") {
+			if (userNames.indexOf('%CC%') >= 0) {
+				if (isAuth) {
+					this.wss.send("<%ps>\n" + myName + '\n%CC%\n{"cmd":"CHECK","id":"'+ myName+'", "data":""}\n');
+					return "Sent request successfully.";
+				} else {
+						return "Not logged in!";
+				}
+			} else {
+				return "CloudCoin API not connected! Try again later.";
+			}
+		} else {
+			return "Username not set, no action taken.";
+		};
 	};
 	setCoins(args) {
 		if (isRunning) {
