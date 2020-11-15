@@ -19,6 +19,7 @@ global USERNAMES
 STREAMS = {"gs": "", "dd":""} #Define data streams, will improve upon this design later
 USERS = set() #create unorganized, non-indexed set of users
 USERNAMES = [] #create organized, indexable list of users
+USERSDICT = {} #dictionary for figuring out what user is which
 
 """#WS over SSL for WSS support
 ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
@@ -31,42 +32,61 @@ class CloudLink(object):
     async def notify_state_global():
         if USERS:
             message = json.dumps({"type":"gs","data":str(STREAMS["gs"])}) # Send global data to every client
-            await asyncio.wait([user.send(message) for user in USERS])
+            try:
+                for user in USERS:
+                    await asyncio.wait([user.send(message)])
+            except Exception as e:
+                print("[ ! ] Error: An exception occured. For notify_state_global, here's the error:\n"+str(e))
 
     async def notify_state_private(e):
         if USERS:
             message = json.dumps({"type":"ps","data":str(STREAMS[e]),"id":str(e)}) #Send private data to every client, only one client will store the data, others will ignore
             #await asyncio.wait([user.send(message) for user in USERS])
-            for user in USERS:
-              await asyncio.wait([user.send(message)])
+            try:
+                for user in USERS:
+                    await asyncio.wait([user.send(message)])
+            except Exception as e:
+                print("[ ! ] Error: An exception occured. For notify_state_private, here's the error:\n"+str(e))
 
     async def notify_state_disk(e):
         if USERS:
             message = json.dumps({"type":"dd","data":str(STREAMS[e]),"id":str(e)}) #Send CloudDisk data to every client, only one client will store the data, others will ignore
             #await asyncio.wait([user.send(message) for user in USERS])
-            for user in USERS:
-              await asyncio.wait([user.send(message)])
+            try:
+                for user in USERS:
+                    await asyncio.wait([user.send(message)])
+            except Exception as e:
+                print("[ ! ] Error: An exception occured. For notify_state_disk, here's the error:\n"+str(e))
     
     async def notify_state_ftp(e):
         if USERS:
             message = json.dumps({"type":"ftp","data":str(STREAMS[e]),"id":str(e)}) #Send CloudDisk FTP data to every client, only one client will store the data, others will ignore
             #await asyncio.wait([user.send(message) for user in USERS])
-            for user in USERS:
-              await asyncio.wait([user.send(message)])
+            try:
+                for user in USERS:
+                    await asyncio.wait([user.send(message)])
+            except Exception as e:
+                print("[ ! ] Error: An exception occured. For notify_state_ftp, here's the error:\n"+str(e))
 
     async def notify_state_coin(e):
         if USERS:
             message = json.dumps({"type":"cd","data":str(STREAMS[e]),"id":str(e)}) #Send CloudCoin data to every client, only one client will store the data, others will ignore
             #await asyncio.wait([user.send(message) for user in USERS])
-            for user in USERS:
-              await asyncio.wait([user.send(message)])
+            try:
+                for user in USERS:
+                    await asyncio.wait([user.send(message)])
+            except Exception as e:
+                print("[ ! ] Error: An exception occured. For notify_state_coin, here's the error:\n"+str(e))
     
     async def notify_state_account(e):
         if USERS:
             message = json.dumps({"type":"ca","data":str(STREAMS[e]),"id":str(e)}) #Send CloudAccount data to every client, only one client will store the data, others will ignore
             #await asyncio.wait([user.send(message) for user in USERS])
-            for user in USERS:
-              await asyncio.wait([user.send(message)])
+            try:
+                for user in USERS:
+                    await asyncio.wait([user.send(message)])
+            except Exception as e:
+                print("[ ! ] Error: An exception occured. For notify_state_account, here's the error:\n"+str(e))
 
     async def update_username_lists():
         if USERS:
@@ -75,13 +95,20 @@ class CloudLink(object):
                 y = str(y + USERNAMES[x] + ";")
             message = json.dumps({"type":"ul","data":str(y)}) #Send username list to all clients
             #await asyncio.wait([user.send(message) for user in USERS])
-            for user in USERS:
-              await asyncio.wait([user.send(message)])
+            try:
+                for user in USERS:
+                    await asyncio.wait([user.send(message)])
+            except Exception as e:
+                print("[ ! ] Error: An exception occured. For update_username_lists, here's the error:\n"+str(e))
 
     async def refresh_username_lists():
         if USERS:
-          for user in USERS:
-            await asyncio.wait([user.send(json.dumps({"type":"ru","data":""}))])
+            try:
+                for user in USERS:
+                    await asyncio.wait([user.send(json.dumps({"type":"ru","data":""}))])
+            except Exception as e:
+                print("[ ! ] Error: An exception occured. For refresh_username_lists, here's the error:\n"+str(e))
+                
 
     async def register(websocket): #Create client session
         USERS.add(websocket)
@@ -90,8 +117,11 @@ class CloudLink(object):
         USERS.remove(websocket)
 
     async def server(websocket, path):
-        global USERNAMES
+        global USERNAMES, set_updating
         await CloudLink.register(websocket)
+        print("[ i ] Connection detected...")
+        if not websocket in USERSDICT:
+            USERSDICT[websocket] = ""
         await CloudLink.notify_state_global()
         await CloudLink.update_username_lists()
         try:
@@ -124,26 +154,23 @@ class CloudLink(object):
                         print("[ i ] Disconnecting user:", str(data[1]))
                         USERNAMES.remove(str(data[1]))
                         STREAMS.pop(str(data[1]))
-                    await CloudLink.unregister(websocket)
-                    await CloudLink.update_username_lists()
+                        await CloudLink.unregister(websocket)
+                        await CloudLink.update_username_lists()
+                        if websocket in USERSDICT:
+                            del USERSDICT[websocket]
+                        print("[ i ] Usernames: "+str(USERNAMES))
                 elif data[0] == "<%ftp>": # CloudDisk API FTP update command
                     if data[2] in USERNAMES:
                         STREAMS[str(data[2])] = str(data[3])
                         await CloudLink.notify_state_ftp(str(data[2])) 
                 elif data[0] == "<%sn>": # Append username command
-                    if data[1] == "%CD%":
-                        print("[ OK ] Linked to CloudDisk API.")
-                    elif data[1] == "%CC%":
-                        print("[ OK ] Linked to CloudCoin API.")
-                    elif data[1] == "%CA%":
-                        print("[ OK ] Linked to CloudAccount API.")
-                    else:
-                        if not data[1] in USERNAMES:
-                            print("[ i ] Connected:", data[1])
                     if not data[1] in USERNAMES:
+                        print("[ i ] Connected:", data[1])
                         USERNAMES.append(str(data[1]))
                         STREAMS[str(data[1])] = ""
+                        USERSDICT[websocket] = data[1]
                         await CloudLink.update_username_lists()
+                        print("[ i ] Usernames: "+str(USERNAMES))
                 elif data[0] == "<%rf>": # Refresh user list
                     print("[ i ] Refreshing user list...")
                     USERNAMES = []
@@ -153,13 +180,22 @@ class CloudLink(object):
                     print("[ ! ] Error: Unknown command:", str(data))
         except Exception as e:
             print("[ ! ] Error: An exception occured. Here's the error:\n"+str(e))
+            if data[1] in USERNAMES:
+                await websocket.send(json.dumps({"type":"ps","data":"E:"+str(e), "id":data[1]}))
         finally:
             print("[ i ] Disconnect detected...")
+            if websocket in USERSDICT:
+                try:
+                    if str(USERSDICT[websocket]) in USERNAMES:
+                        USERNAMES.remove(str(USERSDICT[websocket]))
+                except Exception as e:
+                    print(str(e))
+                del USERSDICT[websocket]
             if websocket in USERS:
                 await CloudLink.unregister(websocket)
-            USERNAMES = []
             await CloudLink.update_username_lists()
             await CloudLink.refresh_username_lists()
+            print("[ i ] Usernames: "+str(USERNAMES))
 
 if __name__ == "__main__":
     try:
