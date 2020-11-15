@@ -12,4 +12,4 @@ The client is a [E羊icques](https://sheeptester.github.io/scratch-gui/) extensi
 
 ## View the wiki page for documentation on how to use the server.py program and the extension.
 
-## Click [here](https://sheeptester.github.io/scratch-gui/?url=https://mikedev101.github.io/cloudlink/cloudlink.js) to try the extension.
+## Click [here](https://sheeptester.github.io/scratch-gui/?url=https://mikedev101.github.io/cloudlink/index.js) to try the extension.
