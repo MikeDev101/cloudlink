@@ -138,10 +138,12 @@ class CloudLink(object):
                     elif data[1] == "%CA%":
                         print("[ OK ] Linked to CloudAccount API.")
                     else:
-                        print("[ i ] Connected:", data[1])
-                    USERNAMES.append(str(data[1]))
-                    STREAMS[str(data[1])] = ""
-                    await CloudLink.update_username_lists()
+                        if not data[1] in USERNAMES:
+                            print("[ i ] Connected:", data[1])
+                    if not data[1] in USERNAMES:
+                        USERNAMES.append(str(data[1]))
+                        STREAMS[str(data[1])] = ""
+                        await CloudLink.update_username_lists()
                 elif data[0] == "<%rf>": # Refresh user list
                     print("[ i ] Refreshing user list...")
                     USERNAMES = []
@@ -150,9 +152,12 @@ class CloudLink(object):
                 else: # Generic unknown command response
                     print("[ ! ] Error: Unknown command:", str(data))
         except Exception as e:
-            print("[ ! ] Whoops! Something went wrong. Here's the error:", e)
-            await CloudLink.unregister(websocket) # If all things fork up, kill the connection
-            USERNAMES = [] # Force update of usernames in the server
+            print("[ ! ] Error: An exception occured. Here's the error:\n"+str(e))
+        finally:
+            print("[ i ] Disconnect detected...")
+            if websocket in USERS:
+                await CloudLink.unregister(websocket)
+            USERNAMES = []
             await CloudLink.update_username_lists()
             await CloudLink.refresh_username_lists()
 
