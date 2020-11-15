@@ -4,7 +4,7 @@
 // See https://github.com/KingdomPy/scratch_websockets/blob/master/index.js for the original script!
 // DO NOT USE ON OLDER WEB BROWSERS! CloudLink is designed to run best on a modern web browser.
 
-const vers = 'B2.6';
+const vers = 'B2.7';
 console.log("[CloudLink] Loading 1/3: Initializing the extension...")
 defIP = "wss://91f71231e2c9.ngrok.io";
 
@@ -571,9 +571,13 @@ class cloudlink {
 							return "Your username must be 20 characters or less!"
 						} else {
 							if (args.NAME.length != 0) {
-								this.wss.send("<%sn>\n" + args.NAME); // begin packet data with setname command in the header
-								myName = args.NAME;
-								return "Set username on server successfully.";
+								if (args.NAME == "%CA%" || args.NAME == "%CC%" || args.NAME == "%CD%"){
+								return "Those IDs are reserved.";
+								} else {
+									this.wss.send("<%sn>\n" + args.NAME); // begin packet data with setname command in the header
+									myName = args.NAME;
+									return "Set username on server successfully.";
+								}
 							} else {
 								return "You can't have a blank username!";
 							}
@@ -670,9 +674,13 @@ class cloudlink {
 		if (args.ACCMODE == "Login") { 
 			if (isRunning) {
 				if (!isAuth) {
-					accMode = "LI"
-					this.wss.send("<%ps>\n" + myName + '\n%CA%\n{"cmd":"LOGIN","id":"'+ myName+'", "data":"'+args.pswd+'"}\n');
-					return "Sent request successfully.";
+					if (myName != ""){
+						accMode = "LI"
+						this.wss.send("<%ps>\n" + myName + '\n%CA%\n{"cmd":"LOGIN","id":"'+ myName+'", "data":"'+args.pswd+'"}\n');
+						return "Sent request successfully.";
+					} else {
+						return "Username not set! No action taken.";
+					}
 				} else {
 					return "Already logged in!";
 				};
@@ -683,9 +691,13 @@ class cloudlink {
 		if (args.ACCMODE == "Register") {
 			if (isRunning) {
 				if (!isAuth) {
-					accMode = "LI"
-					this.wss.send("<%ps>\n" + myName + '\n%CA%\n{"cmd":"REGISTER","id":"'+ myName+'", "data":"'+args.pswd+'"}\n');
-					return "Sent request successfully.";
+					if (myName != ""){
+						accMode = "LI"
+						this.wss.send("<%ps>\n" + myName + '\n%CA%\n{"cmd":"REGISTER","id":"'+ myName+'", "data":"'+args.pswd+'"}\n');
+						return "Sent request successfully.";
+					} else {
+						return "Username not set! No action taken.";
+					}
 				} else {
 					return "Already logged in!";
 				};
@@ -697,9 +709,13 @@ class cloudlink {
 	logoutAcc() {
 		if (isRunning) {
 			if (isAuth) {
-				accMode = "LO";
-				this.wss.send("<%ps>\n" + myName + '\n%CA%\n{"cmd":"LOGOUT","id":"'+ myName+'", "data":""}\n');
-				return "Sent request successfully.";
+				if (myName != ""){
+					accMode = "LO";
+					this.wss.send("<%ps>\n" + myName + '\n%CA%\n{"cmd":"LOGOUT","id":"'+ myName+'", "data":""}\n');
+					return "Sent request successfully.";
+				} else {
+					return "Username not set! No action taken.";
+				}
 			} else {
 				return "Already logged out!";
 			};
@@ -709,9 +725,13 @@ class cloudlink {
 	};
 	checkAcc() {
 		if (isRunning) {
-				gotAccountData = false;
-				this.wss.send("<%ps>\n" + myName + '\n%CA%\n{"cmd":"CHECK","id":"'+ myName+'", "data":""}\n');
-				return "Sent request successfully.";
+				if (myName != "") {
+					gotAccountData = false;
+					this.wss.send("<%ps>\n" + myName + '\n%CA%\n{"cmd":"CHECK","id":"'+ myName+'", "data":""}\n');
+					return "Sent request successfully.";
+				} else {
+					return "Username not set! No action taken.";
+				}
 			} else {
 				return "Connection closed, no action taken.";
 		};
