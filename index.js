@@ -4,9 +4,9 @@
 // See https://github.com/KingdomPy/scratch_websockets/blob/master/index.js for the original script!
 // DO NOT USE ON OLDER WEB BROWSERS! CloudLink is designed to run best on a modern web browser.
 
-const vers = 'B2.7';
+const vers = 'S2.0';
 console.log("[CloudLink] Loading 1/3: Initializing the extension...")
-defIP = "wss://91f71231e2c9.ngrok.io";
+const defIP = "wss://91f71231e2c9.ngrok.io";
 
 // Booleans for signifying an update to the global or private data streams, as well as the disk and coin data.
 var gotNewGlobalData = false; 
@@ -298,7 +298,7 @@ class cloudlink {
 					items: ['Global', 'Private', 'Account', 'Coin', 'Disk', 'Trade'],
 				},
 				reportermenu: {
-					items: ['Global Data', 'Private Data', 'Account Data', 'Disk Data', 'FTP Data', 'Coin Data', 'Trade Return', 'Link Status', 'Usernames', 'My Username', 'Version'],
+					items: ['Global Data', 'Private Data', 'Account Data', 'Disk Data', 'FTP Data', 'Coin Data', 'Trade Return', 'Link Status', 'Usernames', 'My Username', 'Version', "Test IP"],
 				},
 				accmenu: {
 					items: ['Login', 'Register'],
@@ -540,6 +540,9 @@ class cloudlink {
 		};
 		if (args.MENU == "Trade Return") {
 			return tradeReturn;
+		};
+		if (args.MENU == "Test IP") {
+			return defIP;
 		};
 	};
 	returnIsNewData(args) {
