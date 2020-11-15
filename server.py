@@ -7,7 +7,7 @@ For more details about CloudLink, please visit
 https://github.com/MikeDev101/cloudlink
 """
 
-vers = "B2.3"
+vers = "B2.4"
 
 import asyncio, json, websockets, sys, threading, ssl
 
@@ -20,88 +20,89 @@ STREAMS = {"gs": "", "dd":""} #Define data streams, will improve upon this desig
 USERS = set() #create unorganized, non-indexed set of users
 USERNAMES = [] #create organized, indexable list of users
 USERSDICT = {} #dictionary for figuring out what user is which
-
-"""#WS over SSL for WSS support
-ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-ssl_context.load_cert_chain("cert.pem", "key.pem")"""
+POINTERDICT = {} #reverse of USERSDICT
 
 class CloudLink(object):
     def __init__(self, loop):
         self.loop = loop
 
-    async def notify_state_global():
+    async def notify_state_global(): # Send global data to every client
         if USERS:
-            message = json.dumps({"type":"gs","data":str(STREAMS["gs"])}) # Send global data to every client
+            message = json.dumps({"type":"gs","data":str(STREAMS["gs"])})
             try:
                 for user in USERS:
                     await asyncio.wait([user.send(message)])
             except Exception as e:
                 print("[ ! ] Error: An exception occured. For notify_state_global, here's the error:\n"+str(e))
 
-    async def notify_state_private(e):
+    async def notify_state_private(e): # Send private data to specific client
         if USERS:
-            message = json.dumps({"type":"ps","data":str(STREAMS[e]),"id":str(e)}) #Send private data to every client, only one client will store the data, others will ignore
-            #await asyncio.wait([user.send(message) for user in USERS])
+            message = json.dumps({"type":"ps","data":str(STREAMS[e]),"id":str(e)})
             try:
-                for user in USERS:
-                    await asyncio.wait([user.send(message)])
+                if e in POINTERDICT:
+                    await asyncio.wait([POINTERDICT[e].send(message)])
+                else:
+                    print("[ ! ] Error: Attempted to notify_state_private to an invalid ID.")
             except Exception as e:
                 print("[ ! ] Error: An exception occured. For notify_state_private, here's the error:\n"+str(e))
 
-    async def notify_state_disk(e):
+    async def notify_state_disk(e): # Send disk data to specific client
         if USERS:
-            message = json.dumps({"type":"dd","data":str(STREAMS[e]),"id":str(e)}) #Send CloudDisk data to every client, only one client will store the data, others will ignore
-            #await asyncio.wait([user.send(message) for user in USERS])
+            message = json.dumps({"type":"dd","data":str(STREAMS[e]),"id":str(e)})
             try:
-                for user in USERS:
-                    await asyncio.wait([user.send(message)])
+                if e in POINTERDICT:
+                    await asyncio.wait([POINTERDICT[e].send(message)])
+                else:
+                    print("[ ! ] Error: Attempted to notify_state_disk to an invalid ID.")
             except Exception as e:
                 print("[ ! ] Error: An exception occured. For notify_state_disk, here's the error:\n"+str(e))
     
-    async def notify_state_ftp(e):
+    async def notify_state_ftp(e): # Send ftp data to specific client
         if USERS:
-            message = json.dumps({"type":"ftp","data":str(STREAMS[e]),"id":str(e)}) #Send CloudDisk FTP data to every client, only one client will store the data, others will ignore
-            #await asyncio.wait([user.send(message) for user in USERS])
+            message = json.dumps({"type":"ftp","data":str(STREAMS[e]),"id":str(e)})
             try:
-                for user in USERS:
-                    await asyncio.wait([user.send(message)])
+                if e in POINTERDICT:
+                    await asyncio.wait([POINTERDICT[e].send(message)])
+                else:
+                    print("[ ! ] Error: Attempted to notify_state_ftp to an invalid ID.")
             except Exception as e:
                 print("[ ! ] Error: An exception occured. For notify_state_ftp, here's the error:\n"+str(e))
 
-    async def notify_state_coin(e):
+    async def notify_state_coin(e): # Send coin data to specific client
         if USERS:
-            message = json.dumps({"type":"cd","data":str(STREAMS[e]),"id":str(e)}) #Send CloudCoin data to every client, only one client will store the data, others will ignore
-            #await asyncio.wait([user.send(message) for user in USERS])
+            message = json.dumps({"type":"cd","data":str(STREAMS[e]),"id":str(e)})
             try:
-                for user in USERS:
-                    await asyncio.wait([user.send(message)])
+                if e in POINTERDICT:
+                    await asyncio.wait([POINTERDICT[e].send(message)])
+                else:
+                    print("[ ! ] Error: Attempted to notify_state_coin to an invalid ID.")
             except Exception as e:
                 print("[ ! ] Error: An exception occured. For notify_state_coin, here's the error:\n"+str(e))
     
-    async def notify_state_account(e):
+    async def notify_state_account(e): # Send account data to specific client
         if USERS:
-            message = json.dumps({"type":"ca","data":str(STREAMS[e]),"id":str(e)}) #Send CloudAccount data to every client, only one client will store the data, others will ignore
-            #await asyncio.wait([user.send(message) for user in USERS])
+            message = json.dumps({"type":"ca","data":str(STREAMS[e]),"id":str(e)})
             try:
-                for user in USERS:
-                    await asyncio.wait([user.send(message)])
+                if e in POINTERDICT:
+                    await asyncio.wait([POINTERDICT[e].send(message)])
+                else:
+                    print("[ ! ] Error: Attempted to notify_state_account to an invalid ID.")
             except Exception as e:
                 print("[ ! ] Error: An exception occured. For notify_state_account, here's the error:\n"+str(e))
 
-    async def update_username_lists():
+    async def update_username_lists(): # Send username list to every client
         if USERS:
             y = ""
             for x in range(len(USERNAMES)):
                 y = str(y + USERNAMES[x] + ";")
-            message = json.dumps({"type":"ul","data":str(y)}) #Send username list to all clients
-            #await asyncio.wait([user.send(message) for user in USERS])
+            message = json.dumps({"type":"ul","data":str(y)})
             try:
                 for user in USERS:
                     await asyncio.wait([user.send(message)])
             except Exception as e:
                 print("[ ! ] Error: An exception occured. For update_username_lists, here's the error:\n"+str(e))
 
-    async def refresh_username_lists():
+    async def refresh_username_lists(): # Send refresh command to every client
         if USERS:
             try:
                 for user in USERS:
@@ -158,7 +159,7 @@ class CloudLink(object):
                         await CloudLink.update_username_lists()
                         if websocket in USERSDICT:
                             del USERSDICT[websocket]
-                        print("[ i ] Usernames: "+str(USERNAMES))
+                            del POINTERDICT[data[1]]
                 elif data[0] == "<%ftp>": # CloudDisk API FTP update command
                     if data[2] in USERNAMES:
                         STREAMS[str(data[2])] = str(data[3])
@@ -169,6 +170,7 @@ class CloudLink(object):
                         USERNAMES.append(str(data[1]))
                         STREAMS[str(data[1])] = ""
                         USERSDICT[websocket] = data[1]
+                        POINTERDICT[data[1]] = websocket
                         await CloudLink.update_username_lists()
                         print("[ i ] Usernames: "+str(USERNAMES))
                 elif data[0] == "<%rf>": # Refresh user list
