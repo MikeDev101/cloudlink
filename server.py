@@ -7,7 +7,7 @@ For more details about CloudLink, please visit
 https://github.com/MikeDev101/cloudlink
 """
 
-vers = "B2.4"
+vers = "S2.0"
 
 import asyncio, json, websockets, sys, threading, ssl
 
