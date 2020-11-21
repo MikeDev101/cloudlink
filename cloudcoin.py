@@ -6,120 +6,109 @@ For more details about the CloudLink API, please visit
 https://github.com/MikeDev101/cloudlink
 
 """
-servname = 'CC'
-PORT = 3000
+import websocket, json, threading, time, sys, traceback, os
 
-import websocket, json, threading, time, sys, traceback, os.path
+SERVERID = 'CC' #Will be seen as %CC% on the Link
+IP = "ws://127.0.0.1:3000/"
 
-if not os.path.isfile('cloudcoin.db'):
-    spawn_db = open('cloudcoin.db', 'w+')
-    spawn_db.write(json.dump({"users": [], "data": {}}))
-    spawn_db.close()
-
-if __name__ == "__main__":
-    print("[ i ] Launching CloudCoin...")
-    if "-ip" in sys.argv:
-        ip = str(sys.argv[2])
-        print("[ i ] Connecting to CloudLink API server using IP:", ip)
-    else:
-        print("[ i ] Using localhost to connect to CloudLink API server...")
-        ip = "ws://127.0.0.1:3000/"
+def init_files():
+    try:
+        os.mkdir("./USERDATA")
+        print("[ i ] Created userdata directory.")
+    except:
+        pass
+    finally:
+        print("[ i ] Initialized files.")
 
 def user_IO_handler(cmd, user, data):
     print('[ i ] User "'+user+'": '+cmd+'...')
-    time.sleep(0.05) # Delay to keep connection stable if using ultra-low latency connections
     if cmd == "PING":
         try:
-            ws.send("<%cd>\n%"+servname+"%\n"+user+"\nOK")
+            ws.send("<%cd>\n%"+SERVERID+"%\n"+user+"\nOK")
         except Exception as e:
-            print("[ ! ] Error on user thread: attempted to handle "+cmd+" for user",str(user),"but an exception occured:",str(e))
-            ws.send("<%cd>\n%"+servname+"%\n"+user+"\n") # Return error to client
+            print("[ ! ] Error on user thread: attempted to handle "+cmd+" for user",str(user),"but an exception ocdured:",str(e))
+            ws.send("<%cd>\n%"+SERVERID+"%\n"+user+"\n") # Return error to client
     elif cmd == "CHECK":
         try:
-            # Reload cloudcoin file
-            with open("cloudcoin.db") as json_file:
-                userdata = json.load(json_file)
-            if user in userdata['users']:
-                raw_userdata = ((userdata['data'])[user]) #read data from disk
-                rt_data = str(raw_userdata) #read specific data slot
+            # Check the existence of a user in the USERDATA directory
+            userlist = os.listdir("./USERDATA")
+            if user in userlist:
+                userdata = json.loads(str(open(('./USERDATA/'+str(user)), "r").read()))
+                rt_data = str(userdata['balance']) #read balance from disk
             else:
                 rt_data = 'E:ACC_NOT_FOUND'
-            ws.send("<%cd>\n%"+servname+"%\n"+user+"\n"+rt_data+"\n") # Return value to client
+            ws.send("<%cd>\n%"+SERVERID+"%\n"+user+"\n"+rt_data+"\n") # Return value to client
         except Exception as e:
-            print("[ ! ] Error on user thread: attempted to handle "+cmd+" for user",str(user),"but an exception occured:",str(e),", and the traceback data reads the following:\n"+str(traceback.format_exc()))
-            ws.send("<%cd>\n%"+servname+"%\n"+user+"\nE:INTERNAL_SERVER_ERR") # Return error to client
+            print("[ ! ] Error on user thread: attempted to handle "+cmd+" for user",str(user),"but an exception ocdured:",str(e),", and the traceback data reads the following:\n"+str(traceback.format_exc()))
+            ws.send("<%cd>\n%"+SERVERID+"%\n"+user+"\nE:INTERNAL_SERVER_ERR") # Return error to client
     elif cmd == "SPEND":
         try:
-            # Reload cloudcoin file
-            with open("cloudcoin.db") as json_file:
-                userdata = json.load(json_file)
-            if user in userdata['users']:
-                if (len(str(data)) > 1000):
+            userlist = os.listdir("./USERDATA")
+            if user in userlist:
+                userdata = json.loads(str(open(('./USERDATA/'+str(user)), "r").read()))
+                if (len(data) > 1000):
                     rt_data = "E:DATA_TOO_LARGE"
                 else:
-                    raw_userdata = ((userdata['data'])[user]) #read data from disk
-                    raw_userdata = str(float(raw_userdata)-float(data)) #replace data in slot
-                    if float(raw_userdata) < 0.0:
+                    userdata['balance'] = float(float(userdata['balance'])-float(data))
+                    if userdata['balance'] < 0.0:
                         rt_data = "E:BALANCE_TOO_LOW"
                     else:
-                        (userdata['data'])[user] = raw_userdata #update contents on disk
-                        with open("cloudcoin.db", "w") as outfile:
+                        with open(('./USERDATA/'+str(user)), "w") as outfile:
                             json.dump(userdata, outfile)
                         rt_data = "OK"
             else:
                 rt_data = 'E:ACC_NOT_FOUND'
-            ws.send("<%cd>\n%"+servname+"%\n"+user+"\n"+rt_data+"\n") # Return value to client
+            ws.send("<%cd>\n%"+SERVERID+"%\n"+user+"\n"+rt_data+"\n") # Return value to client
         except Exception as e:
-            print("[ ! ] Error on user thread: attempted to handle "+cmd+" for user",str(user),"but an exception occured:",str(e),", and the traceback data reads the following:\n"+str(traceback.format_exc()))
-            ws.send("<%cd>\n%"+servname+"%\n"+user+"\nE:INTERNAL_SERVER_ERR") # Return error to client
+            print("[ ! ] Error on user thread: attempted to handle "+cmd+" for user",str(user),"but an exception ocdured:",str(e),", and the traceback data reads the following:\n"+str(traceback.format_exc()))
+            ws.send("<%cd>\n%"+SERVERID+"%\n"+user+"\nE:INTERNAL_SERVER_ERR") # Return error to client
     elif cmd == "EARN":
         try:
-            # Reload cloudcoin file
-            with open("cloudcoin.db") as json_file:
-                userdata = json.load(json_file)
-            if user in userdata['users']:
-                if (len(str(data)) > 1000):
+            userlist = os.listdir("./USERDATA")
+            if user in userlist:
+                userdata = json.loads(str(open(('./USERDATA/'+str(user)), "r").read()))
+                if (len(data) > 1000):
                     rt_data = "E:DATA_TOO_LARGE"
                 else:
-                    raw_userdata = ((userdata['data'])[user]) #read data from disk
-                    raw_userdata = str(float(raw_userdata)+float(data)) #replace data in slot
-                    (userdata['data'])[user] = raw_userdata #update contents on disk
-                    with open("cloudcoin.db", "w") as outfile:
+                    userdata['balance'] = float(float(userdata['balance'])+float(data)) #replace data on disk
+                    with open(('./USERDATA/'+str(user)), "w") as outfile:
                         json.dump(userdata, outfile)
                     rt_data = "OK"
             else:
                 rt_data = 'E:ACC_NOT_FOUND'
-            ws.send("<%cd>\n%"+servname+"%\n"+user+"\n"+rt_data+"\n") # Return value to client
+            ws.send("<%cd>\n%"+SERVERID+"%\n"+user+"\n"+rt_data+"\n") # Return value to client
         except Exception as e:
-            print("[ ! ] Error on user thread: attempted to handle "+cmd+" for user",str(user),"but an exception occured:",str(e),", and the traceback data reads the following:\n"+str(traceback.format_exc()))
-            ws.send("<%cd>\n%"+servname+"%\n"+user+"\nE:INTERNAL_SERVER_ERR") # Return error to client
+            print("[ ! ] Error on user thread: attempted to handle "+cmd+" for user",str(user),"but an exception ocdured:",str(e),", and the traceback data reads the following:\n"+str(traceback.format_exc()))
+            ws.send("<%cd>\n%"+SERVERID+"%\n"+user+"\nE:INTERNAL_SERVER_ERR") # Return error to client
     elif cmd == "REGISTER":
         try:
-            # Reload cloudcoin file
-            with open("cloudcoin.db") as json_file:
-                userdata = json.load(json_file)
-            if not user in userdata['users']:
-                raw_userdata = (userdata['users'])
-                raw_userdata.append(str(user))
-                with open("cloudcoin.db", "w") as outfile:
-                    json.dump(userdata, outfile)
-                raw_userdata = (userdata['data'])
-                raw_userdata[str(user)] = "0.00"
-                with open("cloudcoin.db", "w") as outfile:
+            userlist = os.listdir("./USERDATA")
+            if not user in userlist:
+                userdata = {}
+                userdata["balance"] = 0.0
+                with open(('./USERDATA/'+str(user)), "w+") as outfile:
                     json.dump(userdata, outfile)
                 print("[ i ] Registered user "+user+" successfully.")
         except Exception as e:
-            print("[ ! ] Error on user thread: attempted to handle "+cmd+" from the CloudAccount API, but an exception occured:",str(e),", and the traceback data reads the following:\n"+str(traceback.format_exc()))
+            print("[ ! ] Error on user thread: attempted to handle "+cmd+" from the CloudAccount API, but an exception ocdured:",str(e),", and the traceback data reads the following:\n"+str(traceback.format_exc()))
+    elif cmd == "DELETE":
+        try:
+            userlist = os.listdir("./USERDATA")
+            if user in userlist:
+                os.remove(('./USERDATA/'+str(user)))
+                print("[ i ] Deleted user "+user+" successfully.")
+        except Exception as e:
+            print("[ ! ] Error on user thread: attempted to handle "+cmd+" from the CloudAccount API, but an exception ocdured:",str(e),", and the traceback data reads the following:\n"+str(traceback.format_exc()))
     else:
-        print("[ ! ] Error on user thread: attempted to handle a packet for user",str(user),"but an exception occured: The packet data is corrupt or invalid.")
-        ws.send("<%cd>\n%"+servname+"%\n"+user+"\nE:INVALID_CMD")
+        print("[ ! ] Error on user thread: attempted to handle a packet for user",str(user),"but an exception ocdured: The packet data is corrupt or invalid.")
+        ws.send("<%cd>\n%"+SERVERID+"%\n"+user+"\nE:INVALID_CMD")
 
 def on_message(ws, message):
     pTmp = json.loads(message) # Convert the message from str. to a dict. object
     # Spawn user thread to handle the I/O from the websockets.
     if str(pTmp["type"]) == "ru": #Refresh userlist return, DO NOT REMOVE
-        ws.send("<%sn>\n%"+servname+"%")
-    elif (pTmp['id'] == ("%"+servname+"%")): # confirm that the packet is being transmitted to the correct server
+        ws.send("<%sn>\n%"+SERVERID+"%")
+    elif (pTmp['id'] == ("%"+SERVERID+"%")): # confirm that the packet is being transmitted to the correct server
         if __name__ == "__main__":
             uTmp = json.loads(pTmp['data']) #Read the json-encoded packet, and spawn a thread to handle it
             uCMD = uTmp['cmd']
@@ -130,15 +119,17 @@ def on_message(ws, message):
             tr.start()
 
 def on_error(ws, error):
-    print("[ ! ] Oops! An error occured:", str(error))
+    print("[ ! ] Oops! An error ocdured:", str(error))
 
 def on_close(ws):
     print("[OK] CloudCoin is now disconnected.")
 
 def on_open(ws):
-    ws.send("<%sn>\n%"+servname+"%")
+    ws.send("<%sn>\n%"+SERVERID+"%")
     print("[OK] CloudCoin is connected to CloudLink.")
 
 if __name__ == "__main__":
-    ws = websocket.WebSocketApp(("ws://127.0.0.1:"+str(PORT)+"/"), on_open = on_open, on_message = on_message, on_error = on_error, on_close = on_close)
+    init_files()
+    print("[ i ] Launching CloudCoin...")
+    ws = websocket.WebSocketApp(IP, on_open = on_open, on_message = on_message, on_error = on_error, on_close = on_close)
     ws.run_forever()

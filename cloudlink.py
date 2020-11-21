@@ -6,14 +6,11 @@ Rewritten in 2020.
 For more details about CloudLink, please visit
 https://github.com/MikeDev101/cloudlink
 """
-
-vers = "S2.0"
-
 import asyncio, json, websockets, sys, threading, ssl
 
+vers = "S2.1"
 PORT = 3000 #Define default port if the code runs on it's own
 enable_verbose_events = False #Leave verbose events off by default
-
 global USERNAMES
 
 STREAMS = {"gs": "", "dd":""} #Define data streams, will improve upon this design later
@@ -109,7 +106,6 @@ class CloudLink(object):
                     await asyncio.wait([user.send(json.dumps({"type":"ru","data":""}))])
             except Exception as e:
                 print("[ ! ] Error: An exception occured. For refresh_username_lists, here's the error:\n"+str(e))
-                
 
     async def register(websocket): #Create client session
         USERS.add(websocket)
@@ -150,6 +146,15 @@ class CloudLink(object):
                     if data[2] in USERNAMES:
                         STREAMS[str(data[2])] = str(data[3])
                         await CloudLink.notify_state_account(str(data[2]))
+                elif data[0] == "<%ftp>": # CloudDisk API FTP update command
+                    if data[2] in USERNAMES:
+                        STREAMS[str(data[2])] = str(data[3])
+                        await CloudLink.notify_state_ftp(str(data[2]))
+                elif data[0] == "<%rf>": # Refresh user list
+                    print("[ i ] Refreshing user list...")
+                    USERNAMES = []
+                    await CloudLink.update_username_lists()
+                    await CloudLink.refresh_username_lists()
                 elif data[0] == "<%ds>": # Disconnect command
                     if data[1] in USERNAMES:
                         print("[ i ] Disconnecting user:", str(data[1]))
@@ -160,10 +165,6 @@ class CloudLink(object):
                         if websocket in USERSDICT:
                             del USERSDICT[websocket]
                             del POINTERDICT[data[1]]
-                elif data[0] == "<%ftp>": # CloudDisk API FTP update command
-                    if data[2] in USERNAMES:
-                        STREAMS[str(data[2])] = str(data[3])
-                        await CloudLink.notify_state_ftp(str(data[2])) 
                 elif data[0] == "<%sn>": # Append username command
                     if not data[1] in USERNAMES:
                         print("[ i ] Connected:", data[1])
@@ -173,17 +174,10 @@ class CloudLink(object):
                         POINTERDICT[data[1]] = websocket
                         await CloudLink.update_username_lists()
                         print("[ i ] Usernames: "+str(USERNAMES))
-                elif data[0] == "<%rf>": # Refresh user list
-                    print("[ i ] Refreshing user list...")
-                    USERNAMES = []
-                    await CloudLink.update_username_lists()
-                    await CloudLink.refresh_username_lists()
                 else: # Generic unknown command response
                     print("[ ! ] Error: Unknown command:", str(data))
         except Exception as e:
             print("[ ! ] Error: An exception occured. Here's the error:\n"+str(e))
-            if data[1] in USERNAMES:
-                await websocket.send(json.dumps({"type":"ps","data":"E:"+str(e), "id":data[1]}))
         finally:
             print("[ i ] Disconnect detected...")
             if websocket in USERSDICT:
