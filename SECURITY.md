@@ -14,8 +14,9 @@ At this time, Release S1.1 is the latest supported version. Any older build of t
 
 | Version  | Supported?         |
 | ------- | ------------------ |
-| B2.0     | :x: (Not available due to being incomplete) |
-| S1.1     | :white_check_mark: |
+| S2.1    | :white_check_mark: |
+| S2.0     | :x: |
+| S1.1     | :x: |
 | < 1.1   | :x: (Considered Legacy, and will not be updated, but software made using legacy versions are fully compatible with newer versions)|
 
 ## Reporting a Vulnerability
