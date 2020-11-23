@@ -23,7 +23,7 @@ At this time, Release S1.1 is the latest supported version. Any older build of t
 
 In the event of a vulnerability, please follow the following format when creating a issue.
 
-1. The version number of the CloudLink API (server/client), for example: "Versions: 1.8/1.1b".
+1. The version number of the CloudLink suite you use, for example: "Client S2.1, Server S2.1".
 2. A detailed description of the vulnerability.
 3. Anything else you would like to comment on.
 
