@@ -10,7 +10,7 @@ Our version system has been updated, all client and server version numbers start
 | S#.#     | Stable Release    |
 | No S or B before Version # | Legacy Release    |
 
-At this time, Release S1.1 is the latest supported version. Any older build of the client or the server.py is unsupported.
+At this time, Release S2.1 is the latest supported version. Any older build of the extension, cloudlink.py, or cloudaccount/disk/coin.py is unsupported.
 
 | Version  | Supported?         |
 | ------- | ------------------ |
