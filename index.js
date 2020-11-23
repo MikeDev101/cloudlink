@@ -582,7 +582,9 @@ class cloudaccount {
 	getComState() {
 		if (isRunning) {
 			if (userNames.indexOf("%CA%") >= 0) {
-			return true;
+				return true;
+			} else {
+				return false;
 			}
 		} else {
 			return false;
@@ -758,7 +760,9 @@ class cloudcoin {
 	getComState() {
 		if (isRunning) {
 			if (userNames.indexOf("%CC%") >= 0) {
-			return true;
+				return true;
+			} else {
+				return false;
 			}
 		} else {
 			return false;
@@ -940,7 +944,9 @@ class clouddisk {
 	getComState() {
 		if (isRunning) {
 			if (userNames.indexOf("%CD%") >= 0) {
-			return true;
+				return true;
+			} else {
+				return false;
 			}
 		} else {
 			return false;
