@@ -14,10 +14,10 @@ At this time, Release S1.1 is the latest supported version. Any older build of t
 
 | Version  | Supported?         |
 | ------- | ------------------ |
-| S2.1    | :white_check_mark: |
-| S2.0     | :x: |
-| S1.1     | :x: |
-| < 1.1   | :x: (Considered Legacy, and will not be updated, but software made using legacy versions are fully compatible with newer versions)|
+| S2.1    | :white_check_mark: (Index.js) |
+| S2.0     | :x: (Oldindex.js) |
+| S1.1     | :x: (Old.js) |
+| < 1.1   | :x: (Legacy, some features will NOT be supported in S2.2 and newer)|
 
 ## Reporting a Vulnerability
 
