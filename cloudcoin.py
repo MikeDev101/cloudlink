@@ -133,3 +133,4 @@ if __name__ == "__main__":
     print("[ i ] Launching CloudCoin...")
     ws = websocket.WebSocketApp(IP, on_open = on_open, on_message = on_message, on_error = on_error, on_close = on_close)
     ws.run_forever()
+    
