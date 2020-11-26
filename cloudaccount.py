@@ -55,6 +55,7 @@ def user_IO_handler(cmd, user, data):
                         with open(('./USERDATA/'+str(user)), "w") as outfile:
                             json.dump(userdata, outfile)
                         rt_data = "OK"
+                        ws.send("<%lg>\n"+user) # Send signal to CloudLink AutoLogout to add to list
                     else:
                         rt_data = "E:INVALID_PASSWORD"
             else:
@@ -76,6 +77,7 @@ def user_IO_handler(cmd, user, data):
                         with open(('./USERDATA/'+str(user)), "w") as outfile:
                             json.dump(userdata, outfile)
                         rt_data = "OK"
+                        ws.send("<%lo>\n"+user) # Send signal to CloudLink AutoLogout to remove from list
                     else:
                         rt_data = "I:ALREADY_LOGGED_OUT"
             else:
@@ -84,6 +86,21 @@ def user_IO_handler(cmd, user, data):
         except Exception as e:
             print("[ ! ] Error on user thread: attempted to handle "+cmd+" for user",str(user),"but an exception occured:",str(e),", and the traceback data reads the following:\n"+str(traceback.format_exc()))
             ws.send("<%ca>\n%"+SERVERID+"%\n"+user+"\nE:INTERNAL_SERVER_ERR") # Return error to client
+    elif cmd == "AUTOLOGOUT":
+        try:
+            userlist = os.listdir("./USERDATA")
+            if user in userlist:
+                userdata = json.loads(str(open(('./USERDATA/'+str(user)), "r").read()))
+                if (len(data) > 1000):
+                    rt_data = "E:DATA_TOO_LARGE"
+                else:
+                    if userdata['isAuth']:
+                        userdata['isAuth'] = False #replace data on disk
+                        with open(('./USERDATA/'+str(user)), "w") as outfile:
+                            json.dump(userdata, outfile)
+                        print("[ i ] AutoLogout has logged out user "+user+".")
+        except Exception as e:
+            print("[ ! ] Error on user thread: attempted to handle "+cmd+" for user",str(user),"but an exception occured:",str(e),", and the traceback data reads the following:\n"+str(traceback.format_exc()))
     elif cmd == "REGISTER":
         try:
             userlist = os.listdir("./USERDATA")
