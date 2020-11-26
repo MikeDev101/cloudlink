@@ -139,12 +139,41 @@ def ftp_IO_handler(cmd, user, data):
                         print("[ i ] Done running FTP for user "+str(user)+".")
                         ws.send("<%dd>\n%"+SERVERID+"%\n"+user+"\nI:DONE")
                 except Exception as e:
-                    print("[ ! ] Error on user thread: attempted to handle a FTP start command for user",str(user),"but an exception occured: "+str(e)+"\n"+str(traceback.format_exc()))
+                    print("[ ! ] Error on user thread: attempted to handle a FTP download command for user",str(user),"but an exception occured: "+str(e)+"\n"+str(traceback.format_exc()))
+                    ws.send("<%ftp>\n%"+SERVERID+"%\n"+user+"\n<TX>")
                     ws.send("<%dd>\n%"+SERVERID+"%\n"+user+"\nE:INTERNAL_SERVER_ERR")
                     ftpUsers.remove(str(user))
             else:
                 ws.send("<%ftp>\n%"+SERVERID+"%\n"+user+"\n<TX>")
                 ws.send("<%dd>\n%"+SERVERID+"%\n"+user+"\nE:FILE_NOT_FOUND")
+    elif cmd == "PUT":
+        try:
+            if not user in ftpUsers:
+                ftpUsers.append(str(user))
+                ftpFileList = os.listdir("./FTP")
+                if not str(data['fname']) in ftpFileList:
+                    print("[ i ] Receiving new file "+str(data['fname'])+"...")
+                else:
+                    print("[ i ] Writing new data to file "+str(data['fname'])+"...")
+                if not (len(data['fdata']) > 10000):
+                    f = open(("./FTP/"+str(data['fname'])), "w+")
+                    ws.send("<%dd>\n%"+SERVERID+"%\n"+user+"\nI:WRITING")
+                    print("[ i ] File "+str(data['fname'])+" is "+str(len(data['fdata']))+" bytes in size.")
+                    f.write(data['fdata'])
+                    f.close()
+                    ws.send("<%ftp>\n%"+SERVERID+"%\n"+user+"\n<TX>")
+                    ftpUsers.remove(str(user))
+                    ws.send("<%dd>\n%"+SERVERID+"%\n"+user+"\nI:DONE")
+                else:
+                    print("[ i ] File size is too large. Aborting upload.")
+                    ws.send("<%ftp>\n%"+SERVERID+"%\n"+user+"\n<TX>")
+                    ftpUsers.remove(str(user))
+                    ws.send("<%dd>\n%"+SERVERID+"%\n"+user+"\nE:DATA_TOO_LARGE")
+                
+        except Exception as e:
+            print("[ ! ] Error on user thread: attempted to handle a FTP upload command for user",str(user),"but an exception occured: "+str(e)+"\n"+str(traceback.format_exc()))
+            ws.send("<%ftp>\n%"+SERVERID+"%\n"+user+"\n<TX>")
+            ws.send("<%dd>\n%"+SERVERID+"%\n"+user+"\nE:INTERNAL_SERVER_ERR")
     elif cmd == "ABORT":
         if not user in ftpUsers:
             ws.send("<%dd>\n%"+SERVERID+"%\n"+user+"\nE:NOT_IN_QUEUE")
