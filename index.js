@@ -4,9 +4,10 @@
 // See https://github.com/KingdomPy/scratch_websockets/blob/master/index.js for the original script!
 // DO NOT USE ON OLDER WEB BROWSERS! CloudLink is designed to run best on a modern web browser.
 
-const vers = 'S2.1'; // Suite version number
+const vers = 'S2.2'; // Suite version number
 const defIP = "ws://127.0.0.1:3000/"; // Default IP address
 const testIP = "wss://85c6c0fa6c8d.ngrok.io"; // Public test server IP.
+const enableSpecialHandshake = true; // Experimental direct-linking mode support. 
 
 console.log("[CloudLink Suite] Loading 1/3: Initializing the extension...")
 
@@ -33,18 +34,31 @@ var gotNewTrade = false;
 var gotDiskData = false;
 var gotCoinData = false;
 var gotAccountData = false;
+var gotNewGlobalLinkedData = false;
+var gotNewPrivateLinkedData = false;
 
 // Variables storing global and private stream data transmitted from the server.
 var sGData = "";
 var sPData = "";
+var sGLinkedData = "";
+var sPLinkedData = "";
 
 // System variables needed for basic functionality
-var sys_status = 0;
-var userNames = "";
-var myName = "";
-var servIP = defIP;
-var isRunning = false;
-var wss = null;
+var sys_status = 0; // System status reporter, 0 = Ready, 1 = Connecting, 2 = Connected, 3 = Disconnected OK, 4 = Disconnected ERR
+var userNames = ""; // Usernames list
+var myName = ""; // Username reporter
+var servIP = defIP; // Default server IP
+var isRunning = false; // Boolean for determining if the connection is alive and well
+var wss = null; // Websocket object that enables communications
+
+// Special Features that work when enableSpecialHandshake is set to true (If false, it enables backward-compatibility mode for older application servers)
+var linkTo = ''; // Variable for linking to a specific client ID. 
+var specialHandshakeAcquired = false; // Determines if new blocks are supported on the server.
+var serverVersion = ''; // Diagnostics, gets the server's value for 'vers'.
+var globalVars = {}; // Custom globally-readable variables.
+var privateVars = {}; // Custom private variables.
+var gotNewGlobalVarData = {}; // Booleans for checking if a new value has been written to a global var.
+var gotNewPrivateVarData = {}; // Booleans for checking if a new value has been written to a private var.
 
 // Variables for storing CloudAccount data
 var isAuth = false;
@@ -84,31 +98,62 @@ class cloudlink {
 				opcode: 'returnGlobalData',
 				blockType: Scratch.BlockType.REPORTER,
 				text: 'Global data',
-			}, {
+			}, 	{
 				opcode: 'returnPrivateData',
 				blockType: Scratch.BlockType.REPORTER,
 				text: 'Private data',
-			}, {
+			}, 	{
+				opcode: 'returnGlobalLinkedData',
+				blockType: Scratch.BlockType.REPORTER,
+				text: 'Linked Global Data',
+			}, 	{
+				opcode: 'returnPrivateLinkedData',
+				blockType: Scratch.BlockType.REPORTER,
+				text: 'Linked Private Data',
+			}, 	{
 				opcode: 'returnLinkData',
 				blockType: Scratch.BlockType.REPORTER,
-				text: 'Link status',
-			}, {
+				text: 'Link Status',
+			}, 	{
 				opcode: 'returnUserListData',
 				blockType: Scratch.BlockType.REPORTER,
 				text: 'Usernames',
-			}, {
+			}, 	{
 				opcode: 'returnUsernameData',
 				blockType: Scratch.BlockType.REPORTER,
-				text: 'My username',
-			}, {
+				text: 'My Username',
+			}, 	{
 				opcode: 'returnVersionData',
 				blockType: Scratch.BlockType.REPORTER,
-				text: 'Version',
-			}, {
+				text: 'Extension Version',
+			}, 	{
+				opcode: 'returnServerVersion',
+				blockType: Scratch.BlockType.REPORTER,
+				text: 'Server Version',
+			}, 	{
+				opcode: 'returnLinkedID',
+				blockType: Scratch.BlockType.REPORTER,
+				text: 'Linked ID',
+			},	{
 				opcode: 'returnTestIPData',
 				blockType: Scratch.BlockType.REPORTER,
 				text: 'Test IP',
-			}, {
+			}, 	{
+				opcode: 'returnVarData',
+				blockType: Scratch.BlockType.REPORTER,
+				text: '[TYPE] var [VAR] data',
+				arguments: {
+					VAR: {
+						type: Scratch.ArgumentType.STRING,
+						defaultValue: 'Apple',
+					},
+					TYPE: {
+						type: Scratch.ArgumentType.STRING,
+						menu: 'varmenu',
+						defaultValue: 'Global',
+					},
+				},
+			},	{
 				opcode: 'parseJSON',
 				blockType: Scratch.BlockType.REPORTER,
 				text: '[PATH] of [JSON_STRING]',
@@ -122,15 +167,19 @@ class cloudlink {
 						defaultValue: '{"fruit": {"apples": 2, "bananas": 3}, "total_fruit": 5}',
 					},
 				},
-			}, {
+			}, 	{
 				opcode: 'getComState',
 				blockType: Scratch.BlockType.BOOLEAN,
 				text: 'Connected?',
-			}, {
+			}, 	{
 				opcode: 'getUsernameState',
 				blockType: Scratch.BlockType.BOOLEAN,
 				text: 'Username synced?',
-			}, {
+			}, 	{
+				opcode: 'returnIsLinked',
+				blockType: Scratch.BlockType.BOOLEAN,
+				text: 'Linked to ID?',
+			}, 	{
 				opcode: 'returnIsNewData',
 				blockType: Scratch.BlockType.BOOLEAN,
 				text: 'Got New [TYPE] Data?',
@@ -141,7 +190,22 @@ class cloudlink {
 						defaultValue: 'Global',
 					},
 				},
-			}, {
+			}, 	{
+				opcode: 'returnIsNewVarData',
+				blockType: Scratch.BlockType.BOOLEAN,
+				text: 'Got New [TYPE] Var [VAR] Data?',
+				arguments: {
+					VAR: {
+						type: Scratch.ArgumentType.STRING,
+						defaultValue: 'Apple',
+					},
+					TYPE: {
+						type: Scratch.ArgumentType.STRING,
+						menu: 'varmenu',
+						defaultValue: 'Global',
+					},
+				},
+			}, 	{
 				opcode: 'openSocket',
 				blockType: Scratch.BlockType.COMMAND,
 				text: 'Connect to [IP]',
@@ -151,35 +215,11 @@ class cloudlink {
 						defaultValue: defIP,
 					},
 				},
-			}, {
+			}, 	{
 				opcode: 'closeSocket',
 				blockType: Scratch.BlockType.COMMAND,
 				text: 'Disconnect',
-			}, {
-				opcode: 'sendGData',
-				blockType: Scratch.BlockType.COMMAND,
-				text: 'Send [DATA]',
-				arguments: {
-					DATA: {
-						type: Scratch.ArgumentType.STRING,
-						defaultValue: 'thing',
-					},
-				},
-			}, {
-				opcode: 'sendPData',
-				blockType: Scratch.BlockType.COMMAND,
-				text: 'Send [DATA] to [ID]',
-				arguments: {
-					DATA: {
-						type: Scratch.ArgumentType.STRING,
-						defaultValue: 'thing',
-					},
-					ID: {
-						type: Scratch.ArgumentType.STRING,
-						defaultValue: 'A name',
-					},
-				},
-			},  {
+			}, 	{
 				opcode: 'setMyName',
 				blockType: Scratch.BlockType.COMMAND,
 				text: 'Set [NAME] as username',
@@ -189,11 +229,67 @@ class cloudlink {
 						defaultValue: 'A name',
 					},
 				},
-			}, {
+			},	{
+				opcode: 'sendGData',
+				blockType: Scratch.BlockType.COMMAND,
+				text: 'Send [DATA]',
+				arguments: {
+					DATA: {
+						type: Scratch.ArgumentType.STRING,
+						defaultValue: 'Apple',
+					},
+				},
+			}, 	{
+				opcode: 'sendPData',
+				blockType: Scratch.BlockType.COMMAND,
+				text: 'Send [DATA] to [ID]',
+				arguments: {
+					DATA: {
+						type: Scratch.ArgumentType.STRING,
+						defaultValue: 'Apple',
+					},
+					ID: {
+						type: Scratch.ArgumentType.STRING,
+						defaultValue: 'A name',
+					},
+				},
+			},  {
+				opcode: 'sendGDataAsVar',
+				blockType: Scratch.BlockType.COMMAND,
+				text: 'Send Var [VAR] with Data [DATA]',
+				arguments: {
+					DATA: {
+						type: Scratch.ArgumentType.STRING,
+						defaultValue: 'Banana',
+					},
+					VAR: {
+						type: Scratch.ArgumentType.STRING,
+						defaultValue: 'Apple',
+					},
+				},
+			},	{
+				opcode: 'sendPDataAsVar',
+				blockType: Scratch.BlockType.COMMAND,
+				text: 'Send Var [VAR] to [ID] with Data [DATA]',
+				arguments: {
+					DATA: {
+						type: Scratch.ArgumentType.STRING,
+						defaultValue: 'Banana',
+					},
+					ID: {
+						type: Scratch.ArgumentType.STRING,
+						defaultValue: 'A name',
+					},
+					VAR: {
+						type: Scratch.ArgumentType.STRING,
+						defaultValue: 'Apple',
+					},
+				},
+			},	{
 				opcode: 'refreshUserList',
 				blockType: Scratch.BlockType.COMMAND,
 				text: 'Refresh User List',
-			}, {
+			},	{
 				opcode: 'resetNewData',
 				blockType: Scratch.BlockType.COMMAND,
 				text: 'Reset Got New [TYPE] Data',
@@ -204,22 +300,64 @@ class cloudlink {
 						defaultValue: 'Global',
 					},
 				},
-			},
+			},	{
+				opcode: 'resetNewVarData',
+				blockType: Scratch.BlockType.COMMAND,
+				text: 'Reset Got New [TYPE] Var [VAR] Data',
+				arguments: {
+					TYPE: {
+						type: Scratch.ArgumentType.STRING,
+						menu: 'varmenu',
+						defaultValue: 'Global',
+					},
+					VAR: {
+						type: Scratch.ArgumentType.STRING,
+						defaultValue: 'Apple',
+					},
+				},
+			},	{
+				opcode: 'linkWithID',
+				blockType: Scratch.BlockType.COMMAND,
+				text: 'Link with ID [ID]',
+				arguments: {
+					ID: {
+						type: Scratch.ArgumentType.STRING,
+						defaultValue: '%MS%',
+					},
+				},
+			},	/*{
+				opcode: 'runCMD',
+				blockType: Scratch.BlockType.COMMAND,
+				text: 'Send CMD [CMD] to ID [ID] with data [DATA]',
+				arguments: {
+					CMD: {
+						type: Scratch.ArgumentType.STRING,
+						defaultValue: 'PING',
+					},
+					ID: {
+						type: Scratch.ArgumentType.STRING,
+						defaultValue: '%MS%',
+					},
+					DATA: {
+						type: Scratch.ArgumentType.STRING,
+						defaultValue: 'Banana',
+					},
+				},
+			}, */
 			],
 			menus: {
 				coms: {
 					items: ["Connected", "Username Synced"]
 				},
 				datamenu: {
+					items: ['Global', 'Private', 'Global (Linked)', 'Private (Linked)'],
+				},
+				varmenu: {
 					items: ['Global', 'Private'],
 				},
-				reportermenu: {
-					items: ['Global Data', 'Private Data', 'Link Status', 'Usernames', 'My Username', 'Version', "Test IP"],
-				},
-				
 			}
 		};
-	};
+	}; 
 	openSocket(args) {
 		servIP = args.IP; // Begin the main updater scripts
 		if (!isRunning) {
@@ -231,6 +369,10 @@ class cloudlink {
 					isRunning = true;
 					sys_status = 2; // Connected OK value
 					console.log("[CloudLink] Connected.");
+					if (enableSpecialHandshake) {
+						wss.send("<%sh>\n") // request for special features to be enabled
+						console.log("[CloudLink] Attempting special features handshake...")
+					}; 
 				};
 				wss.onmessage = function(event) {
 					var rawpacket = String(event.data)
@@ -240,8 +382,8 @@ class cloudlink {
 						gotNewGlobalData = true;
 					} else if (obj["type"] == "ps") {
 						if (String(obj["id"]) == String(myName)) {
-							sPData = String(obj["data"]);
-							gotNewPrivateData = true;
+						sPData = String(obj["data"]);
+						gotNewPrivateData = true;
 						};
 					} else if (obj["type"] == "dd") {
 						if (String(obj["id"]) == String(myName)) {
@@ -263,17 +405,17 @@ class cloudlink {
 							if (String(obj["data"]) == "OK") {
 								if (accMode == "LI"){
 									isAuth = true;
-									accMode = ""
+									accMode = "";
 								} if (accMode == "LO") {
 									isAuth = false;
-									accMode = ""
+									accMode = "";
 								} else {
-									accMode = ""
+									accMode = "";
 									accountData = String(obj["data"]);
 									gotAccountData = true;
 								};
 							} else {
-								accMode = ""
+								accMode = "";
 								accountData = String(obj["data"]);
 								gotAccountData = true;
 							};
@@ -287,7 +429,44 @@ class cloudlink {
 						userNames = String(obj["data"]);
 					} else if (obj["type"] == "ru") {
 						if (myName != "") {
-							wss.send("<%sn>\n" + myName)
+							wss.send("<%sn>\n" + myName);
+						};
+					} else if (obj["type"] == "direct") {
+						var ddata = obj['data'];
+						if (ddata['type'] == "vers") {
+							specialHandshakeAcquired = true;
+							console.log("[CloudLink] Special features handshake acknowledged!")
+							serverVersion = ddata["data"];
+							console.log("[CloudLink] Server version: " + String(serverVersion));
+						};
+					} else if (obj["type"] == "sf") {
+						try {
+							var ddata = obj['data'];
+							if (ddata['type'] == "gs") {
+								sGData = String(ddata['data']);
+								gotNewGlobalData = true;
+							} else if (ddata['type'] == "lm") {
+								if (ddata['mode'] == "g") {
+									sGLinkedData = String(ddata['data']);
+									gotNewGlobalLinkedData = true;
+								} else if (ddata['mode'] == "p") {
+									sPLinkedData = String(ddata['data']);
+									gotNewPrivateLinkedData = true;
+								}
+							} else if (ddata['type'] == "vm") {
+								if (ddata['mode'] == "g") {
+									globalVars[ddata['var']] = ddata['data'];
+									gotNewGlobalVarData[ddata['var']] = true;
+								} else if (ddata['mode'] == "p") {
+									privateVars[ddata['var']] = ddata['data'];
+									gotNewPrivateVarData[ddata['var']] = true;
+								}
+							} else if (ddata['type'] == "ps") {
+								sPData = String(ddata['data']);
+								gotNewPrivateData = true;
+							}
+						} catch(err) {
+							console.log("[CloudLink] Oops! An error occured. "+String(err));
 						}
 					} else {
 						console.log("[CloudLink] Error! Unknown packet data: " + String(rawpacket));
@@ -298,6 +477,8 @@ class cloudlink {
 					myName = "";
 					gotNewGlobalData = false;
 					gotNewPrivateData = false;
+					gotNewGlobalLinkedData = false;
+					gotNewPrivateLinkedData = false;
 					gotNewTrade = false;
 					gotDiskData = false;
 					gotCoinData = false;
@@ -305,6 +486,8 @@ class cloudlink {
 					userNames = "";
 					sGData = "";
 					sPData = "";
+					sGLinkedData = "";
+					sPLinkedData = "";
 					coinData = "";
 					tradeReturn = "";
 					diskData = "";
@@ -314,12 +497,19 @@ class cloudlink {
 					sys_status = 3; // Disconnected OK value
 					runningFtp = false;
 					ftpData = '';
+					serverVersion = '';
+					linkTo = '';
+					globalVars = {};
+					privateVars = {};
+					specialHandshakeAcquired = false;
+					gotNewGlobalVarData = {};
+					gotNewPrivateVarData = {};
 					if (event.wasClean) {
 						sys_status = 3; // Disconnected OK value
-						console.log("[CloudLink] Disconnected.");
+						console.log("[CloudLink] Disconnected: Safely disconnected.");
 					} else {
 						sys_status = 4; // Connection lost value
-						console.log("[CloudLink] Lost connection to the server.");
+						console.log("[CloudLink] Disconnected: Lost connection.");
 					};
 				};
 			} catch(err) {
@@ -337,6 +527,8 @@ class cloudlink {
 			myName = "";
 			gotNewGlobalData = false;
 			gotNewPrivateData = false;
+			gotNewGlobalLinkedData = false;
+			gotNewPrivateLinkedData = false;
 			gotNewTrade = false;
 			gotDiskData = false;
 			gotCoinData = false;
@@ -344,6 +536,8 @@ class cloudlink {
 			userNames = "";
 			sGData = "";
 			sPData = "";
+			sGLinkedData = "";
+			sPLinkedData = "";
 			coinData = "";
 			tradeReturn = "";
 			diskData = "";
@@ -353,6 +547,13 @@ class cloudlink {
 			sys_status = 3; // Disconnected OK value
 			runningFtp = false;
 			ftpData = '';
+			serverVersion = '';
+			linkTo = '';
+			globalVars = {};
+			privateVars = {};
+			specialHandshakeAcquired = false;
+			gotNewGlobalVarData = {};
+			gotNewPrivateVarData = {};
 			return ("Connection closed.");
 		} else {
 			return ("Connection already closed.");
@@ -374,7 +575,11 @@ class cloudlink {
 	};
 	sendGData(args) {
 		if (isRunning) {
-			wss.send("<%gs>\n" + myName + "\n" + args.DATA); // begin packet data with global stream idenifier in the header
+			if (linkTo == "") {
+				wss.send("<%gs>\n" + myName + "\n" + args.DATA);
+			} else {
+				wss.send("<%l_g>\n0\n" + myName + "\n" + args.DATA);
+			};
 			return "Sent data successfully.";
 		} else {
 			return "Connection closed, no action taken.";
@@ -383,8 +588,68 @@ class cloudlink {
 	sendPData(args) {
 		if (isRunning) {
 			if (myName != "") {
-				if (args.user != myName) {
-					wss.send("<%ps>\n" + myName + "\n" + args.ID + "\n" + args.DATA); // begin packet data with global stream idenifier in the header
+				if (args.ID != myName) {
+					if (linkTo == "") {
+						wss.send("<%ps>\n" + myName + "\n" + args.ID + "\n" + args.DATA);
+					} else {
+						wss.send("<%l_p>\n0\n" + myName + "\n" + args.ID + "\n" + args.DATA);
+					};
+					return "Sent data successfully.";
+				} else {
+					return "Can't send data to yourself!";
+				};
+			} else {
+				return "Username not set, no action taken.";
+			}
+		} else {
+			return "Connection closed, no action taken.";
+		};
+	}; 
+	sendGDataAsVar(args) {
+		if (isRunning && specialHandshakeAcquired) {
+			if (linkTo != "") {
+				wss.send("<%l_g>\n2\n" + myName + "\n" + args.VAR + "\n" + args.DATA);
+			} else {
+				wss.send("<%l_g>\n1\n" + myName + "\n" + args.VAR + "\n" + args.DATA);
+			}
+			return "Sent data successfully.";
+		} else {
+			if (isRunning) {
+				return "Server is out-of-date / Doesn't support special features!";
+			} else {
+				return "Connection closed, no action taken.";
+			}
+		}
+	};
+	sendPDataAsVar(args) {
+		if (isRunning && specialHandshakeAcquired) {
+			if (myName != "") {
+				if (args.ID != myName) {
+					if (linkTo != "") {
+						wss.send("<%l_p>\n2\n" + myName + "\n" + args.ID + "\n" + args.VAR + "\n" + args.DATA);
+					} else {
+						wss.send("<%l_p>\n1\n" + myName + "\n" + args.ID + "\n" + args.VAR + "\n" + args.DATA);
+					}
+					return "Sent data successfully.";
+				} else {
+					return "Can't send data to yourself!";
+				}
+			} else {
+				return "Username not set, no action taken.";
+			}
+		} else {
+			if (isRunning) {
+				return "Server is out-of-date / Doesn't support special features!";
+			} else {
+				return "Connection closed, no action taken.";
+			}
+		};
+	};
+	runCMD(args) {
+		if (isRunning) {
+			if (myName != "") {
+				if (args.ID != myName) {
+					wss.send("<%ps>\n" + myName + "\n" + args.ID + '\n{"cmd":"' + args.CMD + '","id":"' + myName + '","data":"' + args.DATA + '"}');
 					return "Sent data successfully.";
 				} else {
 					return "Can't send data to yourself!";
@@ -402,6 +667,42 @@ class cloudlink {
 	returnPrivateData() {
 		return sPData;
 	};
+	returnGlobalLinkedData() {
+		return sGLinkedData;
+	};
+	returnPrivateLinkedData() {
+		return sPLinkedData;
+	};
+	returnVarData(args) {
+		if (args.TYPE == "Global") {
+			if (args.VAR in globalVars) {
+				return globalVars[args.VAR];
+			} else {
+				return "";
+			}
+		} else if (args.TYPE == "Private") {
+			if (args.VAR in privateVars) {
+				return privateVars[args.VAR];
+			} else {
+				return "";
+			}
+		}
+	};
+	returnIsNewVarData(args) {
+		if (args.TYPE == "Global") {
+			if (args.VAR in globalVars) {
+				return gotNewGlobalVarData[args.VAR];
+			} else {
+				return false;
+			}
+		} else if (args.TYPE == "Private") {
+			if (args.VAR in privateVars) {
+				return gotNewPrivateVarData[args.VAR];
+			} else {
+				return false;
+			}
+		};
+	};
 	returnLinkData() {
 		return sys_status;
 	}; 
@@ -417,12 +718,21 @@ class cloudlink {
 	returnTestIPData() {
 		return testIP;
 	};
+	returnServerVersion() {
+		return serverVersion;
+	};
 	returnIsNewData(args) {
 		if (args.TYPE == "Global") {
 			return gotNewGlobalData;
 		};
 		if (args.TYPE == "Private") {
 			return gotNewPrivateData;
+		};
+		if (args.TYPE == "Global (Linked)") {
+			return gotNewGlobalLinkedData;
+		};
+		if (args.TYPE == "Private (Linked)") {
+			return gotNewPrivateLinkedData;
 		};
 	}
 	setMyName(args) {
@@ -500,6 +810,88 @@ class cloudlink {
 				gotNewPrivateData = false;
 			};
 		};
+		if (args.TYPE == "Global (Linked)") {
+			if (gotNewGlobalLinkedData == true) {
+				gotNewGlobalLinkedData = false;
+			};
+		};
+		if (args.TYPE == "Private (Linked)") {
+			if (gotNewPrivateLinkedData == true) {
+				gotNewPrivateLinkedData = false;
+			};
+		};
+	};
+	resetNewVarData(args) {
+		if (args.TYPE == "Global") {
+			if (args.VAR in globalVars) {
+				gotNewGlobalVarData[args.VAR] = false;
+			}
+		} else if (args.TYPE == "Private") {
+			if (args.VAR in privateVars) {
+				gotNewPrivateVarData[args.VAR] = false;
+			}
+		}
+	};
+	linkWithID(args) {
+		if (isRunning && specialHandshakeAcquired) {
+			if (myName != "") {
+				if (args.ID == "") {
+					if (linkTo != "") {
+						linkTo = "";
+						sGLinkedData = "";
+						sPLinkedData = "";
+						gotNewGlobalLinkedData = false;
+						gotNewPrivateLinkedData = false;
+						globalVars = {};
+						privateVars = {};
+						gotNewGlobalVarData = {};
+						gotNewPrivateVarData = {};
+						wss.send("<%rt>\n" + myName);
+						return "Now linked to main link.";
+					} else {
+						return "Already linked to main link!";
+					}
+				} else {
+					if (userNames.indexOf(args.ID) >= 0) {
+						if (myName != args.ID) {
+							if (linkTo != args.ID) {
+								linkTo = args.ID;
+								sGLinkedData = "";
+								sPLinkedData = "";
+								gotNewGlobalLinkedData = false;
+								gotNewPrivateLinkedData = false;
+								globalVars = {};
+								privateVars = {};
+								gotNewGlobalVarData = {};
+								gotNewPrivateVarData = {};
+								wss.send("<%rl>\n" + myName + "\n" + args.ID);
+								return ("Now linked to ID: "+String(args.ID)+".");
+							} else {
+								return ("Already linked to ID: "+String(args.ID)+"!");
+							}
+						} else {
+							return "Can't link to yourself!";
+						}
+					} else {
+						return "ID does not exist!";
+					}
+				}
+			} else {
+				return "Username not set! No action taken.";
+			}
+		} else {
+			if (isRunning) {
+				return "Server is out-of-date / Doesn't support special features!";
+			} else {
+				return "Connection closed, no action taken.";
+			}
+		};
+	};
+	returnIsLinked() {
+		return ((linkTo != "") && specialHandshakeAcquired);
+	};
+	returnLinkedID() {
+		return linkTo;
 	};
 };
 
@@ -912,13 +1304,27 @@ class clouddisk {
 					},
 				},
 			}, {
-				opcode: 'initFTP',
+				opcode: 'initFTP_DL',
 				blockType: Scratch.BlockType.COMMAND,
 				text: 'Download file [fname] from FTP',
 				arguments: {
 					fname: {
 						type: Scratch.ArgumentType.STRING,
 						defaultValue: 'sample.txt',
+					},
+				},
+			}, {
+				opcode: 'initFTP_UL',
+				blockType: Scratch.BlockType.COMMAND,
+				text: 'Upload file [fname] to FTP with data [fdata]',
+				arguments: {
+					fname: {
+						type: Scratch.ArgumentType.STRING,
+						defaultValue: 'sample.txt',
+					},
+					fdata: {
+						type: Scratch.ArgumentType.STRING,
+						defaultValue: 'Hello, World!',
 					},
 				},
 			}, {
@@ -982,14 +1388,31 @@ class clouddisk {
 			return "Connection closed, no action taken.";
 		};
 	};
-	initFTP(args){
+	initFTP_DL(args){
 		if (isRunning) {
 			if (isAuth) {
 				if (!runningFtp){
 					ftpData = '';
 					wss.send("<%ftp>\n" + myName + '\n%CD%\n{"cmd":"GET","id":"'+ myName+'", "data":"'+args.fname+'"}\n');
 					runningFtp = true;
-					return "Sent request successfully.";
+					return "File downloading...";
+				} else {
+					return "Already running FTP!";
+				}
+			} else {
+				return "Not Logged In!";
+			};
+		} else {
+			return "Connection closed, no action taken.";
+		};
+	};
+	initFTP_UL(args){
+		if (isRunning) {
+			if (isAuth) {
+				if (!runningFtp){
+					wss.send("<%ftp>\n" + myName + '\n%CD%\n{"cmd":"PUT","id":"'+ myName+'", "data":{"fname":"'+args.fname+'", "fdata":"'+args.fdata+'"}}\n');
+					runningFtp = true;
+					return "File uploading...";
 				} else {
 					return "Already running FTP!";
 				}
