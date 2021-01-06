@@ -16,3 +16,5 @@ CloudDisk is a free-to-use cloud storage service. Providing up to 10 slots, stor
 
 ## View the wiki page for documentation.
 ## Click [here](https://sheeptester.github.io/scratch-gui/?url=https://mikedev101.github.io/cloudlink/index.js) to try the extension.
+
+**CloudLink is licensed under The Unlicence licence. See [UNLICENSE.md](https://github.com/MikeDev101/cloudlink/blob/master/UNLICENSE.md) for details.**
