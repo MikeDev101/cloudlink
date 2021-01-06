@@ -6,7 +6,7 @@ CloudLink, CloudAccount, CloudCoin, and CloudDisk are a series of APIs developed
 CloudLink is a high-speed, reliable, and custom websocket extension. It permits cross-project (as well as cross-program) cloud variables. It also enables full-duplex networking and limitless possibilities for Scratch 3.0 projects.
 
 ### CloudAccount
-CloudAccount is an umbrella-service for the CloudLink suite, as it provides authentication and basic protection of your CloudCoins and your CloudDisk drive.
+CloudAccount is a sub-service of the CloudLink suite, as it provides authentication and basic protection of your CloudCoins and your CloudDisk drive.
 
 ### CloudCoin
 CloudCoin is a pseudo virtual currency service, providing a free-to-use, universally-compatable platform for ingame currency as well as a uniform platform for trading of virtual goods.
