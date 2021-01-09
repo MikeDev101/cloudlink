@@ -17,7 +17,8 @@ def verifyCode(username: str, code: str, projectid: int, limit: int) -> bool:
         else:
           return False
     return False
-  except ExceptionError as e:
+  except Exception as e:
+    print("[ ! ] Authenticator error! ", str(e))
     return False
 
 if __name__ == "__main__":
