@@ -14,7 +14,7 @@ CloudCoin is a pseudo virtual currency service, providing a free-to-use, univers
 ### CloudDisk
 CloudDisk is a free-to-use cloud storage service. Providing up to 10 slots, storing 1 KB each, you can store 10 KB of save data instantaneously. CloudDisk supports cross-program and cross-project visibility. CloudDisk also enables publically-hosted psuedo-FTP files that can be downloaded into a Scratch project, as well as support for uploading large files for public usage.
 
-## View the wiki page for documentation.
+## Click [here](https://hackmd.io/G9q1kPqvQT6NrPobjjxSgg) to view documentation.
 ## Click [here](https://sheeptester.github.io/scratch-gui/?url=https://mikedev101.github.io/cloudlink/src/Clients/S2-2.js) to try the extension.
 
 **CloudLink is licensed under The Unlicence licence. See [UNLICENSE.md](https://github.com/MikeDev101/cloudlink/blob/master/UNLICENSE.md) for details.**
