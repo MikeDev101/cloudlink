@@ -555,6 +555,7 @@ class cloudlink {
 					gotNewGlobalVarData = {};
 					gotNewPrivateVarData = {};
 					uList = "";
+					delete wss;
 					if (event.wasClean) {
 						sys_status = 3; // Disconnected OK value
 						console.log("[CloudLink] Disconnected: Safely disconnected.");
@@ -606,6 +607,7 @@ class cloudlink {
 			gotNewGlobalVarData = {};
 			gotNewPrivateVarData = {};
 			uList = "";
+			delete wss;
 			return ("Connection closed.");
 		} else {
 			return ("Connection already closed.");
