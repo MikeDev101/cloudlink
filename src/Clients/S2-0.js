@@ -6,7 +6,7 @@
 
 const vers = 'S2.0';
 console.log("[CloudLink] Loading 1/3: Initializing the extension...")
-const defIP = "wss://85c6c0fa6c8d.ngrok.io";
+const defIP = "wss://afc459219655.ngrok.io";
 
 // Booleans for signifying an update to the global or private data streams, as well as the disk and coin data.
 var gotNewGlobalData = false; 
