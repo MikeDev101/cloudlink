@@ -3,7 +3,7 @@
 // DO NOT USE ON OLDER WEB BROWSERS! CloudLink is designed to run best on a modern web browser.
 
 const vers = 'S1.1';
-const defIP = "wss://afc459219655.ngrok.io";
+const defIP = "wss://ef4e5a473455.ngrok.io/";
 
 var myName = "";
 var gotNewGlobalData = false;
