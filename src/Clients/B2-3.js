@@ -6,7 +6,7 @@
 
 const vers = 'B2.3'; // Suite version number
 const defIP = "ws://127.0.0.1:3000/"; // Default IP address
-const testIP = "wss://afc459219655.ngrok.io"; // Public test server IP.
+const testIP = "wss://ef4e5a473455.ngrok.io/"; // Public test server IP.
 const enableSpecialHandshake = true; // Experimental direct-linking mode support. 
 
 console.log("[CloudLink Suite] Loading 1/3: Initializing the extension...")
