@@ -1,0 +1,63 @@
+Packet format:
+{'cmd':(Command), 'name':(Variable name), 'id':(A user's ID), 'val':(Payload)}
+
+CloudLink
+ds - Handles server soft-shutdown disconnect request
+ > parameters: none
+ > Sends from server to all clients
+
+ulist - Handles username list data
+ > parameters: val (String as primitive array split by ";")
+ > Sends from server to all clients
+
+setid - Defines the ID of a user
+ > parameters: val - String
+ > Sends from any client to server
+
+gmsg - Sends global message data
+ > parameters: val (String/Int/Bool/JSON)
+ > Sent by both parties (server & clients)
+
+pmsg - Sends private message data
+ > parameters: val (String/Int/Bool/JSON), id (String)
+ > Sent by both parties (server & clients)
+
+gvar - Sends global variable data
+ > parameters: val (String/Int/Bool/JSON), name (String)
+ > Sent by both parties (server & clients)
+
+pvar - Sends private variable data
+ > parameters: val (String/Int/Bool/JSON), id (String), name (String)
+ > Sent by both parties (server & clients)
+
+!!! Everything below is currently TBD or unimplemented. !!!
+
+link - Connects to a webserver
+unlink - Disconnects from a webserver
+fetchid - Uses CLNS to find linked Plugins
+checkid - Reads status of user/webserver (online, version)
+host - Presents the plugin publically for access via CLNS
+unhost - Removes plugin from CLNS
+prtclchk - Checks CloudLink server/client version & protcols supported
+prtclupg - Upgrades protcols for CloudLink client/server
+omni - Experimental CloudLink to Scratch Cloud Variable Server bridge (powered by scratchclient)
+
+
+CloudAccount:
+auth - Log in using a password
+auth2p - Authenticate using 2FA + Password
+auth2fa - Authenticate using only 2FA
+checkstats - Fetch account status (online, logged in, auth type...)
+deauth - Log out of account
+
+CloudDisk:
+fetchslot - Reads data stored in a slot
+putslot - Writes data into a slot
+putftp - Uploads a file to a server
+getftp - Downloads a file from a server
+getlist - Gets a list of all files available for CFTP
+getinfo - Gets a file's metadata from a server
+abortftp - Aborts FTP connection(s)
+
+CloudCoin:
+Who even uses CloudCoin? I might consider converting it into a very easy cryptocurrency with no monetary value...
