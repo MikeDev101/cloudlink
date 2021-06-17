@@ -27,6 +27,6 @@ You can view the client-side extension using one of the following modded Scratch
 ```pip3 install cloudlink```
 
 ## Method 2: Directly downloading cloudlink.py
-Simply download cloudlink.py and import it as shown above. However, the following dependencies are required in order to take advantage of full functionality:
+Simply download the [source code](https://github.com/MikeDev101/cloudlink/archive/refs/heads/master.zip), extract cloudlink.py, and import it as shown above. However, the following dependencies are required in order to take advantage of full functionality:
 * websocket-server ```pip3 install websocket-server```
 * websocket-client ```pip3 install websocket-client```
