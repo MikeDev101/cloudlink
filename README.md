@@ -19,7 +19,7 @@ my [Scratch profile.](https://scratch.mit.edu/users/MikeDEV/)
 # Scratch Extension
 You can view the client-side extension using one of the following modded Scratch editors:
 * [TurboWarp](https://turbowarp.org/editor?extension=https://mikedev101.github.io/cloudlink/B3-0.js)
-* [SheepTester's E羊icques](https://sheeptester.github.io/scratch-gui/?url=)
+* [SheepTester's E羊icques](https://sheeptester.github.io/scratch-gui/?url=https://mikedev101.github.io/cloudlink/B3-0.js)
 * _Adacraft support WIP..._
 
 # Installing CloudLink
