@@ -261,7 +261,7 @@ class cloudlink {
 					items: ["Connected", "Username Synced"]
 				},
 				datamenu: {
-					items: ['Global', 'Private', 'Global (Linked)', 'Private (Linked)'],
+					items: ['Global', 'Private'],
 				},
 				varmenu: {
 					items: ['Global', 'Private'],
