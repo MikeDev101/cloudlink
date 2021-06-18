@@ -1,6 +1,7 @@
 # CloudLink
 
-View the [Discussion Forum  here!](https://scratch.mit.edu/discuss/topic/398473)
+### [Discussion Forum](https://scratch.mit.edu/discuss/topic/398473)
+### [HackMD Documentation](https://hackmd.io/G9q1kPqvQT6NrPobjjxSgg)
 
 CloudLink is a high-speed, reliable, and custom websocket extension for Scratch 3.0, with server code that runs on Python.
 It permits cross-project (as well as cross-program) cloud variables.
