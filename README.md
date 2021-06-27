@@ -1,5 +1,3 @@
-# CloudLink
-
 ### [Discussion Forum](https://scratch.mit.edu/discuss/topic/398473)
 ### [HackMD Documentation](https://hackmd.io/G9q1kPqvQT6NrPobjjxSgg)
 
