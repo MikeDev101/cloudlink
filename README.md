@@ -11,6 +11,8 @@ from cloudlink import CloudLink
 
 cl = CloudLink()
 cl.host(3000) # Hosts CloudLink in Server Mode on ws://localhost:3000/
+# Have some code to keep this script alive! Ever since v0.1.4, this now runs as a daemon thread.
+
 ```
 
 Please report any bugs you find to the official [GitHub repository](https://github.com/MikeDev101/cloudlink/issues) or on
