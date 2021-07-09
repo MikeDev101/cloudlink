@@ -7,8 +7,8 @@ It also enables full-duplex networking and limitless possibilities for Scratch 3
 
 Example code can be downloaded in the GitHub repository.
 
-Server: https://github.com/MikeDev101/cloudlink/blob/master/server_example.py
-Client: https://github.com/MikeDev101/cloudlink/blob/master/client_example.py
+#### Server: https://github.com/MikeDev101/cloudlink/blob/master/server_example.py
+#### Client: https://github.com/MikeDev101/cloudlink/blob/master/client_example.py
 
 Please report any bugs you find to the official [GitHub repository](https://github.com/MikeDev101/cloudlink/issues) or on
 my [Scratch profile.](https://scratch.mit.edu/users/MikeDEV/)
@@ -21,10 +21,10 @@ You can view the client-side extension using one of the following modded Scratch
 * [Ogadaki's Adacraft (Manual load required)](https://adacraft.org/studio/)
 
 # Installing CloudLink
-## Method 1: using pip3 (This is WIP and may not work)
-```pip3 install cloudlink```
+## Method 1: using pip
+```pip install cloudlink```
 
 ## Method 2: Directly downloading cloudlink.py
 Simply download the [source code](https://github.com/MikeDev101/cloudlink/archive/refs/heads/master.zip), extract cloudlink.py, and import it as shown above. However, the following dependencies are required in order to take advantage of full functionality:
-* websocket-server ```pip3 install websocket-server```
-* websocket-client ```pip3 install websocket-client```
+* websocket-server ```pip install websocket-server```
+* websocket-client ```pip install websocket-client```
