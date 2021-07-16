@@ -254,6 +254,24 @@ class cloudlink {
 						defaultValue: 'Apple',
 					},
 				},
+			}, {
+				opcode: 'runCMD',
+				blockType: Scratch.BlockType.COMMAND,
+				text: 'Send command [CMD] [ID] [DATA]',
+				arguments: {
+					CMD: {
+						type: Scratch.ArgumentType.STRING,
+						defaultValue: 'test',
+					},
+					ID: {
+						type: Scratch.ArgumentType.STRING,
+						defaultValue: '%MS%',
+					},
+					DATA: {
+						type: Scratch.ArgumentType.STRING,
+						defaultValue: 'Hello world!',
+					},
+				},
 			},
 			],
 			menus: {
@@ -402,6 +420,26 @@ class cloudlink {
 			return false;
 		};
 	};
+	runCMD(args) {
+		if (isRunning) {
+			if (String(myName) != "") {
+				if (userNames.indexOf(String(args.ID)) >= 0) {
+					if (!(String(args.DATA).length > 1000)) {
+						wss.send(JSON.stringify({
+							cmd: args.CMD,
+							id: args.ID,
+							val: args.DATA,
+							origin: String(myName)
+						}));
+					} else {
+						console.log("Blocking attempt to send packet larger than 1000 bytes (1 KB), packet is " + String(String(args.DATA).length) + " bytes");
+					};
+				} else {
+						console.log("Blocking attempt to send private packet to nonexistent ID");
+				};
+			};
+		};
+	};
 	sendGData(args) {
 		if (isRunning) {
 			if (!(String(args.DATA).length > 1000)) {
@@ -422,7 +460,8 @@ class cloudlink {
 						wss.send(JSON.stringify({
 						cmd: "pmsg",
 						id: args.ID,
-						val: args.DATA
+						val: args.DATA,
+						origin: String(myName)
 						}));
 					} else {
 						console.log("Blocking attempt to send packet larger than 1000 bytes (1 KB), packet is " + String(String(args.DATA).length) + " bytes");
@@ -455,7 +494,8 @@ class cloudlink {
 							cmd: "pvar",
 							name: args.VAR,
 							id: args.ID,
-							val: args.DATA
+							val: args.DATA,
+							origin: String(myName)
 						}));
 					} else {
 						console.log("Blocking attempt to send packet larger than 1000 bytes (1 KB), packet is " + String(String(args.DATA).length) + " bytes");
