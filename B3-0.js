@@ -304,7 +304,7 @@ class cloudlink {
 					var obj = JSON.parse(rawpacket);
 					
 					// console.log("Got new packet");
-					// console.log(obj);
+					console.log(obj);
 					
 					// Global Messages
 					if (obj["cmd"] == "gmsg") {
@@ -332,9 +332,9 @@ class cloudlink {
 					};
 					// Direct COMS (Fetches server metadata)
 					if (obj["cmd"] == "direct") {
-						var ddata = obj['data'];
+						var ddata = obj['val'];
 						if (ddata['cmd'] == "vers") {
-							serverVersion = ddata["data"];
+							serverVersion = ddata["val"];
 							console.log("Server version: " + String(serverVersion));
 						};
 					};
