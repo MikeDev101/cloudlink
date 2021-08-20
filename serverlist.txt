@@ -1,1 +1,0 @@
-{'id': 1, 'owner': '@CST1992', 'url': 'wss://cloudserver1.cst1229.repl.co/'}
