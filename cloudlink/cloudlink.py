@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+version = "0.1.5"
+
 """
 ### CloudLink Server ###
 
@@ -50,10 +52,6 @@ class API:
             self.serverThread.setDaemon(True)
             
             # Run the server
-            if ip == None:
-                print("Now running in host mode on port {0}...".format(port))
-            else:
-                print("Now running in host mode on port {0} using IP {1}...".format(port, ip))
             self.serverThread.start()
             
         except Exception as e:
@@ -76,7 +74,6 @@ class API:
             self.clientThread.setDaemon(True)
             
             # Run the client
-            print("Now running in client mode, connecting to IP {0}...".format(ip))
             self.clientThread.start()
             
         except Exception as e:
@@ -113,6 +110,7 @@ class CloudLink(API):
         self.handlers = []
         self.gdata = ""
         self.mode = 0 # 1=Host, 2=Client
+        print("CloudLink v{0}".format(version))
 
     def _newConnection(self, client, server): # Server: Handles new connections
         if self.mode == 1:
@@ -120,6 +118,7 @@ class CloudLink(API):
             self.users[str(client)] = {"name": "", "id": str(client['id'])}
             self._relayUserList(server, True, client)
             self._sendPacket(server, True, {"cmd":"gmsg", "id":client, "val":str(self.gdata)})
+            self._sendPacket(server, True, {"cmd":"direct", "id":client, "val": {"cmd": "vers", "val": version}})
 
     def _sendPacket(self, server, type, data): # Server: Transmits packets, False:Public, True:Private
         if self.mode == 1:
@@ -161,6 +160,7 @@ class CloudLink(API):
             err = False
             try:
                 packet = json.loads(message)
+                print("Got packet: {0} bytes".format(len(str(packet))))
             except Exception as e:
                 err = True
             finally:
@@ -182,6 +182,10 @@ class CloudLink(API):
                             name = str(packet['name'])
                         else:
                             name = ""
+                        if "origin" in packet:
+                            origin = str(packet['origin'])
+                        else:
+                            origin = ""
                         
                         if cmd == "clear": # Clears comms
                             self._sendPacket(server, False, {"cmd":"gmsg", "val":""})
@@ -202,12 +206,14 @@ class CloudLink(API):
                             self._sendPacket(server, False, {"cmd":"gmsg", "val":self.gdata})
                         if cmd == "pmsg": # Set private stream data values
                             if not id == "":
-                                self._sendPacket(server, True, {"cmd":"pmsg", "id":id, "val":val})
+                                if not origin == "":
+                                    self._sendPacket(server, True, {"cmd":"pmsg", "id":id, "val":val, "origin":origin})
                         if cmd == "gvar": # Set global variable data values
                             self._sendPacket(server, False, {"cmd":"gvar", "name":name, "val":val})
                         if cmd == "pvar": # Set private variable data values
                             if not id == "":
-                                self._sendPacket(server, True, {"cmd":"pvar", "name":name, "id":id, "val":val})
+                                if not origin == "":
+                                    self._sendPacket(server, True, {"cmd":"pvar", "name":name, "id":id, "val":val, "origin":origin})
 
     def _set_fn_new_packet(self, fn): # Client: Defines API-friendly callback to new packet events
         self.fn_msg = fn
@@ -225,7 +231,6 @@ class CloudLink(API):
         if not json.loads(message) == {"cmd": "ds"}:
             self.fn_msg(json.loads(message))
         else:
-            print("Server is shutting down, disconnecting.")
             self.fn_ds()
     
     def _on_error(self, ws, error): # Client: Defines callback to error events
@@ -233,5 +238,4 @@ class CloudLink(API):
         self.fn_ds()
     
     def _on_open(self, ws): # Client: Defines callback to connected event
-        print("Connected.")
         self.fn_con()
