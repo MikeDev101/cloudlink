@@ -447,9 +447,6 @@ class cloudlink {
 		};
 	};
 	openSocketPublicServers(args) {
-		console.log(args.ID);
-		console.log(serverlist.indexOf(args.ID)+1);
-		console.log(serverips[serverlist.indexOf(args.ID)+1]);
 		servIP = serverips[serverlist.indexOf(args.ID)+1]; // Begin the main updater scripts
 		if (!isRunning) {
 			sys_status = 1;
