@@ -1,1 +1,1 @@
-{"servers": {"1": {"id": "CST1992's 30-Day Server", "owner": "@CST1992", "url": "wss://cloudserver1.cst1229.repl.co/"}, "2": {"id": "MikeDEV's Test Repl", "owner": "@MikeDEV", "url": "wss://cloudlink-sample-server.mikedev101.repl.co/"}}}
+{"1": {"id": "CloudLink Public Sample Server", "url": "wss://cloudlink-sample-server.mikedev101.repl.co/"}, "2": {"id": "CST1992's 30-Day Server", "url": "wss://cloudserver1.cst1229.repl.co/"}}
