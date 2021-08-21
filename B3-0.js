@@ -1,6 +1,5 @@
 const vers = 'B3.0'; // Suite version number
 const defIP = "ws://127.0.0.1:3000/"; // Default IP address
-const testIP = ""; // Public test server IP.
 
 // CloudLink icons
 const cl_icon = 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyNS4yLjMsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0iTGF5ZXJfMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayIgeD0iMHB4IiB5PSIwcHgiDQoJIHZpZXdCb3g9IjAgMCA0NSA0NSIgc3R5bGU9ImVuYWJsZS1iYWNrZ3JvdW5kOm5ldyAwIDAgNDUgNDU7IiB4bWw6c3BhY2U9InByZXNlcnZlIj4NCjxzdHlsZSB0eXBlPSJ0ZXh0L2NzcyI+DQoJLnN0MHtmaWxsOiMwRkJEOEM7fQ0KCS5zdDF7ZmlsbDpub25lO3N0cm9rZTojRkZGRkZGO3N0cm9rZS13aWR0aDo0O3N0cm9rZS1saW5lY2FwOnJvdW5kO3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQo8L3N0eWxlPg0KPGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoLTIxNy41MDAxNCwtMTU3LjUwMDEzKSI+DQoJPGc+DQoJCTxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik0yMTcuNSwxODBjMC0xMi40LDEwLjEtMjIuNSwyMi41LTIyLjVzMjIuNSwxMC4xLDIyLjUsMjIuNXMtMTAuMSwyMi41LTIyLjUsMjIuNVMyMTcuNSwxOTIuNCwyMTcuNSwxODANCgkJCUwyMTcuNSwxODB6Ii8+DQoJCTxnPg0KCQkJPHBhdGggY2xhc3M9InN0MSIgZD0iTTIzMC4zLDE4MC4xYzUuNy00LjcsMTMuOS00LjcsMTkuNiwwIi8+DQoJCQk8cGF0aCBjbGFzcz0ic3QxIiBkPSJNMjI1LjMsMTc1LjFjOC40LTcuNCwyMS03LjQsMjkuNCwwIi8+DQoJCQk8cGF0aCBjbGFzcz0ic3QxIiBkPSJNMjM1LjIsMTg1YzIuOS0yLjEsNi44LTIuMSw5LjcsMCIvPg0KCQkJPHBhdGggY2xhc3M9InN0MSIgZD0iTTI0MCwxOTAuNEwyNDAsMTkwLjQiLz4NCgkJPC9nPg0KCTwvZz4NCjwvZz4NCjwvc3ZnPg0K';
@@ -27,6 +26,40 @@ var globalVars = {}; // Custom globally-readable variables.
 var privateVars = {}; // Custom private variables.
 var gotNewGlobalVarData = {}; // Booleans for checking if a new value has been written to a global var.
 var gotNewPrivateVarData = {}; // Booleans for checking if a new value has been written to a private var.
+
+var serverlist = [''];
+var serverips = [''];
+var servers = "";
+
+try {
+	fetch('https://mikedev101.github.io/cloudlink/serverlist.json').then(response => {
+		return response.text();
+	}).then(data => {
+		servers = data;
+	}).catch(err => {
+		console.log(err);
+	});
+	fetch('https://mikedev101.github.io/cloudlink/serverlist.json').then(response => {
+		return response.json();
+	}).then(data => {
+		serverlist = [];
+		for (let i in data) {
+			//console.log(data['servers'][i]);
+			serverlist.push(String(data[i]['id']));
+			serverips.push(String(data[i]['url']));
+		};
+	}).catch(err => {
+		// Do something for an error here
+		console.log(err);
+		serverlist = ['Error!'];
+		serverips = [''];
+	});
+} catch(err) {
+	console.log(err);
+	serverlist = ['Error!'];
+	serverips = [''];
+	servers = "Error!";
+};
 
 // CloudLink class for the primary extension.
 class cloudlink {
@@ -72,9 +105,9 @@ class cloudlink {
 				blockType: Scratch.BlockType.REPORTER,
 				text: 'Server Version',
 			}, {
-				opcode: 'returnTestIPData',
+				opcode: 'returnServerList',
 				blockType: Scratch.BlockType.REPORTER,
-				text: 'Test IP',
+				text: 'Server List',
 			}, 	{
 				opcode: 'returnVarData',
 				blockType: Scratch.BlockType.REPORTER,
@@ -158,7 +191,18 @@ class cloudlink {
 						defaultValue: defIP,
 					},
 				},
-			}, 	{
+			}, {	
+				opcode: 'openSocketPublicServers',
+				blockType: Scratch.BlockType.COMMAND,
+				text: 'Connect to [ID]',
+				arguments: {
+					ID: {
+						type: Scratch.ArgumentType.STRING,
+						menu: 'servermenu',
+						defaultValue: '',
+					},
+				},
+			}, {
 				opcode: 'closeSocket',
 				blockType: Scratch.BlockType.COMMAND,
 				text: 'Disconnect',
@@ -284,6 +328,9 @@ class cloudlink {
 				varmenu: {
 					items: ['Global', 'Private'],
 				},
+				servermenu: {
+					items: serverlist,
+				},
 			}
 		};
 	}; 
@@ -399,6 +446,101 @@ class cloudlink {
 			wss = null;
 		};
 	};
+	openSocketPublicServers(args) {
+		console.log(args.ID);
+		console.log(serverlist.indexOf(args.ID)+1);
+		console.log(serverips[serverlist.indexOf(args.ID)+1]);
+		servIP = serverips[serverlist.indexOf(args.ID)+1]; // Begin the main updater scripts
+		if (!isRunning) {
+			sys_status = 1;
+			console.log("Establishing connection");
+			try {
+				wss = new WebSocket(servIP);
+				wss.onopen = function(e) {
+					isRunning = true;
+					sys_status = 2; // Connected OK value
+					console.log("Connected");
+				};
+				wss.onmessage = function(event) {
+					var rawpacket = String(event.data);
+					var obj = JSON.parse(rawpacket);
+					
+					// console.log("Got new packet");
+					console.log(obj);
+					
+					// Global Messages
+					if (obj["cmd"] == "gmsg") {
+						sGData = String(obj["val"]);
+						gotNewGlobalData = true;
+					};
+					// Private Messages
+					if (obj["cmd"] == "pmsg") {
+						sPData = String(obj["val"]);
+						gotNewPrivateData = true;
+					};
+					// Username List
+					if (obj["cmd"] == "ulist") {
+						userNames = String(obj["val"]);
+						userNames = userNames.split(";");
+						userNames.pop();
+						var uListTemp = "";
+						var i;
+						for (i = 0; i < userNames.length; i++) {
+							if (!userNames[i].includes("%")) {
+								uListTemp = (String(uListTemp) + String(userNames[i])+ "; ");
+							};
+						};
+						uList = uListTemp;
+					};
+					// Direct COMS (Fetches server metadata)
+					if (obj["cmd"] == "direct") {
+						var ddata = obj['val'];
+						if (ddata['cmd'] == "vers") {
+							serverVersion = ddata["val"];
+							console.log("Server version: " + String(serverVersion));
+						};
+					};
+					// Global Variables
+					if (obj["cmd"] == "gvar") {
+						globalVars[obj["name"]] = obj["val"];
+						gotNewGlobalVarData[obj["name"]] = true;
+					};
+					// Private Variables
+					if (obj["cmd"] == "pvar") {
+						privateVars[obj["name"]] = obj["val"];
+						gotNewPrivateVarData[obj["name"]] = true;
+					};
+					// Server soft-shutdown handler
+					if (obj["cmd"] == "ds") {
+						console.log("Server is shutting down, disconnecting");
+						wss.close(1000);
+					};
+					
+				};
+				wss.onclose = function(event) {
+					isRunning = false;
+					myName = "";
+					gotNewGlobalData = false;
+					gotNewPrivateData = false;
+					userNames = "";
+					sGData = "";
+					sPData = "";
+					sys_status = 3; // Disconnected OK value
+					serverVersion = '';
+					globalVars = {};
+					privateVars = {};
+					gotNewGlobalVarData = {};
+					gotNewPrivateVarData = {};
+					uList = "";
+					wss = null;
+					sys_status = 3;
+					console.log("Disconnected");
+					};
+			} catch(err) {
+				throw(err)
+			};
+		};
+	}
 	getComState() {
 		return isRunning;
 	};
@@ -560,8 +702,8 @@ class cloudlink {
 	returnVersionData() {
 		return vers;
 	}; 
-	returnTestIPData() {
-		return testIP;
+	returnServerList() {
+		return servers;
 	};
 	returnServerVersion() {
 		return serverVersion;
@@ -666,6 +808,5 @@ class cloudlink {
 		}
 	};
 };
-
 
 Scratch.extensions.register(new cloudlink());
