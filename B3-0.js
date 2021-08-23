@@ -36,20 +36,13 @@ try {
 		return response.text();
 	}).then(data => {
 		servers = data;
-	}).catch(err => {
-		console.log(err);
-	});
-	fetch('https://mikedev101.github.io/cloudlink/serverlist.json').then(response => {
-		return response.json();
-	}).then(data => {
 		serverlist = [];
-		for (let i in data) {
-			//console.log(data['servers'][i]);
-			serverlist.push(String(data[i]['id']));
-			serverips.push(String(data[i]['url']));
+		dataloads = JSON.parse(data)
+		for (let i in dataloads) {
+			serverlist.push(String(dataloads[i]['id']));
+			serverips.push(String(dataloads[i]['url']));
 		};
 	}).catch(err => {
-		// Do something for an error here
 		console.log(err);
 		serverlist = ['Error!'];
 		serverips = [''];
@@ -194,11 +187,10 @@ class cloudlink {
 			}, {	
 				opcode: 'openSocketPublicServers',
 				blockType: Scratch.BlockType.COMMAND,
-				text: 'Connect to [ID]',
+				text: 'Connect to Server #[ID]',
 				arguments: {
 					ID: {
-						type: Scratch.ArgumentType.STRING,
-						menu: 'servermenu',
+						type: Scratch.ArgumentType.NUMBER,
 						defaultValue: '',
 					},
 				},
@@ -328,9 +320,6 @@ class cloudlink {
 				varmenu: {
 					items: ['Global', 'Private'],
 				},
-				servermenu: {
-					items: serverlist,
-				},
 			}
 		};
 	}; 
@@ -447,7 +436,7 @@ class cloudlink {
 		};
 	};
 	openSocketPublicServers(args) {
-		servIP = serverips[serverlist.indexOf(args.ID)+1]; // Begin the main updater scripts
+		servIP = serverips[String(args.ID)];
 		if (!isRunning) {
 			sys_status = 1;
 			console.log("Establishing connection");
