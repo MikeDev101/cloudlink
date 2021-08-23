@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-version = "0.1.5"
+version = "0.1.5.1"
 
 """
 ### CloudLink Server ###
@@ -57,7 +57,7 @@ class API:
         except Exception as e:
             print(e)
             sys.exit()
-
+    
     def client(self, ip, on_new_packet=None, on_connect=None, on_error=None): # runs the module in client mode, uses websocket-client
         self.mode = 2
         try:
@@ -97,6 +97,12 @@ class API:
             self.wss.server_close()
             self.mode = 0
     
+    def setMOTD(self, motd):
+        if self.mode == 1:
+            self.motd_enable = True
+            self.motd = motd
+            print('Set MOTD to "{0}"'.format(motd))
+    
     def sendPacket(self, msg): # Sends packets when the module is running in client mode
         if self.mode == 2:
             self.client.send(json.dumps(msg))
@@ -110,6 +116,8 @@ class CloudLink(API):
         self.handlers = []
         self.gdata = ""
         self.mode = 0 # 1=Host, 2=Client
+        self.motd_enable = False
+        self.motd = ""
         print("CloudLink v{0}".format(version))
 
     def _newConnection(self, client, server): # Server: Handles new connections
@@ -119,6 +127,8 @@ class CloudLink(API):
             self._relayUserList(server, True, client)
             self._sendPacket(server, True, {"cmd":"gmsg", "id":client, "val":str(self.gdata)})
             self._sendPacket(server, True, {"cmd":"direct", "id":client, "val": {"cmd": "vers", "val": version}})
+            if self.motd_enable:
+                self._sendPacket(server, True, {"cmd":"direct", "id":client, "val": {"cmd": "motd", "val": self.motd}})
 
     def _sendPacket(self, server, type, data): # Server: Transmits packets, False:Public, True:Private
         if self.mode == 1:
