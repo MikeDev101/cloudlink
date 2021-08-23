@@ -27,6 +27,7 @@ var privateVars = {}; // Custom private variables.
 var gotNewGlobalVarData = {}; // Booleans for checking if a new value has been written to a global var.
 var gotNewPrivateVarData = {}; // Booleans for checking if a new value has been written to a private var.
 
+var motd = "";
 var serverlist = [''];
 var serverips = [''];
 var servers = "";
@@ -36,11 +37,12 @@ try {
 		return response.text();
 	}).then(data => {
 		servers = data;
+		serverips = [];
 		serverlist = [];
 		dataloads = JSON.parse(data)
 		for (let i in dataloads) {
-			serverlist.push(String(dataloads[i]['id']));
 			serverips.push(String(dataloads[i]['url']));
+			serverlist.push(String(i));
 		};
 	}).catch(err => {
 		console.log(err);
@@ -102,6 +104,10 @@ class cloudlink {
 				blockType: Scratch.BlockType.REPORTER,
 				text: 'Server List',
 			}, 	{
+				opcode: 'returnMOTD',
+				blockType: Scratch.BlockType.REPORTER,
+				text: 'Server MOTD',
+			},  {
 				opcode: 'returnVarData',
 				blockType: Scratch.BlockType.REPORTER,
 				text: '[TYPE] var [VAR] data',
@@ -187,7 +193,7 @@ class cloudlink {
 			}, {	
 				opcode: 'openSocketPublicServers',
 				blockType: Scratch.BlockType.COMMAND,
-				text: 'Connect to Server #[ID]',
+				text: 'Connect to Server [ID]',
 				arguments: {
 					ID: {
 						type: Scratch.ArgumentType.NUMBER,
@@ -373,6 +379,10 @@ class cloudlink {
 							serverVersion = ddata["val"];
 							console.log("Server version: " + String(serverVersion));
 						};
+						if (ddata['cmd'] == "motd") {
+							motd = ddata["val"];
+							console.log("Server Message-of-the-day: " + String(motd));
+						};
 					};
 					// Global Variables
 					if (obj["cmd"] == "gvar") {
@@ -394,6 +404,7 @@ class cloudlink {
 				wss.onclose = function(event) {
 					isRunning = false;
 					myName = "";
+					motd = "";
 					gotNewGlobalData = false;
 					gotNewPrivateData = false;
 					userNames = "";
@@ -407,11 +418,11 @@ class cloudlink {
 					gotNewPrivateVarData = {};
 					uList = "";
 					wss = null;
-					sys_status = 3;
 					console.log("Disconnected");
 					};
 			} catch(err) {
 				throw(err)
+				sys_status = 3;
 			};
 		};
 	}; // end the updater scripts
@@ -423,6 +434,7 @@ class cloudlink {
 			gotNewGlobalData = false;
 			gotNewPrivateData = false;
 			userNames = "";
+			motd = "";
 			sGData = "";
 			sPData = "";
 			sys_status = 3; // Disconnected OK value
@@ -436,8 +448,12 @@ class cloudlink {
 		};
 	};
 	openSocketPublicServers(args) {
-		servIP = serverips[String(args.ID)];
-		if (!isRunning) {
+		servIP = serverips[String(args.ID)-1];
+		console.log(serverlist);
+		if ((servIP == "-1") || !(serverlist.includes(String(args.ID)))) {
+			console.log("Blocking attempt to connect to a nonexistent server #")
+		}
+		else if (!isRunning) {
 			sys_status = 1;
 			console.log("Establishing connection");
 			try {
@@ -485,6 +501,10 @@ class cloudlink {
 							serverVersion = ddata["val"];
 							console.log("Server version: " + String(serverVersion));
 						};
+						if (ddata['cmd'] == "motd") {
+							motd = ddata["val"];
+							console.log("Server Message-of-the-day: " + String(motd));
+						};
 					};
 					// Global Variables
 					if (obj["cmd"] == "gvar") {
@@ -519,14 +539,17 @@ class cloudlink {
 					gotNewPrivateVarData = {};
 					uList = "";
 					wss = null;
-					sys_status = 3;
 					console.log("Disconnected");
 					};
 			} catch(err) {
 				throw(err)
+				sys_status = 3;
 			};
 		};
 	}
+	returnMOTD() {
+		return motd;
+	};
 	getComState() {
 		return isRunning;
 	};
