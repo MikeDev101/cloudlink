@@ -38,9 +38,9 @@ class API:
         self.mode = 1
         try:
             if ip == None:
-                self.wss = WebsocketServer(int(port)) # Instanciate WebsocketServer alongside CloudLink module
+                self.wss = WebsocketServer(port=int(port), host="0.0.0.0") # Instanciate WebsocketServer alongside CloudLink module
             else:
-                self.wss = WebsocketServer(int(port), host=ip) # Instanciate WebsocketServer alongside CloudLink module
+                self.wss = WebsocketServer(port=int(port), host=ip) # Instanciate WebsocketServer alongside CloudLink module
             
             # Define callbacks to functions
             self.wss.set_fn_new_client(self._newConnection)
