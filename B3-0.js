@@ -122,6 +122,16 @@ class cloudlink {
 						defaultValue: 'Global',
 					},
 				},
+			}, {
+				opcode: 'fetchURL', 
+				blockType: Scratch.BlockType.REPORTER,
+				text: 'Fetch data from URL [url]',
+				arguments: {
+						url: {
+							type: Scratch.ArgumentType.STRING,
+							defaultValue: 'https://mikedev101.github.io/cloudlink/fetch_test'
+						}
+					}
 			},	{
 				opcode: 'parseJSON',
 				blockType: Scratch.BlockType.REPORTER,
@@ -329,6 +339,9 @@ class cloudlink {
 			}
 		};
 	}; 
+	fetchURL(args) {
+		return fetch(args.url).then(response => response.text())
+	}
 	openSocket(args) {
 		servIP = args.IP; // Begin the main updater scripts
 		if (!isRunning) {
