@@ -1,3 +1,7 @@
+# CloudLink
+
+## NOTICE: DO NOT INSTALL FROM PYPI FOR NOW, RELEASE IS CURRENTLY BORKED, WILL BE FIXED IN SERVER 0.1.5.2
+
 ### [Discussion Forum](https://scratch.mit.edu/discuss/topic/398473)
 ### [HackMD Documentation](https://hackmd.io/G9q1kPqvQT6NrPobjjxSgg)
 
