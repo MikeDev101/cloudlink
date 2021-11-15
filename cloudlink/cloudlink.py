@@ -1,23 +1,18 @@
 #!/usr/bin/env python3
 
-version = "0.1.5.1"
+version = "0.1.5.2"
 
 """
 ### CloudLink Server ###
-
 Version S3.0 - Developed by MikeDEV Software
-
 CloudLink is a websocket extension developed for Scratch 3.0. It's
 designed to make web browsers, MMOs, BBSs, chats, etc. possible within
 the limitations of Scratch. For more details and documentation about
 the CloudLink project, please see the official repository on Github:
 https://github.com/MikeDev101/cloudlink.
-
 0BSD License
 Copyright (C) 2020-2021 MikeDEV Software, Co.
-
 Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted.
-
 THE SOFTWARE IS PROVIDED “AS IS” AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
 MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
 WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
@@ -34,6 +29,9 @@ import websocket
 
 # API class for interacting with the module.
 class API:
+    def __init__(self):
+        print("API initialized")
+    
     def host(self, port, ip=None): # runs the module in server mode, uses websocket-server
         self.mode = 1
         try:
@@ -102,6 +100,15 @@ class API:
             self.motd_enable = True
             self.motd = motd
             print('Set MOTD to "{0}"'.format(motd))
+
+    def trustedAccess(self, enable, keys):
+        if self.mode == 1:
+            self.accessdata["enable"] = enable
+            self.accessdata["keys"] = keys
+            if enable:
+                print("Trusted access has been enabled.")
+            else:
+                print("Trusted access has been disabled.")
     
     def sendPacket(self, msg): # Sends packets when the module is running in client mode
         if self.mode == 2:
@@ -118,19 +125,32 @@ class CloudLink(API):
         self.mode = 0 # 1=Host, 2=Client
         self.motd_enable = False
         self.motd = ""
+        self.accessdata = {
+            "enable": False,
+            "keys": [],
+            "trusted": []
+        }
         print("CloudLink v{0}".format(version))
 
     def _newConnection(self, client, server): # Server: Handles new connections
         if self.mode == 1:
             print("New connection: {0}".format(client['id']))
-            self.users[str(client)] = {"name": "", "id": str(client['id'])}
-            self._relayUserList(server, True, client)
-            self._sendPacket(server, True, {"cmd":"gmsg", "id":client, "val":str(self.gdata)})
-            self._sendPacket(server, True, {"cmd":"direct", "id":client, "val": {"cmd": "vers", "val": version}})
-            if self.motd_enable:
-                self._sendPacket(server, True, {"cmd":"direct", "id":client, "val": {"cmd": "motd", "val": self.motd}})
+            if self.accessdata["enable"]:
+                self._sendPacket(server, True, {"cmd":"pmsg", "id":client, "val":"I:TRUSTED_ACCESS_SEND_ACCESS_KEY"})
+                if self.motd_enable:
+                    self._sendPacket(server, True, {"cmd":"direct", "id":client, "val": {"cmd": "motd", "val": self.motd}})
+            else:
+                self._relayInitialData(client, server)
+    
+    def _relayInitialData(self, client, server):
+        self.users[str(client)] = {"name": "", "id": str(client['id'])}
+        self._relayUserList(server, True, client)
+        self._sendPacket(server, True, {"cmd":"gmsg", "id":client, "val":str(self.gdata)})
+        self._sendPacket(server, True, {"cmd":"direct", "id":client, "val": {"cmd": "vers", "val": version}})
+        if self.motd_enable:
+            self._sendPacket(server, True, {"cmd":"direct", "id":client, "val": {"cmd": "motd", "val": self.motd}})
 
-    def _sendPacket(self, server, type, data): # Server: Transmits packets, False:Public, True:Private
+    def _sendPacket(self, server, type, data, client=None): # Server: Transmits packets, False:Public, True:Private
         if self.mode == 1:
             if "id" in data:
                 id = data["id"]
@@ -145,7 +165,11 @@ class CloudLink(API):
             y = ""
             for x in range(len(self.userlist)):
                 y = str(y + self.userlist[x] + ";")
-            self._sendPacket(server, type, {"cmd":"ulist", "id":id, "val":str(y)})
+            if self.accessdata["enable"]:
+                if id in self.accessdata["trusted"]:
+                    self._sendPacket(server, type, {"cmd":"ulist", "id":id, "val":str(y)})
+            else:
+                self._sendPacket(server, type, {"cmd":"ulist", "id":id, "val":str(y)})
 
     def _closedConnection(self, client, server): # Server: Handles dropped/lost/manual disconnections
         if self.mode == 1:
@@ -161,6 +185,11 @@ class CloudLink(API):
                     del self.handlers[self.handlers.index(client)]
                     
                 del self.users[str(client)]
+                if self.accessdata["enable"]:
+                    if client in self.accessdata["trusted"]:
+                        self.accessdata["trusted"].remove(client)
+                        print("Removing {0} from trust".format(client))
+                        print(self.accessdata)
                 
                 if not len(self.users) == 0:
                     self._relayUserList(server, False, client)
@@ -196,34 +225,51 @@ class CloudLink(API):
                             origin = str(packet['origin'])
                         else:
                             origin = ""
-                        
-                        if cmd == "clear": # Clears comms
-                            self._sendPacket(server, False, {"cmd":"gmsg", "val":""})
-                            self._sendPacket(server, False, {"cmd":"pmsg", "val":""})
-                        if cmd == "setid": # Set username on server link
-                            if "val" in packet:
-                                if not client in self.handlers:
-                                    self.userlist.append(val)
-                                    self.handlers.append(client)
+                        if self.accessdata["enable"]:
+                            if client in self.accessdata["trusted"]:
+                                self._packet_handler(cmd, server, client, id, val, name, origin, packet)
+                            else:
+                                if val in self.accessdata["keys"]:
+                                    if not client in self.accessdata["trusted"]:
+                                        print("Trusting new client: {0}".format(client))
+                                        self.accessdata["trusted"].append(client)
+                                        self._sendPacket(server, False, {"cmd":"pmsg", "id": client, "val":"I:TRUSTED"})
+                                        print(self.accessdata)
+                                        self._relayInitialData(client, server)
                                 else:
-                                    if self.users[str(client)]['name'] in self.userlist:
-                                        self.userlist[self.userlist.index(self.users[str(client)]['name'])] = val
-                                self.users[str(client)]['name'] = val
-                                print("User {0} declared username: {1}".format(client['id'], self.users[str(client)]['name']))
-                                self._relayUserList(server, False, client)
-                        if cmd == "gmsg": # Set global stream data values
-                            self.gdata = str(val)
-                            self._sendPacket(server, False, {"cmd":"gmsg", "val":self.gdata})
-                        if cmd == "pmsg": # Set private stream data values
-                            if not id == "":
-                                if not origin == "":
-                                    self._sendPacket(server, True, {"cmd":"pmsg", "id":id, "val":val, "origin":origin})
-                        if cmd == "gvar": # Set global variable data values
-                            self._sendPacket(server, False, {"cmd":"gvar", "name":name, "val":val})
-                        if cmd == "pvar": # Set private variable data values
-                            if not id == "":
-                                if not origin == "":
-                                    self._sendPacket(server, True, {"cmd":"pvar", "name":name, "id":id, "val":val, "origin":origin})
+                                    self._sendPacket(server, False, {"cmd":"pmsg", "id": client, "val":"E:NOT_TRUSTED"})
+                        else:
+                            self._packet_handler(cmd, server, client, id, val, name, origin, packet)
+
+    def _packet_handler(self, cmd, server, client, id, val, name, origin, packet):
+        #print(cmd, server, client, id, val, name, origin, packet)
+        if cmd == "clear": # Clears comms
+            self._sendPacket(server, False, {"cmd":"gmsg", "val":""})
+            self._sendPacket(server, False, {"cmd":"pmsg", "val":""})
+        if cmd == "setid": # Set username on server link
+            if "val" in packet:
+                if not client in self.handlers:
+                    self.userlist.append(val)
+                    self.handlers.append(client)
+                else:
+                    if self.users[str(client)]['name'] in self.userlist:
+                        self.userlist[self.userlist.index(self.users[str(client)]['name'])] = val
+                self.users[str(client)]['name'] = val
+                print("User {0} declared username: {1}".format(client['id'], self.users[str(client)]['name']))
+                self._relayUserList(server, False, client)
+        if cmd == "gmsg": # Set global stream data values
+            self.gdata = str(val)
+            self._sendPacket(server, False, {"cmd":"gmsg", "val":self.gdata})
+        if cmd == "pmsg": # Set private stream data values
+            if not id == "":
+                if not origin == "":
+                    self._sendPacket(server, True, {"cmd":"pmsg", "id":id, "val":val, "origin":origin})
+        if cmd == "gvar": # Set global variable data values
+            self._sendPacket(server, False, {"cmd":"gvar", "name":name, "val":val})
+        if cmd == "pvar": # Set private variable data values
+            if not id == "":
+                if not origin == "":
+                    self._sendPacket(server, True, {"cmd":"pvar", "name":name, "id":id, "val":val, "origin":origin})
 
     def _set_fn_new_packet(self, fn): # Client: Defines API-friendly callback to new packet events
         self.fn_msg = fn
