@@ -1,14 +1,14 @@
 # CloudLink
 
-## NOTICE: DO NOT INSTALL FROM PYPI FOR NOW, RELEASE IS CURRENTLY BORKED, WILL BE FIXED IN SERVER 0.1.5.2
+CloudLink is a high-speed, reliable, and custom websocket extension for Scratch 3.0, with server code that runs on Python.
+It permits cross-project (as well as cross-program) cloud variables.
+It also enables full-duplex networking and limitless possibilities for Scratch 3.0 projects.
+## Links
 
 ### [Discussion Forum](https://scratch.mit.edu/discuss/topic/398473)
 ### [HackMD Documentation](https://hackmd.io/G9q1kPqvQT6NrPobjjxSgg)
 
-CloudLink is a high-speed, reliable, and custom websocket extension for Scratch 3.0, with server code that runs on Python.
-It permits cross-project (as well as cross-program) cloud variables.
-It also enables full-duplex networking and limitless possibilities for Scratch 3.0 projects.
-
+## Example code
 Example code can be downloaded in the GitHub repository.
 
 #### Server: https://github.com/MikeDev101/cloudlink/blob/master/server_example.py
