@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-version = "0.1.5.2"
+version = "0.1.6"
 
 """
 ### CloudLink Server ###
@@ -200,6 +200,7 @@ class CloudLink(API):
             try:
                 packet = json.loads(message)
                 print("Got packet: {0} bytes".format(len(str(packet))))
+                print(packet)
             except Exception as e:
                 err = True
             finally:
@@ -243,33 +244,40 @@ class CloudLink(API):
 
     def _packet_handler(self, cmd, server, client, id, val, name, origin, packet):
         #print(cmd, server, client, id, val, name, origin, packet)
-        if cmd == "clear": # Clears comms
-            self._sendPacket(server, False, {"cmd":"gmsg", "val":""})
-            self._sendPacket(server, False, {"cmd":"pmsg", "val":""})
-        if cmd == "setid": # Set username on server link
-            if "val" in packet:
-                if not client in self.handlers:
-                    self.userlist.append(val)
-                    self.handlers.append(client)
-                else:
-                    if self.users[str(client)]['name'] in self.userlist:
-                        self.userlist[self.userlist.index(self.users[str(client)]['name'])] = val
-                self.users[str(client)]['name'] = val
-                print("User {0} declared username: {1}".format(client['id'], self.users[str(client)]['name']))
-                self._relayUserList(server, False, client)
-        if cmd == "gmsg": # Set global stream data values
-            self.gdata = str(val)
-            self._sendPacket(server, False, {"cmd":"gmsg", "val":self.gdata})
-        if cmd == "pmsg": # Set private stream data values
+        cmdlist = ["clear", "setid", "gmsg", "pmsg", "gvar", "pvar"]
+        if cmd in cmdlist:
+            if cmd == "clear": # Clears comms
+                self._sendPacket(server, False, {"cmd":"gmsg", "val":""})
+                self._sendPacket(server, False, {"cmd":"pmsg", "val":""})
+            if cmd == "setid": # Set username on server link
+                if "val" in packet:
+                    if not client in self.handlers:
+                        self.userlist.append(val)
+                        self.handlers.append(client)
+                    else:
+                        if self.users[str(client)]['name'] in self.userlist:
+                            self.userlist[self.userlist.index(self.users[str(client)]['name'])] = val
+                    self.users[str(client)]['name'] = val
+                    print("User {0} declared username: {1}".format(client['id'], self.users[str(client)]['name']))
+                    self._relayUserList(server, False, client)
+            if cmd == "gmsg": # Set global stream data values
+                self.gdata = str(val)
+                self._sendPacket(server, False, {"cmd":"gmsg", "val":self.gdata})
+            if cmd == "pmsg": # Set private stream data values
+                if not id == "":
+                    if not origin == "":
+                        self._sendPacket(server, True, {"cmd":"pmsg", "id":id, "val":val, "origin":origin})
+            if cmd == "gvar": # Set global variable data values
+                self._sendPacket(server, False, {"cmd":"gvar", "name":name, "val":val})
+            if cmd == "pvar": # Set private variable data values
+                if not id == "":
+                    if not origin == "":
+                        self._sendPacket(server, True, {"cmd":"pvar", "name":name, "id":id, "val":val, "origin":origin})
+        else:
+            print("[ i ] Routing packet using UPL")
             if not id == "":
                 if not origin == "":
-                    self._sendPacket(server, True, {"cmd":"pmsg", "id":id, "val":val, "origin":origin})
-        if cmd == "gvar": # Set global variable data values
-            self._sendPacket(server, False, {"cmd":"gvar", "name":name, "val":val})
-        if cmd == "pvar": # Set private variable data values
-            if not id == "":
-                if not origin == "":
-                    self._sendPacket(server, True, {"cmd":"pvar", "name":name, "id":id, "val":val, "origin":origin})
+                    self._sendPacket(server, True, {"cmd":cmd, "id":id, "val":val, "origin":origin})
 
     def _set_fn_new_packet(self, fn): # Client: Defines API-friendly callback to new packet events
         self.fn_msg = fn
