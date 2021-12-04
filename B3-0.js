@@ -32,6 +32,12 @@ var serverlist = [''];
 var serverips = [''];
 var servers = "";
 
+var statusCode = "";
+var gotNewStatusCode = false;
+
+var directData = "";
+var gotNewDirectData = false;
+
 try {
 	fetch('https://mikedev101.github.io/cloudlink/serverlist.json').then(response => {
 		return response.text();
@@ -80,10 +86,18 @@ class cloudlink {
 				blockType: Scratch.BlockType.REPORTER,
 				text: 'Private data',
 			}, 	{
+				opcode: 'returnDirectData',
+				blockType: Scratch.BlockType.REPORTER,
+				text: 'Direct Data',
+			}, {
 				opcode: 'returnLinkData',
 				blockType: Scratch.BlockType.REPORTER,
 				text: 'Link Status',
 			}, 	{
+				opcode: 'returnStatusCode',
+				blockType: Scratch.BlockType.REPORTER,
+				text: 'Status Code',
+			}, {
 				opcode: 'returnUserListData',
 				blockType: Scratch.BlockType.REPORTER,
 				text: 'Usernames',
@@ -313,15 +327,15 @@ class cloudlink {
 				arguments: {
 					CMD: {
 						type: Scratch.ArgumentType.STRING,
-						defaultValue: 'test',
+						defaultValue: 'cmd',
 					},
 					ID: {
 						type: Scratch.ArgumentType.STRING,
-						defaultValue: '%MS%',
+						defaultValue: 'id',
 					},
 					DATA: {
 						type: Scratch.ArgumentType.STRING,
-						defaultValue: 'Hello world!',
+						defaultValue: 'val',
 					},
 				},
 			},
@@ -331,14 +345,20 @@ class cloudlink {
 					items: ["Connected", "Username Synced"]
 				},
 				datamenu: {
-					items: ['Global', 'Private'],
+					items: ['Global', 'Private', 'Direct', 'Status Code',],
 				},
 				varmenu: {
 					items: ['Global', 'Private'],
 				},
 			}
 		};
-	}; 
+	};
+	returnDirectData() {
+		return directData;
+	}
+	returnStatusCode() {
+		return statusCode;
+	}
 	fetchURL(args) {
 		return fetch(args.url).then(response => response.text())
 	}
@@ -385,16 +405,18 @@ class cloudlink {
 						};
 						uList = uListTemp;
 					};
-					// Direct COMS (Fetches server metadata)
+					// Direct COMS
 					if (obj["cmd"] == "direct") {
 						var ddata = obj['val'];
 						if (ddata['cmd'] == "vers") {
 							serverVersion = ddata["val"];
 							console.log("Server version: " + String(serverVersion));
-						};
-						if (ddata['cmd'] == "motd") {
+						} else if (ddata['cmd'] == "motd") {
 							motd = ddata["val"];
 							console.log("Server Message-of-the-day: " + String(motd));
+						} else {
+							directData = obj["val"];
+						gotNewDirectData = true;
 						};
 					};
 					// Global Variables
@@ -407,12 +429,11 @@ class cloudlink {
 						privateVars[obj["name"]] = obj["val"];
 						gotNewPrivateVarData[obj["name"]] = true;
 					};
-					// Server soft-shutdown handler
-					if (obj["cmd"] == "ds") {
-						console.log("Server is shutting down, disconnecting");
-						wss.close(1000);
+					// Status code
+					if (obj["cmd"] == "statuscode") {
+						statusCode = obj["val"];
+						gotNewStatusCode = true;
 					};
-					
 				};
 				wss.onclose = function(event) {
 					isRunning = false;
@@ -431,6 +452,10 @@ class cloudlink {
 					gotNewPrivateVarData = {};
 					uList = "";
 					wss = null;
+					statusCode = "";
+					gotNewStatusCode = false;
+					directData = "";
+					gotNewDirectData = false;
 					console.log("Disconnected");
 					};
 			} catch(err) {
@@ -457,6 +482,8 @@ class cloudlink {
 			gotNewGlobalVarData = {};
 			gotNewPrivateVarData = {};
 			uList = "";
+			statusCode = "";
+			gotNewStatusCode = false;
 			wss = null;
 		};
 	};
@@ -507,16 +534,18 @@ class cloudlink {
 						};
 						uList = uListTemp;
 					};
-					// Direct COMS (Fetches server metadata)
+					// Direct COMS
 					if (obj["cmd"] == "direct") {
 						var ddata = obj['val'];
 						if (ddata['cmd'] == "vers") {
 							serverVersion = ddata["val"];
 							console.log("Server version: " + String(serverVersion));
-						};
-						if (ddata['cmd'] == "motd") {
+						} else if (ddata['cmd'] == "motd") {
 							motd = ddata["val"];
 							console.log("Server Message-of-the-day: " + String(motd));
+						} else {
+							directData = obj["val"];
+						gotNewDirectData = true;
 						};
 					};
 					// Global Variables
@@ -529,12 +558,11 @@ class cloudlink {
 						privateVars[obj["name"]] = obj["val"];
 						gotNewPrivateVarData[obj["name"]] = true;
 					};
-					// Server soft-shutdown handler
-					if (obj["cmd"] == "ds") {
-						console.log("Server is shutting down, disconnecting");
-						wss.close(1000);
+					// Status code
+					if (obj["cmd"] == "statuscode") {
+						statusCode = obj["val"];
+						gotNewStatusCode = true;
 					};
-					
 				};
 				wss.onclose = function(event) {
 					isRunning = false;
@@ -552,6 +580,10 @@ class cloudlink {
 					gotNewPrivateVarData = {};
 					uList = "";
 					wss = null;
+					statusCode = "";
+					gotNewStatusCode = false;
+					directData = "";
+					gotNewDirectData = false;
 					console.log("Disconnected");
 					};
 			} catch(err) {
@@ -587,19 +619,14 @@ class cloudlink {
 	runCMD(args) {
 		if (isRunning) {
 			if (String(myName) != "") {
-				if (userNames.indexOf(String(args.ID)) >= 0) {
-					if (!(String(args.DATA).length > 1000)) {
-						wss.send(JSON.stringify({
-							cmd: args.CMD,
-							id: args.ID,
-							val: args.DATA,
-							origin: String(myName)
-						}));
-					} else {
-						console.log("Blocking attempt to send packet larger than 1000 bytes (1 KB), packet is " + String(String(args.DATA).length) + " bytes");
-					};
+				if (!(String(args.DATA).length > 1000)) {
+					wss.send(JSON.stringify({
+						cmd: args.CMD,
+						id: args.ID,
+						val: args.DATA
+					}));
 				} else {
-						console.log("Blocking attempt to send private packet to nonexistent ID");
+					console.log("Blocking attempt to send packet larger than 1000 bytes (1 KB), packet is " + String(String(args.DATA).length) + " bytes");
 				};
 			};
 		};
@@ -743,6 +770,12 @@ class cloudlink {
 		if (args.TYPE == "Private (Linked)") {
 			return gotNewPrivateLinkedData;
 		};
+		if (args.TYPE == "Direct") {
+			return gotNewDirectData; 
+		};
+		if (args.TYPE == "Status Code") {
+			return gotNewStatusCode; 
+		};
 	}
 	setMyName(args) {
 		if (isRunning) {
@@ -815,6 +848,16 @@ class cloudlink {
 		if (args.TYPE == "Private (Linked)") {
 			if (gotNewPrivateLinkedData == true) {
 				gotNewPrivateLinkedData = false;
+			};
+		};
+		if (args.TYPE == "Direct") {
+			if (gotNewDirectData == true) {
+				gotNewDirectData = false;
+			};
+		};
+		if (args.TYPE == "Status Code") {
+			if (gotNewStatusCode == true) {
+				gotNewStatusCode = false;
 			};
 		};
 	};
