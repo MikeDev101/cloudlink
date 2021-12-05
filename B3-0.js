@@ -373,6 +373,7 @@ class cloudlink {
 					isRunning = true;
 					sys_status = 2; // Connected OK value
 					console.log("Connected");
+					wss.send(JSON.stringify({"cmd": "direct", "val": {"cmd": "type", "val": "scratch"}})); // Tell the server that the client is Scratch, which needs stringified nested JSON
 				};
 				wss.onmessage = function(event) {
 					var rawpacket = String(event.data);
@@ -502,6 +503,7 @@ class cloudlink {
 					isRunning = true;
 					sys_status = 2; // Connected OK value
 					console.log("Connected");
+					wss.send(JSON.stringify({"cmd": "direct", "val": {"cmd": "type", "val": "scratch"}})); // Tell the server that the client is Scratch, which needs stringified nested JSON
 				};
 				wss.onmessage = function(event) {
 					var rawpacket = String(event.data);
