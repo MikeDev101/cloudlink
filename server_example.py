@@ -1,46 +1,57 @@
 from cloudlink import CloudLink
 
 """
-CloudLink v0.1.7 Server Example
 
-This code demonstrates how easy it is to connect run a server. It also shows how to write functions
-to interact with CloudLink.
+CloudLink Server Example
 
+This demonstrates the new features of CloudLink server as of 0.1.7.2.
 For more information, please visit https://hackmd.io/G9q1kPqvQT6NrPobjjxSgg
 
-NOTICE ABOUT CALLBACKS
-The on_packet callback differs in what it does when used in server
-mode than it does in client mode.
-
-In server mode, the on_packet callback will only return back packets
-sent using the "direct" command, and will return the value of "val".
-
-If a client sends {"cmd": "direct", "val": "test"}, the server will
-take this message and callback the on_packet callback here, only
-returning the value "test" as the message.
-
-In client mode, the message will return the entire packet.
-
-As shown above, if a client sends {"cmd": "test", "val": "test", "id": "(YOUR ID HERE)"}
-to (YOUR ID HERE), the on_packet callback will return the entire
-JSON as the message.
 """
 
 def on_packet(message):
-    print(message)
-    cl.sendPacket({"cmd": "statuscode", "val": cl.codes["Test"], "id": message["id"]})
-    cl.sendPacket({"cmd": "direct", "val": message["val"], "id": message["id"]})
-    print(cl.getUsernames())
+    # We can get the IP of the client
+    if type(message["id"]) == dict:
+        print("Username is not set for this ID, ID is {0}".format(message["id"]["id"]))
+        print("IP of unnamed user is {0}".format(cl.getIPofObject(message["id"])))
+    elif type(message["id"]) == str:
+        print("Username set as {0}".format(message["id"]))
+        print("IP of user is {0}".format(cl.getIPofUsername(message["id"])))
+    
+    # Check for custom commands, of which we can write custom handlers for
+    if "cmd" in message:
+        print("Detected custom cmd")
+        print("cmd is {0}".format(message["cmd"]))
+    print("val is", message["val"])
+    
+    # Send back a status code to the user
+    cl.sendPacket({"cmd": "statuscode", "val": cl.codes["OK"], "id": message["id"]})
+    #cl.sendPacket({"cmd": "direct", "val": message["val"], "id": message["id"]})
+    
+def on_connect(client):
+    print("New client connected:", client["id"])
+
+def on_error(error):
+    print("Got an error: {0}".format(error))
+
+def on_close(client):
+    print("Client disconnected:", client["id"])
 
 if __name__ == "__main__":
-    cl = CloudLink(debug=True)
-    # Instanciates a CloudLink object into memory.
+    cl = CloudLink(debug=False)
+    # Instanciate CloudLink
     
     cl.callback("on_packet", on_packet)
-    # Create callbacks to functions.
+    cl.callback("on_error", on_error)
+    cl.callback("on_connect", on_connect)
+    cl.callback("on_close", on_close)
+    # Specify callbacks to functions above
+    
+    #cl.trustedAccess(True, ["test"])
+    # Enable trusted access
     
     cl.setMOTD("CloudLink test", enable=True)
-    # Sets the server Message of the Day.
-    
+    # Turn on Message-Of-The-Day
+
     cl.server()
-    # Start CloudLink and run as a server.
+    # Run the server

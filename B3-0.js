@@ -27,17 +27,35 @@ var privateVars = {}; // Custom private variables.
 var gotNewGlobalVarData = {}; // Booleans for checking if a new value has been written to a global var.
 var gotNewPrivateVarData = {}; // Booleans for checking if a new value has been written to a private var.
 
-var motd = "";
-var serverlist = [''];
-var serverips = [''];
-var servers = "";
+var motd = ""; // Message-of-the-day
+var serverlist = ['']; // Server list
+var serverips = ['']; // Server IP list
+var servers = ""; // another server list
 
-var statusCode = "";
-var gotNewStatusCode = false;
+var statusCode = ""; // Server status code
+var gotNewStatusCode = false; // Bool to check if new status code has been written to the status code var.
 
-var directData = "";
-var gotNewDirectData = false;
+var directData = ""; // Direct data
+var gotNewDirectData = false; // Bool to check if new direct data has been written to the direct data var.
 
+var clientip = ""; // Client IP address tracer for CloudLink Trusted Access & IP blocking
+
+// Get the client's IP address, requirement for Trusted Access to work correctly
+try {
+	fetch('https://api.ipify.org/').then(response => {
+		return response.text();
+	}).then(data => {
+		console.log("Client's IP address: " + String(data));
+		clientip = data;
+	}).catch(err => {
+		console.log("Error while getting client's IP address: " + String(err));
+		clientip = "";
+	});
+} catch(err) {
+	console.log(err);
+};
+
+// Get the server URL list
 try {
 	fetch('https://mikedev101.github.io/cloudlink/serverlist.json').then(response => {
 		return response.text();
@@ -374,6 +392,7 @@ class cloudlink {
 					sys_status = 2; // Connected OK value
 					console.log("Connected");
 					wss.send(JSON.stringify({"cmd": "direct", "val": {"cmd": "type", "val": "scratch"}})); // Tell the server that the client is Scratch, which needs stringified nested JSON
+					wss.send(JSON.stringify({"cmd": "direct", "val": {"cmd": "ip", "val": String(clientip)}})); // Tell the server the client's IP address
 				};
 				wss.onmessage = function(event) {
 					var rawpacket = String(event.data);
@@ -504,6 +523,7 @@ class cloudlink {
 					sys_status = 2; // Connected OK value
 					console.log("Connected");
 					wss.send(JSON.stringify({"cmd": "direct", "val": {"cmd": "type", "val": "scratch"}})); // Tell the server that the client is Scratch, which needs stringified nested JSON
+					wss.send(JSON.stringify({"cmd": "direct", "val": {"cmd": "ip", "val": String(clientip)}})); // Tell the server the client's IP address
 				};
 				wss.onmessage = function(event) {
 					var rawpacket = String(event.data);
@@ -620,16 +640,14 @@ class cloudlink {
 	};
 	runCMD(args) {
 		if (isRunning) {
-			if (String(myName) != "") {
-				if (!(String(args.DATA).length > 1000)) {
-					wss.send(JSON.stringify({
-						cmd: args.CMD,
-						id: args.ID,
-						val: args.DATA
-					}));
-				} else {
-					console.log("Blocking attempt to send packet larger than 1000 bytes (1 KB), packet is " + String(String(args.DATA).length) + " bytes");
-				};
+			if (!(String(args.DATA).length > 1000)) {
+				wss.send(JSON.stringify({
+					cmd: args.CMD,
+					id: args.ID,
+					val: args.DATA
+				}));
+			} else {
+				console.log("Blocking attempt to send packet larger than 1000 bytes (1 KB), packet is " + String(String(args.DATA).length) + " bytes");
 			};
 		};
 	};
