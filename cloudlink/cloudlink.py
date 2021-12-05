@@ -39,7 +39,7 @@ Description: String, Describes the code
 """
 
 class API:
-    def server(self, ip="127.0.0.1", port=3000): # Runs CloudLink in server mode.
+    def server(self, ip="127.0.0.1", port=3000, threaded=False): # Runs CloudLink in server mode.
         try:
             if self.state == 0:
                 # Change the link state to 1 (Server mode)
@@ -78,7 +78,7 @@ class API:
                 
                 # Run the server
                 print("Running server on ws://{0}:{1}/".format(ip, port))
-                self.wss.run_forever(threaded=False)
+                self.wss.run_forever(threaded=threaded)
             else:
                 if self.debug:
                     print("Error: Attempted to switch states!")
@@ -176,7 +176,10 @@ class API:
                             client = self.statedata["ulist"]["objs"][self.statedata["ulist"]["usernames"][id]]["object"]
                             if self.debug:
                                 print('Sending {0} to {1}'.format(msg, id))
-                            self.wss.send_message(client, payload)
+                            if self._get_client_type(client) == "scratch":
+                                if ("val" in msg) and (type(msg["val"]) == dict):
+                                    msg["val"] = json.dumps(msg["val"])
+                            self.wss.send_message(client, json.dumps(msg))
                         except Exception as e:
                             if self.debug:
                                 print("Error on sendPacket (server): {0}".format(e))
@@ -184,7 +187,7 @@ class API:
                     try:
                         if self.debug:
                             print('Sending "{0}" to all clients'.format(json.dumps(msg)))
-                        self.wss.send_message_to_all(payload)
+                        self._send_to_all(json.dumps(msg))
                     except Exception as e:
                             if self.debug:
                                 print("Error on sendPacket (server): {0}".format(e))
@@ -236,6 +239,12 @@ class CLTLS: #Feature NOT YET IMPLEMENTED
         pass
 """
 
+"""
+class CLTLS: #Feature NOT YET IMPLEMENTED
+    def __init__(self):
+        pass
+"""
+
 class CloudLink(API):
     def __init__(self, debug=False): # Initializes CloudLink
         self.wss = None # Websocket Object
@@ -274,12 +283,40 @@ class CloudLink(API):
         if self.debug:
             print("Debug enabled")
     
-    def _is_json(self, data):
-        try:
-            tmp = json.loads(data)
+    def _is_json(self, data): # Checks if something is JSON
+        if type(data) == dict:
             return True
-        except Exception as e:
-            return False
+        else:
+            try:
+                tmp = json.loads(data)
+                return True
+            except Exception as e:
+                return False
+    
+    def _get_client_type(self, client): # Gets client types to help prevent errors
+        if client["id"] in self.statedata["ulist"]["objs"]:
+            return self.statedata["ulist"]["objs"][client["id"]]["type"]
+        else:
+            return None
+    
+    def _get_obj_of_username(self, client): # Helps mitigate packet spoofing
+        if client in self.statedata["ulist"]["usernames"]:
+            return self.statedata["ulist"]["objs"][self.statedata["ulist"]["usernames"][client]]["object"]
+        else:
+            return None
+    
+    def _send_to_all(self, payload): # "Better" (?) send to all function
+        tmp_payload = payload
+        for client in self.wss.clients:
+            #print("sending {0} to {1}".format(payload, client["id"]))
+            if self._get_client_type(client) == "scratch":
+                #print("sending to all, {0} is a scratcher".format(client["id"]))
+                if ("val" in payload) and (type(payload["val"]) == dict):
+                    #print("stringifying nested json")
+                    tmp_payload["val"] = json.dumps(payload["val"])
+                self.wss.send_message(client, json.dumps(tmp_payload))
+            else:
+                self.wss.send_message(client, json.dumps(payload))
     
     def _server_packet_handler(self, client, server, message): # The almighty packet handler, single-handedly responsible for over hundreds of lines of code
         if not len(str(message)) == 0:
@@ -290,25 +327,16 @@ class CloudLink(API):
                 if "cmd" in msg: # Verify that the packet contains the command parameter, which is needed to work.
                     if type(msg["cmd"]) == str:
                         if msg["cmd"] in ["gmsg", "pmsg", "setid", "direct", "gvar", "pvar"]:
-                            
-                            # Check if the val can be converted to dict
-                            convert_to_str = False
-                            if ("val" in msg) and (type(msg["val"]) == str) and (self._is_json(msg["val"])):
-                                convert_to_str = True
-                                if self.debug:
-                                    print("Detected stringified JSON, most likely a TurboWarp block")
-                            
-                            """
-                            This checks if the packet uses the standard set of commands.
-                            If the packet does not, we can try to route it using UPL.
-                            """
                             if msg["cmd"] == "gmsg": # Handles global messages.
                                 if "val" in msg: # Verify that the packet contains the required parameters.
+                                    if self._get_client_type(client) == "scratch":
+                                        if self._is_json(msg["val"]):
+                                            msg["val"] = json.loads(msg["val"])
                                     if not len(str(msg["val"])) > 1000:
                                         if self.debug:
                                             print("message is {0} bytes".format(len(str(msg["val"]))))
                                         # Send the packet to all clients.
-                                        self.wss.send_message_to_all(json.dumps({"cmd": "gmsg", "val": msg["val"]}))
+                                        self._send_to_all({"cmd": "gmsg", "val": msg["val"]})
                                         self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["OK"]}))
                                     else:
                                         if self.debug:
@@ -321,22 +349,24 @@ class CloudLink(API):
                             
                             if msg["cmd"] == "pmsg": # Handles private messages.
                                 if ("val" in msg) and ("id" in msg): # Verify that the packet contains the required parameters.
+                                    if self._get_client_type(client) == "scratch":
+                                        if self._is_json(msg["val"]):
+                                            msg["val"] = json.loads(msg["val"])
                                     if msg["id"] in self.statedata["ulist"]["usernames"]:
                                         if not len(str(msg["val"])) > 1000:
-                                            if not msg["id"] == self.statedata["ulist"]["objs"][client["id"]]["username"]:
+                                            if not client == self._get_obj_of_username(msg["id"]):
                                                 try:
-                                                    otherclient = self.statedata["ulist"]["objs"][self.statedata["ulist"]["usernames"][msg["id"]]]["object"]
+                                                    otherclient = self._get_obj_of_username(msg["id"])
                                                     if not len(str(self.statedata["ulist"]["objs"][client["id"]]["username"])) == 0:
                                                         msg["origin"] = self.statedata["ulist"]["objs"][client["id"]]["username"]
-                                                        if self.debug:
-                                                            print('Sending {0} to {1}'.format(msg, msg["id"]))
-                                                        del msg["id"]
-                                                        
-                                                        if self._is_json(msg["val"]) and convert_to_str:
-                                                            tmp_val = json.dumps(tmp_val)
+                                                        if (self._get_client_type(otherclient) == "scratch") and (self._is_json(msg["val"])):
+                                                            tmp_val = json.dumps(msg["val"])
                                                         else:
                                                             tmp_val = msg["val"]
                                                         
+                                                        if self.debug:
+                                                            print('Sending {0} to {1}'.format(msg, msg["id"]))
+                                                        del msg["id"]
                                                         self.wss.send_message(otherclient, json.dumps({"cmd": "pmsg", "val": tmp_val, "origin": msg["origin"]}))
                                                         self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["OK"]}))
                                                     else:
@@ -374,7 +404,7 @@ class CloudLink(API):
                                                         # Set the object's username info
                                                         self.statedata["ulist"]["objs"][client['id']]["username"] = msg["val"]
                                                         self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["OK"]}))
-                                                        self.wss.send_message_to_all(json.dumps({"cmd": "ulist", "val": self._get_ulist()}))
+                                                        self._send_to_all({"cmd": "ulist", "val": self._get_ulist()})
                                                         if self.debug:
                                                             print("User {0} set username: {1}".format(client["id"], msg["val"]))
                                                     else:
@@ -403,11 +433,31 @@ class CloudLink(API):
                                     self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Syntax"]}))
                             
                             if msg["cmd"] == "direct": # Direct packet handler for server.
+                                if self._get_client_type(client) == "scratch":
+                                    if self._is_json(msg["val"]):
+                                        msg["val"] = json.loads(msg["val"])
                                 if ("val" in msg):
                                     if not self.callback_function["on_packet"] == None:
-                                        if self._is_json(msg["val"]) and not convert_to_str:
-                                            msg["val"] = json.loads(msg["val"])
-                                        if not len(str(self.statedata["ulist"]["objs"][client["id"]]["username"])) == 0:
+                                        if ("cmd" in msg["val"]) and (msg["val"]["cmd"] in ["type"]):
+                                            if msg["val"]["cmd"] == "type":
+                                                if "val" in msg["val"]:
+                                                    self.statedata["ulist"]["objs"][client["id"]]["type"] = msg["val"]["val"] # Set the client type
+                                                    if self.debug:
+                                                        if msg["val"]["val"] == "scratch":
+                                                            print("Client {0} is a CloudLink Scratch-based client type, will be stringfifying nested JSON".format(client["id"]))
+                                                        elif msg["val"]["val"] == "py":
+                                                            print("Client {0} is a CloudLink Python client type, will not be stringfifying nested JSON".format(client["id"]))
+                                                        elif msg["val"]["val"] == "js":
+                                                            print("Client {0} is a CloudLink JS client type, will not be stringfifying nested JSON".format(client["id"]))
+                                                        else:
+                                                            print("Client {0} is of unknown client type, claims it's {1}, assuming we do not need to be stringfifying nested JSON".format(client["id"], (msg["val"]["val"])))
+                                                else:
+                                                    if self.debug:
+                                                        print('Error: Packet missing parameters')
+                                                    self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Syntax"]}))
+                                            else:
+                                                self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["OK"]}))
+                                        elif not len(str(self.statedata["ulist"]["objs"][client["id"]]["username"])) == 0:
                                             origin = self.statedata["ulist"]["objs"][client["id"]]["username"]
                                             if self.debug:
                                                 print("Handling direct command from {0}".format(origin))
@@ -421,15 +471,12 @@ class CloudLink(API):
                             
                             if msg["cmd"] == "gvar": # Handles global variables.
                                 if ("val" in msg) and ("name" in msg): # Verify that the packet contains the required parameters.
+                                    if self._get_client_type(client) == "scratch":
+                                        if self._is_json(msg["val"]):
+                                            msg["val"] = json.loads(msg["val"])
                                     if (not len(str(msg["val"])) > 1000) and (not len(str(msg["name"])) > 100):
                                         # Send the packet to all clients.
-                                        
-                                        if self._is_json(msg["val"]) and convert_to_str:
-                                            tmp_val = json.dumps(tmp_val)
-                                        else:
-                                            tmp_val = msg["val"]
-                                        
-                                        self.wss.send_message_to_all(json.dumps({"cmd": "gvar", "val": tmp_val, "name": msg["name"]}))
+                                        self._send_to_all({"cmd": "gvar", "val": msg["val"], "name": msg["name"]})
                                         self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["OK"]}))
                                     else:
                                         if self.debug:
@@ -442,22 +489,23 @@ class CloudLink(API):
                             
                             if msg["cmd"] == "pvar": # Handles private variables.
                                 if ("val" in msg) and ("id" in msg) and ("name" in msg): # Verify that the packet contains the required parameters.
+                                    if self._get_client_type(client) == "scratch":
+                                        if self._is_json(msg["val"]):
+                                            msg["val"] = json.loads(msg["val"])
                                     if msg["id"] in self.statedata["ulist"]["usernames"]:
                                         if (not len(str(msg["val"])) > 1000) and (not len(str(msg["name"])) > 1000):
-                                            if not msg["id"] == self.statedata["ulist"]["objs"][client["id"]]["username"]:
+                                            if not client == self._get_obj_of_username(msg["id"]):
                                                 try:
-                                                    otherclient = self.statedata["ulist"]["objs"][self.statedata["ulist"]["usernames"][msg["id"]]]["object"]
+                                                    otherclient = self._get_obj_of_username(msg["id"])
                                                     if not len(str(self.statedata["ulist"]["objs"][client["id"]]["username"])) == 0:
                                                         msg["origin"] = self.statedata["ulist"]["objs"][client["id"]]["username"]
+                                                        if (self._get_client_type(otherclient) == "scratch") and ((self._is_json(msg["val"])) or (type(msg["val"]) == dict)):
+                                                            tmp_val = json.dumps(msg["val"])
+                                                        else:
+                                                            tmp_val = msg["val"]
                                                         if self.debug:
                                                             print('Sending {0} to {1}'.format(msg, msg["id"]))
                                                         del msg["id"]
-                                                        
-                                                        if self._is_json(msg["val"]) and convert_to_str:
-                                                            tmp_val = json.dumps(tmp_val)
-                                                        else:
-                                                            tmp_val = msg["val"]
-                                                        
                                                         self.wss.send_message(otherclient, json.dumps({"cmd": "pvar", "val": tmp_val, "name": msg["name"], "origin": msg["origin"]}))
                                                         self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["OK"]}))
                                                     else:
@@ -485,20 +533,24 @@ class CloudLink(API):
                         
                         else: # Route the packet using UPL.
                             if ("val" in msg) and ("id" in msg): # Verify that the packet contains the required parameters.
+                                if self._get_client_type(client) == "scratch":
+                                    if self._is_json(msg["val"]):
+                                        msg["val"] = json.loads(msg["val"])
                                 if msg["id"] in self.statedata["ulist"]["usernames"]:
                                     if not len(str(msg["val"])) > 1000:
-                                        if not msg["id"] == self.statedata["ulist"]["objs"][client["id"]]["username"]:
+                                        if not client == self._get_obj_of_username(msg["id"]):
                                             try:
-                                                otherclient = self.statedata["ulist"]["objs"][self.statedata["ulist"]["usernames"][msg["id"]]]["object"]
-                                                if not len(str(self.statedata["ulist"]["objs"][client["id"]]["username"])) == 0: 
+                                                otherclient = self._get_obj_of_username(msg["id"])
+                                                if not len(str(self.statedata["ulist"]["objs"][client["id"]]["username"])) == 0:
                                                     msg["origin"] = self.statedata["ulist"]["objs"][client["id"]]["username"]
+                                                    if (self._get_client_type(otherclient) == "scratch") and ((self._is_json(msg["val"])) or (type(msg["val"]) == dict)):
+                                                        tmp_val = json.dumps(msg["val"])
+                                                    else:
+                                                        tmp_val = msg["val"]
+                                                    
                                                     if self.debug:
-                                                        print('Routing packet {0} to {1}'.format(msg, msg["id"]))
+                                                        print('Routing {0} to {1}'.format(msg, msg["id"]))
                                                     del msg["id"]
-                                                    
-                                                    if self._is_json(msg["val"]) and convert_to_str:
-                                                        msg["val"] = json.loads(msg["val"])
-                                                    
                                                     self.wss.send_message(otherclient, json.dumps(msg))
                                                     self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["OK"]}))
                                                 else:
@@ -515,6 +567,10 @@ class CloudLink(API):
                                         if self.debug:
                                             print('Error: Packet too large')
                                         self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["TooLarge"]}))
+                                else:
+                                    if self.debug:
+                                        print('Error: ID Not found')
+                                    self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["IDNotFound"]}))
                             else:
                                 if self.debug:
                                     print('Error: Packet missing parameters')
@@ -533,7 +589,7 @@ class CloudLink(API):
                 self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Syntax"]}))
             except Exception as e:
                 if self.debug:
-                    print("Error: {0}".format(e))
+                    print("Error on _server_packet_handler: {0}".format(e))
                 self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["InternalServerError"]}))
         else:
             if self.debug:
@@ -557,7 +613,7 @@ class CloudLink(API):
                 print("New connection: {0}".format(str(client['id'])))
             
             # Add the client to the ulist object in memory.
-            self.statedata["ulist"]["objs"][client["id"]] = {"object": client, "username": "", "ip": ""}
+            self.statedata["ulist"]["objs"][client["id"]] = {"object": client, "username": "", "ip": "", "type": ""}
             
             # Send the current username list.
             self.wss.send_message(client, json.dumps({"cmd": "ulist", "val": self._get_ulist()}))
@@ -599,7 +655,7 @@ class CloudLink(API):
                 del self.statedata["ulist"]["usernames"][self.statedata["ulist"]["objs"][client['id']]["username"]]
             del self.statedata["ulist"]["objs"][client['id']]
             
-            self.wss.send_message_to_all(json.dumps({"cmd": "ulist", "val": self._get_ulist()}))
+            self._send_to_all({"cmd": "ulist", "val": self._get_ulist()})
             if not self.callback_function["on_close"] == None:
                 def run(*args):
                     try:
@@ -633,6 +689,7 @@ class CloudLink(API):
         try:
             if self.debug:
                 print("Connected")
+            self.wss.send(json.dumps({"cmd": "direct", "val": {"cmd": "type", "val": "py"}})) # Specify to the server that the client is based on Python
             if not self.callback_function["on_connect"] == None:
                 def run(*args):
                     try:
