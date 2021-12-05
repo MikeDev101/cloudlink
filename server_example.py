@@ -43,4 +43,4 @@ if __name__ == "__main__":
     # Sets the server Message of the Day.
     
     cl.server()
-    # Start CloudLink and run as a client.
+    # Start CloudLink and run as a server.
