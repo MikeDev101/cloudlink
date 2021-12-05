@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-version = "0.1.7.2"
+version = "0.1.7.3"
 
 # Server based on https://github.com/Pithikos/python-websocket-server
 # Client based on https://github.com/websocket-client/websocket-client
@@ -62,6 +62,9 @@ class API:
                 if (not "secure_enable" in self.statedata) or (not "secure_keys" in self.statedata):
                     self.statedata["secure_enable"] = False
                     self.statedata["secure_keys"] = []
+                if not "ip_blocklist" in self.statedata:
+                    self.statedata["ip_blocklist"] = [""]
+                
                 self.statedata = {
                     "ulist": {
                         "usernames": {},
@@ -74,7 +77,8 @@ class API:
                     "motd": self.statedata["motd"], # MOTD text
                     "secure_enable": self.statedata["secure_enable"], # Trusted Access enabler
                     "secure_keys": self.statedata["secure_keys"], # Trusted Access keys
-                    "trusted": [] # Clients that are trusted with Secure Access, references memory objects only
+                    "trusted": [], # Clients that are trusted with Secure Access, references memory objects only
+                    "ip_blocklist": self.statedata["ip_blocklist"] # Blocks clients with certain IP addresses
                 }
                 
                 # Run the server
@@ -185,6 +189,7 @@ class API:
                     
                 elif ("id" in msg) and (type(msg["id"]) == str) and (msg["cmd"] not in ["gmsg", "gvar"]):
                     id = msg["id"]
+                    del msg["id"]
                     if id in self.statedata["ulist"]["usernames"]:
                         try:
                             client = self.statedata["ulist"]["objs"][self.statedata["ulist"]["usernames"][id]]["object"]
@@ -246,7 +251,7 @@ class API:
         else:
             return None
     
-    def getIPofUsername(self, user): # Allows the server to track user IPs for Trusted Access.
+    def getIPofUsername(self, user): # Allows the server to track user IPs for Trusted Access, uses the username of a client.
         if self.state == 1:
             if not self._get_obj_of_username(user) == None:
                 return self._get_ip_of_obj(self._get_obj_of_username(user))
@@ -255,18 +260,87 @@ class API:
                 print("Error: Cannot use the IP getter in current state!")
             return ""
     
-    def getIPofObject(self, obj):
+    def getIPofObject(self, obj): # Allows the server to track user IPs for Trusted Access, but uses the memory object of a client instead.
         if self.state == 1:
             return self._get_ip_of_obj(obj)
         else:
             if self.debug:
                 print("Error: Cannot use the IP getter in current state!")
             return ""
-"""
-class CLTLS: #Feature NOT YET IMPLEMENTED
-    def __init__(self):
-        pass
-"""
+    
+    def untrust(self, obj): # If a client has been trusted, the server can loose trust and refuse future packets.
+        if self.state == 1:
+            if self.statedata["secure_enable"]:
+                if type(obj) == dict:
+                    if obj in self.statedata["trusted"]:
+                        self.statedata["trusted"].remove(obj)
+                        if self.debug:
+                            print("Untrusted ID {0}.".format(obj["id"]))
+                    else:   
+                        if self.debug:
+                            print("Unable to untrust an ID that does not exist")
+                elif type(obj) == str:
+                    obj = self._get_obj_of_username(obj)
+                    if not obj == None:
+                        if obj in self.statedata["trusted"]:
+                            self.statedata["trusted"].remove(obj)
+                            if self.debug:
+                                print("Untrusted ID {0}.".format(obj["id"]))
+                        else:   
+                            if self.debug:
+                                print("Unable to untrust an ID that does not exist")
+                    else:
+                        if self.debug:
+                            print("Unable to untrust an ID that does not exist")
+            else:
+                if self.debug:
+                    print("Error: Cannot use the untrust function: Trusted Access not enabled!")
+        else:
+            if self.debug:
+                print("Error: Cannot use the untrust function in current state!")
+    
+    def loadIPBlocklist(self, blist):
+        if type(blist) == list:
+            if not '' in blist:
+                blist.append("")
+            self.statedata["ip_blocklist"] = blist
+            if self.debug:
+                print("Loaded {0} blocked IPs into the blocklist!".format(len(self.statedata["ip_blocklist"])-1))
+    
+    def blockIP(self, ip):
+        if self.state == 1:
+            if self.statedata["secure_enable"]:
+                if type(ip) == str:
+                    if not ip in self.statedata["ip_blocklist"]:
+                        self.statedata["ip_blocklist"].append(ip)
+                        if self.debug:
+                            print("Blocked IP {0}!".format(ip))
+        else:
+            if self.debug:
+                print("Error: Cannot use the IP Block function in current state!")
+    
+    def unblockIP(self, ip):
+        if self.state == 1:
+            if self.statedata["secure_enable"]:
+                if type(ip) == str:
+                    if ip in self.statedata["ip_blocklist"]:
+                        self.statedata["ip_blocklist"].remove(ip)
+                        if self.debug:
+                            print("Unblocked IP {0}!".format(ip))
+        else:
+            if self.debug:
+                print("Error: Cannot use the IP Block function in current state!")
+    
+    def getIPBlocklist(self):
+        if self.state == 1:
+            if self.statedata["secure_enable"]:
+                tmp = self.statedata["ip_blocklist"]
+                tmp.remove('')
+                return self.statedata["ip_blocklist"]
+        else:
+            if self.debug:
+                print("Error: Cannot use the IP Blocklist get function in current state!")
+            return []
 
 """
 class CLTLS: #Feature NOT YET IMPLEMENTED
@@ -305,7 +379,11 @@ class CloudLink(API):
             "TAInvalid": "E:113 | TA Key invalid",
             "TAExpired": "E:114 | TA Key expired",
             "Refused": "E:115 | Refused",
-            "IDRequired": "E:116 | Username required"
+            "IDRequired": "E:116 | Username required",
+            "TALostTrust": "E:117 | Trust lost",
+            "Invalid": "E:118 | Invalid command",
+            "Blocked": "E:119 | IP Blocked",
+            "IPRequred": "E:120 | IP Address required"
         }
         
         print("CloudLink v{0}".format(str(version))) # Report version number
@@ -348,7 +426,13 @@ class CloudLink(API):
     
     def _is_obj_trusted(self, obj):
         if self.statedata["secure_enable"]:
-            return obj in self.statedata["trusted"]
+            return ((obj in self.statedata["trusted"]) and (not self._is_obj_blocked(obj)))
+        else:
+            return False
+    
+    def _is_obj_blocked(self, obj):
+        if self.statedata["secure_enable"]:
+            return (self._get_ip_of_obj(obj) in self.statedata["ip_blocklist"])
         else:
             return False
     
@@ -516,17 +600,18 @@ class CloudLink(API):
                                         if "cmd" in msg["val"]:
                                             if msg["val"]["cmd"] == "type":
                                                 if "val" in msg["val"]:
-                                                    self.statedata["ulist"]["objs"][client["id"]]["type"] = msg["val"]["val"] # Set the client type
-                                                    if self.debug:
-                                                        if msg["val"]["val"] == "scratch":
-                                                            print("Client {0} is a CloudLink Scratch-based client type, will be stringfifying nested JSON".format(client["id"]))
-                                                        elif msg["val"]["val"] == "py":
-                                                            print("Client {0} is a CloudLink Python client type, will not be stringfifying nested JSON".format(client["id"]))
-                                                        elif msg["val"]["val"] == "js":
-                                                            print("Client {0} is a CloudLink JS client type, will not be stringfifying nested JSON".format(client["id"]))
-                                                        else:
-                                                            print("Client {0} is of unknown client type, claims it's {1}, assuming we do not need to be stringfifying nested JSON".format(client["id"], (msg["val"]["val"])))
-                                                    #self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["OK"]}))
+                                                    if self.statedata["ulist"]["objs"][client["id"]]["type"] == None: # Prevent the client from changing types
+                                                        self.statedata["ulist"]["objs"][client["id"]]["type"] = msg["val"]["val"] # Set the client type
+                                                        if self.debug:
+                                                            if msg["val"]["val"] == "scratch":
+                                                                print("Client {0} is a CloudLink Scratch-based client type, will be stringfifying nested JSON".format(client["id"]))
+                                                            elif msg["val"]["val"] == "py":
+                                                                print("Client {0} is a CloudLink Python client type, will not be stringfifying nested JSON".format(client["id"]))
+                                                            elif msg["val"]["val"] == "js":
+                                                                print("Client {0} is a CloudLink JS client type, will not be stringfifying nested JSON".format(client["id"]))
+                                                            else:
+                                                                print("Client {0} is of unknown client type, claims it's {1}, assuming we do not need to be stringfifying nested JSON".format(client["id"], (msg["val"]["val"])))
+                                                        #self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["OK"]}))
                                                 else:
                                                     if self.debug:
                                                         print('Error: Packet missing parameters')
@@ -534,10 +619,11 @@ class CloudLink(API):
                                             elif msg["val"]["cmd"] == "ip":
                                                 try:
                                                     if "val" in msg["val"]:
-                                                        self.statedata["ulist"]["objs"][client["id"]]["ip"] = msg["val"]["val"] # Set the client's IP
-                                                        if self.debug:
-                                                            print("Client {0} reports IP {1}".format(client["id"], self.statedata["ulist"]["objs"][client["id"]]["ip"]))
-                                                        #self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["OK"]}))
+                                                        if self.statedata["ulist"]["objs"][client["id"]]["ip"] == None: # Prevent the client from changing IP
+                                                            self.statedata["ulist"]["objs"][client["id"]]["ip"] = msg["val"]["val"] # Set the client's IP
+                                                            if self.debug:
+                                                                print("Client {0} reports IP {1}".format(client["id"], self.statedata["ulist"]["objs"][client["id"]]["ip"]))
+                                                            #self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["OK"]}))
                                                     else:
                                                         if self.debug:
                                                             print('Error: Packet missing parameters')
@@ -720,11 +806,14 @@ class CloudLink(API):
                 print("New connection: {0}".format(str(client['id'])))
             
             # Add the client to the ulist object in memory.
-            self.statedata["ulist"]["objs"][client["id"]] = {"object": client, "username": "", "ip": "", "type": ""}
+            self.statedata["ulist"]["objs"][client["id"]] = {"object": client, "username": "", "ip": None, "type": None}
             
             # Send the MOTD if enabled.
             if self.statedata["motd_enable"]:
                 self.wss.send_message(client, json.dumps({"cmd": "direct", "val": {"cmd": "motd", "val": str(self.statedata["motd"])}}))
+            
+            # Send server version.
+            self.wss.send_message(client, json.dumps({"cmd": "direct", "val": {"cmd": "vers", "val": str(version)}}))
             
             if not self.statedata["secure_enable"]:
                 # Send the current username list.
@@ -735,9 +824,6 @@ class CloudLink(API):
             else:
                 # Tell the client that the server is expecting a Trusted Access key.
                 self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["TAEnabled"]}))
-            
-            # Send server version.
-            self.wss.send_message(client, json.dumps({"cmd": "direct", "val": {"cmd": "vers", "val": str(version)}}))
             
             if not self.callback_function["on_connect"] == None:
                 def run(*args):
@@ -792,28 +878,45 @@ class CloudLink(API):
                     try:
                         msg = json.loads(message)
                         if ("cmd" in msg) and ("val" in msg):
-                            if (msg["cmd"] == "direct") and (type(msg["val"]) == dict):
-                                self._server_packet_handler(client, server, message)
+                            if (msg["cmd"] == "direct") and (type(msg["val"]) == dict) and (msg["val"]["cmd"] in ["ip", "type"]):
+                                if self._is_obj_blocked(client):
+                                    if self.debug:
+                                        print("User {0} is IP blocked, not trusting".format(client["id"]))
+                                    # Tell the client it is IP blocked
+                                    self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Blocked"]}))
+                                else:
+                                    self._server_packet_handler(client, server, message)
                             else:
                                 if (msg["cmd"] == "direct") or (msg["cmd"] == "gmsg"):
-                                    if type(msg["val"]) == str:
-                                        if msg["val"] in self.statedata["secure_keys"]:
-                                            self.statedata["trusted"].append(client)
-                                            if self.debug:
-                                                print("Trusting user {0}".format(client["id"]))
-                                            
-                                            # Send the current username list.
-                                            self.wss.send_message(client, json.dumps({"cmd": "ulist", "val": self._get_ulist()}))
-                                            
-                                            # Send the current global data stream value.
-                                            self.wss.send_message(client, json.dumps({"cmd": "gmsg", "val": str(self.statedata["gmsg"])}))
-                                            
-                                            # Tell the client it has been trusted
-                                            self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["OK"]}))
-                                        else:
-                                            self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["TAInvalid"]}))
+                                    if self._is_obj_blocked(client):
+                                        if self.debug:
+                                            print("User {0} is IP blocked, not trusting".format(client["id"]))
+                                        # Tell the client it is IP blocked
+                                        self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Blocked"]}))
                                     else:
-                                        self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Datatype"]}))
+                                        if type(msg["val"]) == str:
+                                            if msg["val"] in self.statedata["secure_keys"]:
+                                                if self._get_ip_of_obj(client) == None:
+                                                    if self.debug:
+                                                        print("User {0} has not set their IP address, not trusting".format(client["id"]))
+                                                    self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["IPRequred"]}))
+                                                else:
+                                                    self.statedata["trusted"].append(client)
+                                                    if self.debug:
+                                                        print("Trusting user {0}".format(client["id"]))
+                                                    
+                                                    # Send the current username list.
+                                                    self.wss.send_message(client, json.dumps({"cmd": "ulist", "val": self._get_ulist()}))
+                                                    
+                                                    # Send the current global data stream value.
+                                                    self.wss.send_message(client, json.dumps({"cmd": "gmsg", "val": str(self.statedata["gmsg"])}))
+                                                    
+                                                    # Tell the client it has been trusted
+                                                    self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["OK"]}))
+                                            else:
+                                                self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["TAInvalid"]}))
+                                        else:
+                                            self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Datatype"]}))
                                 else:
                                     self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Refused"]}))
                         else:
