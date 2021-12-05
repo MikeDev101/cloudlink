@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-version = "0.1.7.1"
+version = "0.1.7.2"
 
 # Server based on https://github.com/Pithikos/python-websocket-server
 # Client based on https://github.com/websocket-client/websocket-client
@@ -769,7 +769,6 @@ class CloudLink(API):
             if self.statedata["secure_enable"]:
                 if client in self.statedata["trusted"]:
                     self.statedata["trusted"].remove(client)
-                print(self.statedata)
             
             self._send_to_all({"cmd": "ulist", "val": self._get_ulist()})
             if not self.callback_function["on_close"] == None:
