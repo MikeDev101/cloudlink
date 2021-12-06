@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-version = "0.1.7.3"
+version = "0.1.7.4"
 
 # Server based on https://github.com/Pithikos/python-websocket-server
 # Client based on https://github.com/websocket-client/websocket-client
@@ -206,7 +206,7 @@ class API:
                     try:
                         if self.debug:
                             print('Sending "{0}" to all clients'.format(json.dumps(msg)))
-                        self._send_to_all(json.dumps(msg))
+                        self._send_to_all(msg)
                     except Exception as e:
                             if self.debug:
                                 print("Error on sendPacket (server): {0}".format(e))
