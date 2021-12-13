@@ -370,7 +370,7 @@ class API:
                             print("Unable to kick an ID that does not exist")
             else:
                 if self.debug:
-                    print("Error: Cannot use the untrust function: Trusted Access not enabled!")
+                    print("Error: Cannot use the kick function: Trusted Access not enabled!")
         else:
             if self.debug:
                 print("Error: Cannot use the kick function in current state!")
