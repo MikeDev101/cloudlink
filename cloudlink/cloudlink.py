@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-version = "0.1.7.4"
+version = "0.1.7.5"
 
 # Server based on https://github.com/Pithikos/python-websocket-server
 # Client based on https://github.com/websocket-client/websocket-client
@@ -150,7 +150,7 @@ class API:
             if self.debug:
                 print("Error at callback: {0}".format(e))
     
-    def trustedAccess(self, enable, keys):
+    def trustedAccess(self, enable, keys): # Enables secure access to the server.
         if type(enable) == bool:
             if type(keys) == list:
                 if enable:
@@ -299,7 +299,7 @@ class API:
             if self.debug:
                 print("Error: Cannot use the untrust function in current state!")
     
-    def loadIPBlocklist(self, blist):
+    def loadIPBlocklist(self, blist): # Loads a list of IP addresses to block
         if type(blist) == list:
             if not '' in blist:
                 blist.append("")
@@ -307,7 +307,7 @@ class API:
             if self.debug:
                 print("Loaded {0} blocked IPs into the blocklist!".format(len(self.statedata["ip_blocklist"])-1))
     
-    def blockIP(self, ip):
+    def blockIP(self, ip): # Blocks an IP address
         if self.state == 1:
             if self.statedata["secure_enable"]:
                 if type(ip) == str:
@@ -319,7 +319,7 @@ class API:
             if self.debug:
                 print("Error: Cannot use the IP Block function in current state!")
     
-    def unblockIP(self, ip):
+    def unblockIP(self, ip): # Unblocks an IP address
         if self.state == 1:
             if self.statedata["secure_enable"]:
                 if type(ip) == str:
@@ -331,7 +331,7 @@ class API:
             if self.debug:
                 print("Error: Cannot use the IP Block function in current state!")
     
-    def getIPBlocklist(self):
+    def getIPBlocklist(self): # Returns the latest IP blocklist
         if self.state == 1:
             if self.statedata["secure_enable"]:
                 tmp = self.statedata["ip_blocklist"]
@@ -341,6 +341,39 @@ class API:
             if self.debug:
                 print("Error: Cannot use the IP Blocklist get function in current state!")
             return []
+    
+    def kickClient(self, obj): # Terminates a client's connection (should only be used for specific purposes)
+        if self.state == 1:
+            if self.statedata["secure_enable"]:
+                if type(obj) == dict:
+                    if obj["id"] in self.statedata["ulist"]["objs"]:
+                        # Ask the WebsocketServer to terminate the connection
+                        obj["handler"].send_close(1000, bytes('', encoding='utf-8'))
+                        if self.debug:
+                            print("Kicked ID {0}.".format(obj["id"]))
+                    else:
+                        if self.debug:
+                            print("Unable to kick an ID that does not exist")
+                elif type(obj) == str:
+                    obj = self._get_obj_of_username(obj)
+                    if not obj == None:
+                        if obj["id"] in self.statedata["ulist"]["objs"]:
+                            # Ask the WebsocketServer to terminate the connection
+                            obj["handler"].send_close(1000, bytes('', encoding='utf-8'))
+                            if self.debug:
+                                print("Kicked ID {0}.".format(obj["id"]))
+                        else:   
+                            if self.debug:
+                                print("Unable to kick an ID that does not exist")
+                    else:
+                        if self.debug:
+                            print("Unable to kick an ID that does not exist")
+            else:
+                if self.debug:
+                    print("Error: Cannot use the untrust function: Trusted Access not enabled!")
+        else:
+            if self.debug:
+                print("Error: Cannot use the kick function in current state!")
 
 """
 class CLTLS: #Feature NOT YET IMPLEMENTED
@@ -412,25 +445,25 @@ class CloudLink(API):
         else:
             return None
     
-    def _get_username_of_obj(self, obj):
+    def _get_username_of_obj(self, obj): # Returns the username of a client object
         if obj["id"] in self.statedata["ulist"]["objs"]:
             return self.statedata["ulist"]["objs"][obj["id"]]["username"]
         else:
             return ""
     
-    def _get_ip_of_obj(self, obj):
+    def _get_ip_of_obj(self, obj): # Returns the IP address of a client object
         if obj["id"] in self.statedata["ulist"]["objs"]:
             return self.statedata["ulist"]["objs"][obj["id"]]["ip"]
         else:
             return ""
     
-    def _is_obj_trusted(self, obj):
+    def _is_obj_trusted(self, obj): # Checks if a client is trusted on the link
         if self.statedata["secure_enable"]:
             return ((obj in self.statedata["trusted"]) and (not self._is_obj_blocked(obj)))
         else:
             return False
     
-    def _is_obj_blocked(self, obj):
+    def _is_obj_blocked(self, obj): # Checks if a client is IP blocked
         if self.statedata["secure_enable"]:
             return (self._get_ip_of_obj(obj) in self.statedata["ip_blocklist"])
         else:
@@ -458,49 +491,274 @@ class CloudLink(API):
                         self.wss.send_message(client, json.dumps(payload))
     
     def _server_packet_handler(self, client, server, message): # The almighty packet handler, single-handedly responsible for over hundreds of lines of code
-        if not len(str(message)) == 0:
-            try:
-                # Parse the JSON into a dict
-                msg = json.loads(message)
-                
-                if ("id" in msg):
-                    if type(msg["id"]) != str:
-                        if (not type(msg["id"]) == dict) or (not type(msg["id"]) == list):
-                            msg["id"] = str(msg["id"])
-                        else:
-                            if self.debug:
-                                print('Error: Packet "id" datatype invalid: expecting <class "str">, got {0}'.format(type(msg["cmd"])))
-                            self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Datatype"]}))
-                            return
-                
-                if self.debug:
-                    print("Packet data:", msg)
-                # Handle the packet
-                if "cmd" in msg: # Verify that the packet contains the command parameter, which is needed to work.
-                    if type(msg["cmd"]) == str:
-                        if msg["cmd"] in ["gmsg", "pmsg", "setid", "direct", "gvar", "pvar"]:
-                            if msg["cmd"] == "gmsg": # Handles global messages.
-                                if "val" in msg: # Verify that the packet contains the required parameters.
-                                    if self._get_client_type(client) == "scratch":
-                                        if self._is_json(msg["val"]):
-                                            msg["val"] = json.loads(msg["val"])
-                                    if not len(str(msg["val"])) > 1000:
-                                        if self.debug:
-                                            print("message is {0} bytes".format(len(str(msg["val"]))))
-                                        self.statedata["gmsg"] = msg["val"]
-                                        # Send the packet to all clients.
-                                        self._send_to_all({"cmd": "gmsg", "val": msg["val"]})
-                                        self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["OK"]}))
+        if not type(client) == type(None):
+            if not len(str(message)) == 0:
+                try:
+                    # Parse the JSON into a dict
+                    msg = json.loads(message)
+
+                    if ("id" in msg):
+                        if type(msg["id"]) != str:
+                            if (not type(msg["id"]) == dict) or (not type(msg["id"]) == list):
+                                msg["id"] = str(msg["id"])
+                            else:
+                                if self.debug:
+                                    print('Error: Packet "id" datatype invalid: expecting <class "str">, got {0}'.format(type(msg["cmd"])))
+                                self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Datatype"]}))
+                                return
+
+                    if self.debug:
+                        print("Packet data:", msg)
+                    # Handle the packet
+                    if "cmd" in msg: # Verify that the packet contains the command parameter, which is needed to work.
+                        if type(msg["cmd"]) == str:
+                            if msg["cmd"] in ["gmsg", "pmsg", "setid", "direct", "gvar", "pvar"]:
+                                if msg["cmd"] == "gmsg": # Handles global messages.
+                                    if "val" in msg: # Verify that the packet contains the required parameters.
+                                        if self._get_client_type(client) == "scratch":
+                                            if self._is_json(msg["val"]):
+                                                msg["val"] = json.loads(msg["val"])
+                                        if not len(str(msg["val"])) > 1000:
+                                            if self.debug:
+                                                print("message is {0} bytes".format(len(str(msg["val"]))))
+                                            self.statedata["gmsg"] = msg["val"]
+                                            # Send the packet to all clients.
+                                            self._send_to_all({"cmd": "gmsg", "val": msg["val"]})
+                                            self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["OK"]}))
+                                        else:
+                                            if self.debug:
+                                                print('Error: Packet too large')
+                                            self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["TooLarge"]}))
                                     else:
                                         if self.debug:
-                                            print('Error: Packet too large')
-                                        self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["TooLarge"]}))
-                                else:
-                                    if self.debug:
-                                        print('Error: Packet missing parameters')
-                                    self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Syntax"]}))
-                            
-                            if msg["cmd"] == "pmsg": # Handles private messages.
+                                            print('Error: Packet missing parameters')
+                                        self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Syntax"]}))
+
+                                if msg["cmd"] == "pmsg": # Handles private messages.
+                                    if ("val" in msg) and ("id" in msg): # Verify that the packet contains the required parameters.
+                                        if self._get_client_type(client) == "scratch":
+                                            if self._is_json(msg["val"]):
+                                                msg["val"] = json.loads(msg["val"])
+                                        if msg["id"] in self.statedata["ulist"]["usernames"]:
+                                            if not len(str(msg["val"])) > 1000:
+                                                if not client == self._get_obj_of_username(msg["id"]):
+                                                    try:
+                                                        otherclient = self._get_obj_of_username(msg["id"])
+                                                        if not len(self._get_username_of_obj(client)) == 0:
+                                                            msg["origin"] = self._get_username_of_obj(client)
+                                                            if (self._get_client_type(otherclient) == "scratch") and (self._is_json(msg["val"])):
+                                                                tmp_val = json.dumps(msg["val"])
+                                                            else:
+                                                                tmp_val = msg["val"]
+
+                                                            if self.debug:
+                                                                print('Sending {0} to {1}'.format(msg, msg["id"]))
+                                                            del msg["id"]
+                                                            self.wss.send_message(otherclient, json.dumps({"cmd": "pmsg", "val": tmp_val, "origin": msg["origin"]}))
+                                                            self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["OK"]}))
+                                                        else:
+                                                            self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["IDRequired"]}))
+                                                    except Exception as e:
+                                                        if self.debug:
+                                                            print("Error on _server_packet_handler: {0}".format(e))
+                                                            self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["InternalServerError"]}))
+                                                else:
+                                                    if self.debug:
+                                                        print('Error: Potential packet loop detected, aborting')
+                                                    self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Loop"]}))
+                                            else:
+                                                if self.debug:
+                                                    print('Error: Packet too large')
+                                                self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["TooLarge"]}))
+                                        else:
+                                            if self.debug:
+                                                print('Error: ID Not found')
+                                            self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["IDNotFound"]}))
+                                    else:
+                                        if self.debug:
+                                            print('Error: Packet missing parameters')
+                                        self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Syntax"]}))
+
+                                if msg["cmd"] == "setid": # Sets the username of the client.
+                                    if "val" in msg: # Verify that the packet contains the required parameters.
+                                        if not len(str(msg["val"])) == 0:
+                                            if not len(str(msg["val"])) > 1000:
+                                                if type(msg["val"]) == str:
+                                                    if self.statedata["ulist"]["objs"][client['id']]["username"] == "":
+                                                        if not msg["val"] in self.statedata["ulist"]["usernames"]:
+                                                            # Add the username to the list
+                                                            self.statedata["ulist"]["usernames"][msg["val"]] = client["id"]
+                                                            # Set the object's username info
+                                                            self.statedata["ulist"]["objs"][client['id']]["username"] = msg["val"]
+                                                            self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["OK"]}))
+                                                            self._send_to_all({"cmd": "ulist", "val": self._get_ulist()})
+                                                            if self.debug:
+                                                                print("User {0} set username: {1}".format(client["id"], msg["val"]))
+                                                        else:
+                                                            if self.debug:
+                                                                print('Error: Refusing to set username because it would cause a conflict')
+                                                            self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["IDConflict"]}))
+                                                    else:
+                                                        if self.debug:
+                                                            print('Error: Refusing to set username because username has already been set')
+                                                        self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["IDSet"]}))
+                                                else:
+                                                    if self.debug:
+                                                        print('Error: Packet "val" datatype invalid: expecting <class "str">, got {0}'.format(type(msg["cmd"])))
+                                                    self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Datatype"]}))
+                                            else:
+                                                if self.debug:
+                                                    print('Error: Packet too large')
+                                                self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["TooLarge"]}))
+                                        else:
+                                            if self.debug:
+                                                print("Error: Packet is empty")
+                                            self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["EmptyPacket"]}))
+                                    else:
+                                        if self.debug:
+                                            print('Error: Packet missing parameters')
+                                        self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Syntax"]}))
+
+                                if msg["cmd"] == "direct": # Direct packet handler for server.
+                                    if self._get_client_type(client) == "scratch":
+                                        if ("val" in msg):
+                                            if (self._is_json(msg["val"])) and (type(msg["val"]) == str):
+                                                try:
+                                                    msg["val"] = json.loads(msg["val"])
+                                                except json.decoder.JSONDecodeError:
+                                                    print("Failed to decode JSON of direct's nested data")
+                                                    self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Syntax"]}))
+                                                    return
+                                    if ("val" in msg):
+                                        if not self.callback_function["on_packet"] == None:
+                                            if "cmd" in msg["val"]:
+                                                if msg["val"]["cmd"] == "type":
+                                                    if "val" in msg["val"]:
+                                                        if self.statedata["ulist"]["objs"][client["id"]]["type"] == None: # Prevent the client from changing types
+                                                            self.statedata["ulist"]["objs"][client["id"]]["type"] = msg["val"]["val"] # Set the client type
+                                                            if self.debug:
+                                                                if msg["val"]["val"] == "scratch":
+                                                                    print("Client {0} is a CloudLink Scratch-based client type, will be stringfifying nested JSON".format(client["id"]))
+                                                                elif msg["val"]["val"] == "py":
+                                                                    print("Client {0} is a CloudLink Python client type, will not be stringfifying nested JSON".format(client["id"]))
+                                                                elif msg["val"]["val"] == "js":
+                                                                    print("Client {0} is a CloudLink JS client type, will not be stringfifying nested JSON".format(client["id"]))
+                                                                else:
+                                                                    print("Client {0} is of unknown client type, claims it's {1}, assuming we do not need to be stringfifying nested JSON".format(client["id"], (msg["val"]["val"])))
+                                                            #self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["OK"]}))
+                                                    else:
+                                                        if self.debug:
+                                                            print('Error: Packet missing parameters')
+                                                        self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Syntax"]}))
+                                                elif msg["val"]["cmd"] == "ip":
+                                                    try:
+                                                        if "val" in msg["val"]:
+                                                            if self.statedata["ulist"]["objs"][client["id"]]["ip"] == None: # Prevent the client from changing IP
+                                                                self.statedata["ulist"]["objs"][client["id"]]["ip"] = msg["val"]["val"] # Set the client's IP
+                                                                if self.debug:
+                                                                    print("Client {0} reports IP {1}".format(client["id"], self.statedata["ulist"]["objs"][client["id"]]["ip"]))
+                                                                #self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["OK"]}))
+                                                        else:
+                                                            if self.debug:
+                                                                print('Error: Packet missing parameters')
+                                                            self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Syntax"]}))
+                                                    except Exception as e:
+                                                        if self.debug:
+                                                            print('Error: Failed to set client IP')
+                                                        self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["InternalServerError"]}))
+                                                else:
+                                                    if "val" in msg["val"]:
+                                                        if len(self._get_username_of_obj(client)) == 0:
+                                                            origin = client
+                                                            if self.debug:
+                                                                print("Handling direct custom command from {0}".format(origin['id']))
+                                                        else:
+                                                            origin = self._get_username_of_obj(client)
+                                                            if self.debug:
+                                                                print("Handling direct custom command from {0}".format(origin))
+                                                        self.callback_function["on_packet"]({"cmd": msg["val"]["cmd"], "val": msg["val"]["val"], "id": origin})
+                                                    else:
+                                                        if self.debug:
+                                                            print('Error: Packet missing parameters')
+                                                        self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Syntax"]}))
+                                            else:
+                                                if len(self._get_username_of_obj(client)) == 0:
+                                                    origin = client
+                                                    if self.debug:
+                                                        print("Handling direct command from {0}".format(origin['id']))
+                                                else:
+                                                    origin = self._get_username_of_obj(client)
+                                                    if self.debug:
+                                                        print("Handling direct command from {0}".format(origin))
+                                                self.callback_function["on_packet"]({"val": msg["val"], "id": origin})
+                                    else:
+                                        if self.debug:
+                                            print('Error: Packet missing parameters')
+                                        self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Syntax"]}))
+
+                                if msg["cmd"] == "gvar": # Handles global variables.
+                                    if ("val" in msg) and ("name" in msg): # Verify that the packet contains the required parameters.
+                                        if self._get_client_type(client) == "scratch":
+                                            if self._is_json(msg["val"]):
+                                                msg["val"] = json.loads(msg["val"])
+                                        if (not len(str(msg["val"])) > 1000) and (not len(str(msg["name"])) > 100):
+                                            # Send the packet to all clients.
+                                            self._send_to_all({"cmd": "gvar", "val": msg["val"], "name": msg["name"]})
+                                            self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["OK"]}))
+                                        else:
+                                            if self.debug:
+                                                print('Error: Packet too large')
+                                            self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["TooLarge"]}))
+                                    else:
+                                        if self.debug:
+                                            print('Error: Packet missing parameters')
+                                        self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Syntax"]}))
+
+                                if msg["cmd"] == "pvar": # Handles private variables.
+                                    if ("val" in msg) and ("id" in msg) and ("name" in msg): # Verify that the packet contains the required parameters.
+                                        if self._get_client_type(client) == "scratch":
+                                            if self._is_json(msg["val"]):
+                                                msg["val"] = json.loads(msg["val"])
+                                        if msg["id"] in self.statedata["ulist"]["usernames"]:
+                                            if (not len(str(msg["val"])) > 1000) and (not len(str(msg["name"])) > 1000):
+                                                if not client == self._get_obj_of_username(msg["id"]):
+                                                    try:
+                                                        otherclient = self._get_obj_of_username(msg["id"])
+                                                        if not len(self._get_username_of_obj(client)) == 0:
+                                                            msg["origin"] = self._get_username_of_obj(client)
+                                                            if (self._get_client_type(otherclient) == "scratch") and ((self._is_json(msg["val"])) or (type(msg["val"]) == dict)):
+                                                                tmp_val = json.dumps(msg["val"])
+                                                            else:
+                                                                tmp_val = msg["val"]
+                                                            if self.debug:
+                                                                print('Sending {0} to {1}'.format(msg, msg["id"]))
+                                                            del msg["id"]
+                                                            self.wss.send_message(otherclient, json.dumps({"cmd": "pvar", "val": tmp_val, "name": msg["name"], "origin": msg["origin"]}))
+                                                            self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["OK"]}))
+                                                        else:
+                                                            self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["IDRequired"]}))
+                                                    except Exception as e:
+                                                        if self.debug:
+                                                            print("Error on _server_packet_handler: {0}".format(e))
+                                                            self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["InternalServerError"]}))
+                                                else:
+                                                    if self.debug:
+                                                        print('Error: Potential packet loop detected, aborting')
+                                                    self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Loop"]}))
+                                            else:
+                                                if self.debug:
+                                                    print('Error: Packet too large')
+                                                self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["TooLarge"]}))
+                                        else:
+                                            if self.debug:
+                                                print('Error: ID Not found')
+                                            self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["IDNotFound"]}))
+                                    else:
+                                        if self.debug:
+                                            print('Error: Packet missing parameters')
+                                        self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Syntax"]}))
+
+                            else: # Route the packet using UPL.
                                 if ("val" in msg) and ("id" in msg): # Verify that the packet contains the required parameters.
                                     if self._get_client_type(client) == "scratch":
                                         if self._is_json(msg["val"]):
@@ -512,194 +770,15 @@ class CloudLink(API):
                                                     otherclient = self._get_obj_of_username(msg["id"])
                                                     if not len(self._get_username_of_obj(client)) == 0:
                                                         msg["origin"] = self._get_username_of_obj(client)
-                                                        if (self._get_client_type(otherclient) == "scratch") and (self._is_json(msg["val"])):
-                                                            tmp_val = json.dumps(msg["val"])
-                                                        else:
-                                                            tmp_val = msg["val"]
-                                                        
-                                                        if self.debug:
-                                                            print('Sending {0} to {1}'.format(msg, msg["id"]))
-                                                        del msg["id"]
-                                                        self.wss.send_message(otherclient, json.dumps({"cmd": "pmsg", "val": tmp_val, "origin": msg["origin"]}))
-                                                        self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["OK"]}))
-                                                    else:
-                                                        self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["IDRequired"]}))
-                                                except Exception as e:
-                                                    if self.debug:
-                                                        print("Error on _server_packet_handler: {0}".format(e))
-                                                        self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["InternalServerError"]}))
-                                            else:
-                                                if self.debug:
-                                                    print('Error: Potential packet loop detected, aborting')
-                                                self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Loop"]}))
-                                        else:
-                                            if self.debug:
-                                                print('Error: Packet too large')
-                                            self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["TooLarge"]}))
-                                    else:
-                                        if self.debug:
-                                            print('Error: ID Not found')
-                                        self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["IDNotFound"]}))
-                                else:
-                                    if self.debug:
-                                        print('Error: Packet missing parameters')
-                                    self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Syntax"]}))
-                            
-                            if msg["cmd"] == "setid": # Sets the username of the client.
-                                if "val" in msg: # Verify that the packet contains the required parameters.
-                                    if not len(str(msg["val"])) == 0:
-                                        if not len(str(msg["val"])) > 1000:
-                                            if type(msg["val"]) == str:
-                                                if self.statedata["ulist"]["objs"][client['id']]["username"] == "":
-                                                    if not msg["val"] in self.statedata["ulist"]["usernames"]:
-                                                        # Add the username to the list
-                                                        self.statedata["ulist"]["usernames"][msg["val"]] = client["id"]
-                                                        # Set the object's username info
-                                                        self.statedata["ulist"]["objs"][client['id']]["username"] = msg["val"]
-                                                        self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["OK"]}))
-                                                        self._send_to_all({"cmd": "ulist", "val": self._get_ulist()})
-                                                        if self.debug:
-                                                            print("User {0} set username: {1}".format(client["id"], msg["val"]))
-                                                    else:
-                                                        if self.debug:
-                                                            print('Error: Refusing to set username because it would cause a conflict')
-                                                        self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["IDConflict"]}))
-                                                else:
-                                                    if self.debug:
-                                                        print('Error: Refusing to set username because username has already been set')
-                                                    self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["IDSet"]}))
-                                            else:
-                                                if self.debug:
-                                                    print('Error: Packet "val" datatype invalid: expecting <class "str">, got {0}'.format(type(msg["cmd"])))
-                                                self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Datatype"]}))
-                                        else:
-                                            if self.debug:
-                                                print('Error: Packet too large')
-                                            self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["TooLarge"]}))
-                                    else:
-                                        if self.debug:
-                                            print("Error: Packet is empty")
-                                        self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["EmptyPacket"]}))
-                                else:
-                                    if self.debug:
-                                        print('Error: Packet missing parameters')
-                                    self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Syntax"]}))
-                            
-                            if msg["cmd"] == "direct": # Direct packet handler for server.
-                                if self._get_client_type(client) == "scratch":
-                                    if ("val" in msg):
-                                        if (self._is_json(msg["val"])) and (type(msg["val"]) == str):
-                                            try:
-                                                msg["val"] = json.loads(msg["val"])
-                                            except json.decoder.JSONDecodeError:
-                                                print("Failed to decode JSON of direct's nested data")
-                                                self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Syntax"]}))
-                                                return
-                                if ("val" in msg):
-                                    if not self.callback_function["on_packet"] == None:
-                                        if "cmd" in msg["val"]:
-                                            if msg["val"]["cmd"] == "type":
-                                                if "val" in msg["val"]:
-                                                    if self.statedata["ulist"]["objs"][client["id"]]["type"] == None: # Prevent the client from changing types
-                                                        self.statedata["ulist"]["objs"][client["id"]]["type"] = msg["val"]["val"] # Set the client type
-                                                        if self.debug:
-                                                            if msg["val"]["val"] == "scratch":
-                                                                print("Client {0} is a CloudLink Scratch-based client type, will be stringfifying nested JSON".format(client["id"]))
-                                                            elif msg["val"]["val"] == "py":
-                                                                print("Client {0} is a CloudLink Python client type, will not be stringfifying nested JSON".format(client["id"]))
-                                                            elif msg["val"]["val"] == "js":
-                                                                print("Client {0} is a CloudLink JS client type, will not be stringfifying nested JSON".format(client["id"]))
-                                                            else:
-                                                                print("Client {0} is of unknown client type, claims it's {1}, assuming we do not need to be stringfifying nested JSON".format(client["id"], (msg["val"]["val"])))
-                                                        #self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["OK"]}))
-                                                else:
-                                                    if self.debug:
-                                                        print('Error: Packet missing parameters')
-                                                    self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Syntax"]}))
-                                            elif msg["val"]["cmd"] == "ip":
-                                                try:
-                                                    if "val" in msg["val"]:
-                                                        if self.statedata["ulist"]["objs"][client["id"]]["ip"] == None: # Prevent the client from changing IP
-                                                            self.statedata["ulist"]["objs"][client["id"]]["ip"] = msg["val"]["val"] # Set the client's IP
-                                                            if self.debug:
-                                                                print("Client {0} reports IP {1}".format(client["id"], self.statedata["ulist"]["objs"][client["id"]]["ip"]))
-                                                            #self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["OK"]}))
-                                                    else:
-                                                        if self.debug:
-                                                            print('Error: Packet missing parameters')
-                                                        self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Syntax"]}))
-                                                except Exception as e:
-                                                    if self.debug:
-                                                        print('Error: Failed to set client IP')
-                                                    self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["InternalServerError"]}))
-                                            else:
-                                                if "val" in msg["val"]:
-                                                    if len(self._get_username_of_obj(client)) == 0:
-                                                        origin = client
-                                                        if self.debug:
-                                                            print("Handling direct custom command from {0}".format(origin['id']))
-                                                    else:
-                                                        origin = self._get_username_of_obj(client)
-                                                        if self.debug:
-                                                            print("Handling direct custom command from {0}".format(origin))
-                                                    self.callback_function["on_packet"]({"cmd": msg["val"]["cmd"], "val": msg["val"]["val"], "id": origin})
-                                                else:
-                                                    if self.debug:
-                                                        print('Error: Packet missing parameters')
-                                                    self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Syntax"]}))
-                                        else:
-                                            if len(self._get_username_of_obj(client)) == 0:
-                                                origin = client
-                                                if self.debug:
-                                                    print("Handling direct command from {0}".format(origin['id']))
-                                            else:
-                                                origin = self._get_username_of_obj(client)
-                                                if self.debug:
-                                                    print("Handling direct command from {0}".format(origin))
-                                            self.callback_function["on_packet"]({"val": msg["val"], "id": origin})
-                                else:
-                                    if self.debug:
-                                        print('Error: Packet missing parameters')
-                                    self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Syntax"]}))
-                            
-                            if msg["cmd"] == "gvar": # Handles global variables.
-                                if ("val" in msg) and ("name" in msg): # Verify that the packet contains the required parameters.
-                                    if self._get_client_type(client) == "scratch":
-                                        if self._is_json(msg["val"]):
-                                            msg["val"] = json.loads(msg["val"])
-                                    if (not len(str(msg["val"])) > 1000) and (not len(str(msg["name"])) > 100):
-                                        # Send the packet to all clients.
-                                        self._send_to_all({"cmd": "gvar", "val": msg["val"], "name": msg["name"]})
-                                        self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["OK"]}))
-                                    else:
-                                        if self.debug:
-                                            print('Error: Packet too large')
-                                        self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["TooLarge"]}))
-                                else:
-                                    if self.debug:
-                                        print('Error: Packet missing parameters')
-                                    self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Syntax"]}))
-                            
-                            if msg["cmd"] == "pvar": # Handles private variables.
-                                if ("val" in msg) and ("id" in msg) and ("name" in msg): # Verify that the packet contains the required parameters.
-                                    if self._get_client_type(client) == "scratch":
-                                        if self._is_json(msg["val"]):
-                                            msg["val"] = json.loads(msg["val"])
-                                    if msg["id"] in self.statedata["ulist"]["usernames"]:
-                                        if (not len(str(msg["val"])) > 1000) and (not len(str(msg["name"])) > 1000):
-                                            if not client == self._get_obj_of_username(msg["id"]):
-                                                try:
-                                                    otherclient = self._get_obj_of_username(msg["id"])
-                                                    if not len(self._get_username_of_obj(client)) == 0:
-                                                        msg["origin"] = self._get_username_of_obj(client)
                                                         if (self._get_client_type(otherclient) == "scratch") and ((self._is_json(msg["val"])) or (type(msg["val"]) == dict)):
                                                             tmp_val = json.dumps(msg["val"])
                                                         else:
                                                             tmp_val = msg["val"]
+
                                                         if self.debug:
-                                                            print('Sending {0} to {1}'.format(msg, msg["id"]))
+                                                            print('Routing {0} to {1}'.format(msg, msg["id"]))
                                                         del msg["id"]
-                                                        self.wss.send_message(otherclient, json.dumps({"cmd": "pvar", "val": tmp_val, "name": msg["name"], "origin": msg["origin"]}))
+                                                        self.wss.send_message(otherclient, json.dumps(msg))
                                                         self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["OK"]}))
                                                     else:
                                                         self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["IDRequired"]}))
@@ -723,71 +802,26 @@ class CloudLink(API):
                                     if self.debug:
                                         print('Error: Packet missing parameters')
                                     self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Syntax"]}))
-                        
-                        else: # Route the packet using UPL.
-                            if ("val" in msg) and ("id" in msg): # Verify that the packet contains the required parameters.
-                                if self._get_client_type(client) == "scratch":
-                                    if self._is_json(msg["val"]):
-                                        msg["val"] = json.loads(msg["val"])
-                                if msg["id"] in self.statedata["ulist"]["usernames"]:
-                                    if not len(str(msg["val"])) > 1000:
-                                        if not client == self._get_obj_of_username(msg["id"]):
-                                            try:
-                                                otherclient = self._get_obj_of_username(msg["id"])
-                                                if not len(self._get_username_of_obj(client)) == 0:
-                                                    msg["origin"] = self._get_username_of_obj(client)
-                                                    if (self._get_client_type(otherclient) == "scratch") and ((self._is_json(msg["val"])) or (type(msg["val"]) == dict)):
-                                                        tmp_val = json.dumps(msg["val"])
-                                                    else:
-                                                        tmp_val = msg["val"]
-                                                    
-                                                    if self.debug:
-                                                        print('Routing {0} to {1}'.format(msg, msg["id"]))
-                                                    del msg["id"]
-                                                    self.wss.send_message(otherclient, json.dumps(msg))
-                                                    self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["OK"]}))
-                                                else:
-                                                    self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["IDRequired"]}))
-                                            except Exception as e:
-                                                if self.debug:
-                                                    print("Error on _server_packet_handler: {0}".format(e))
-                                                    self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["InternalServerError"]}))
-                                        else:
-                                            if self.debug:
-                                                print('Error: Potential packet loop detected, aborting')
-                                            self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Loop"]}))
-                                    else:
-                                        if self.debug:
-                                            print('Error: Packet too large')
-                                        self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["TooLarge"]}))
-                                else:
-                                    if self.debug:
-                                        print('Error: ID Not found')
-                                    self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["IDNotFound"]}))
-                            else:
-                                if self.debug:
-                                    print('Error: Packet missing parameters')
-                                self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Syntax"]}))
+                        else:
+                            if self.debug:
+                                print('Error: Packet "cmd" datatype invalid: expecting <class "bool">, got {0}'.format(type(msg["cmd"])))
+                            self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Datatype"]}))
                     else:
                         if self.debug:
-                            print('Error: Packet "cmd" datatype invalid: expecting <class "bool">, got {0}'.format(type(msg["cmd"])))
-                        self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Datatype"]}))
-                else:
+                            print('Error: Packet missing "cmd" parameter')
+                        self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Syntax"]}))
+                except json.decoder.JSONDecodeError:
                     if self.debug:
-                        print('Error: Packet missing "cmd" parameter')
+                        print("Error: Failed to parse JSON")
                     self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Syntax"]}))
-            except json.decoder.JSONDecodeError:
+                except Exception as e:
+                    if self.debug:
+                        print("Error on _server_packet_handler: {0}".format(e))
+                    self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["InternalServerError"]}))
+            else:
                 if self.debug:
-                    print("Error: Failed to parse JSON")
-                self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Syntax"]}))
-            except Exception as e:
-                if self.debug:
-                    print("Error on _server_packet_handler: {0}".format(e))
-                self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["InternalServerError"]}))
-        else:
-            if self.debug:
-                print("Error: Packet is empty")
-            self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["EmptyPacket"]}))
+                    print("Error: Packet is empty")
+                self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["EmptyPacket"]}))
     
     def _get_ulist(self): # Generates username list
         tmp_ulist = list((self.statedata["ulist"]["usernames"]).keys())
@@ -801,129 +835,141 @@ class CloudLink(API):
         return output
     
     def _on_connection_server(self, client, server): # Server-side new connection handler
-        try:
-            if self.debug:
-                print("New connection: {0}".format(str(client['id'])))
-            
-            # Add the client to the ulist object in memory.
-            self.statedata["ulist"]["objs"][client["id"]] = {"object": client, "username": "", "ip": None, "type": None}
-            
-            # Send the MOTD if enabled.
-            if self.statedata["motd_enable"]:
-                self.wss.send_message(client, json.dumps({"cmd": "direct", "val": {"cmd": "motd", "val": str(self.statedata["motd"])}}))
-            
-            # Send server version.
-            self.wss.send_message(client, json.dumps({"cmd": "direct", "val": {"cmd": "vers", "val": str(version)}}))
-            
-            if not self.statedata["secure_enable"]:
-                # Send the current username list.
-                self.wss.send_message(client, json.dumps({"cmd": "ulist", "val": self._get_ulist()}))
-                
-                # Send the current global data stream value.
-                self.wss.send_message(client, json.dumps({"cmd": "gmsg", "val": str(self.statedata["gmsg"])}))
-            else:
-                # Tell the client that the server is expecting a Trusted Access key.
-                self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["TAEnabled"]}))
-            
-            if not self.callback_function["on_connect"] == None:
-                def run(*args):
-                    try:
-                        self.callback_function["on_connect"](client)
-                    except Exception as e:
-                        if self.debug:
-                            print("Error on _on_connection_server: {0}".format(e))
-                        self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["InternalServerError"]}))
-                threading.Thread(target=run).start()
-        except Exception as e:
-            if self.debug:
-                print("Error on _on_connection_server: {0}".format(e))
-            self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["InternalServerError"]}))
+        if not type(client) == type(None):
+            try:
+                if self.debug:
+                    print("New connection: {0}".format(str(client['id'])))
+
+                # Add the client to the ulist object in memory.
+                self.statedata["ulist"]["objs"][client["id"]] = {"object": client, "username": "", "ip": None, "type": None}
+
+                # Send the MOTD if enabled.
+                if self.statedata["motd_enable"]:
+                    self.wss.send_message(client, json.dumps({"cmd": "direct", "val": {"cmd": "motd", "val": str(self.statedata["motd"])}}))
+
+                # Send server version.
+                self.wss.send_message(client, json.dumps({"cmd": "direct", "val": {"cmd": "vers", "val": str(version)}}))
+
+                if not self.statedata["secure_enable"]:
+                    # Send the current username list.
+                    self.wss.send_message(client, json.dumps({"cmd": "ulist", "val": self._get_ulist()}))
+
+                    # Send the current global data stream value.
+                    self.wss.send_message(client, json.dumps({"cmd": "gmsg", "val": str(self.statedata["gmsg"])}))
+                else:
+                    # Tell the client that the server is expecting a Trusted Access key.
+                    self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["TAEnabled"]}))
+
+                if not self.callback_function["on_connect"] == None:
+                    def run(*args):
+                        try:
+                            self.callback_function["on_connect"](client)
+                        except Exception as e:
+                            if self.debug:
+                                print("Error on _on_connection_server: {0}".format(e))
+                            self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["InternalServerError"]}))
+                    threading.Thread(target=run).start()
+            except Exception as e:
+                if self.debug:
+                    print("Error on _on_connection_server: {0}".format(e))
+                self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["InternalServerError"]}))
     
     def _closed_connection_server(self, client, server): # Server-side client closed connection handler
-        try:
-            if self.debug:
-                if self.statedata["ulist"]["objs"][client['id']]["username"] == "":
-                    print("Connection closed: {0}".format(str(client['id'])))
-                else:
-                    print("Connection closed: {0} ({1})".format(str(client['id']), str(self.statedata["ulist"]["objs"][client['id']]["username"])))
-            
-            # Remove entries from username list and userlist objects
-            if self.statedata["ulist"]["objs"][client['id']]["username"] in self.statedata["ulist"]["usernames"]:
-                del self.statedata["ulist"]["usernames"][self.statedata["ulist"]["objs"][client['id']]["username"]]
-            del self.statedata["ulist"]["objs"][client['id']]
-            
-            if self.statedata["secure_enable"]:
-                if client in self.statedata["trusted"]:
-                    self.statedata["trusted"].remove(client)
-            
-            self._send_to_all({"cmd": "ulist", "val": self._get_ulist()})
-            if not self.callback_function["on_close"] == None:
-                def run(*args):
-                    try:
-                        self.callback_function["on_close"](client)
-                    except Exception as e:
-                        if self.debug:
-                            print("Error on _closed_connection_server: {0}".format(e))
-                threading.Thread(target=run).start()
-        except Exception as e:
-            if self.debug:
-                print("Error on _closed_connection_server: {0}".format(e))
+        if not type(client) == type(None):
+            try:
+                if self.debug:
+                    if self.statedata["ulist"]["objs"][client['id']]["username"] == "":
+                        print("Connection closed: {0}".format(str(client['id'])))
+                    else:
+                        print("Connection closed: {0} ({1})".format(str(client['id']), str(self.statedata["ulist"]["objs"][client['id']]["username"])))
+
+                # Remove entries from username list and userlist objects
+                if self.statedata["ulist"]["objs"][client['id']]["username"] in self.statedata["ulist"]["usernames"]:
+                    del self.statedata["ulist"]["usernames"][self.statedata["ulist"]["objs"][client['id']]["username"]]
+                del self.statedata["ulist"]["objs"][client['id']]
+
+                if self.statedata["secure_enable"]:
+                    if client in self.statedata["trusted"]:
+                        self.statedata["trusted"].remove(client)
+
+                self._send_to_all({"cmd": "ulist", "val": self._get_ulist()})
+                if not self.callback_function["on_close"] == None:
+                    def run(*args):
+                        try:
+                            self.callback_function["on_close"](client)
+                        except Exception as e:
+                            if self.debug:
+                                print("Error on _closed_connection_server: {0}".format(e))
+                    threading.Thread(target=run).start()
+            except Exception as e:
+                if self.debug:
+                    print("Error on _closed_connection_server: {0}".format(e))
     
     def _on_packet_server(self, client, server, message): # Server-side new packet handler (Gives it's powers to _server_packet_handler)
-        try:
-            if self.debug:
-                print("New packet from {0}: {1} bytes".format(str(client['id']), str(len(message))))
-            if self.statedata["secure_enable"]:
-                if not self._is_obj_trusted(client):
-                    try:
-                        msg = json.loads(message)
-                        if ("cmd" in msg) and ("val" in msg):
-                            if (msg["cmd"] == "direct") and (type(msg["val"]) == dict) and (msg["val"]["cmd"] in ["ip", "type"]):
-                                if self._is_obj_blocked(client):
-                                    if self.debug:
-                                        print("User {0} is IP blocked, not trusting".format(client["id"]))
-                                    # Tell the client it is IP blocked
-                                    self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Blocked"]}))
-                                else:
-                                    self._server_packet_handler(client, server, message)
-                            else:
-                                if (msg["cmd"] == "direct") or (msg["cmd"] == "gmsg"):
+        if not type(client) == type(None):
+            try:
+                if self.debug:
+                    print("New packet from {0}: {1} bytes".format(str(client['id']), str(len(message))))
+                if self.statedata["secure_enable"]:
+                    if not self._is_obj_trusted(client):
+                        try:
+                            msg = json.loads(message)
+                            if ("cmd" in msg) and ("val" in msg):
+                                if (msg["cmd"] == "direct") and (type(msg["val"]) == dict) and (msg["val"]["cmd"] in ["ip", "type"]):
                                     if self._is_obj_blocked(client):
                                         if self.debug:
                                             print("User {0} is IP blocked, not trusting".format(client["id"]))
                                         # Tell the client it is IP blocked
                                         self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Blocked"]}))
                                     else:
-                                        if type(msg["val"]) == str:
-                                            if msg["val"] in self.statedata["secure_keys"]:
-                                                if self._get_ip_of_obj(client) == None:
-                                                    if self.debug:
-                                                        print("User {0} has not set their IP address, not trusting".format(client["id"]))
-                                                    self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["IPRequred"]}))
-                                                else:
-                                                    self.statedata["trusted"].append(client)
-                                                    if self.debug:
-                                                        print("Trusting user {0}".format(client["id"]))
-                                                    
-                                                    # Send the current username list.
-                                                    self.wss.send_message(client, json.dumps({"cmd": "ulist", "val": self._get_ulist()}))
-                                                    
-                                                    # Send the current global data stream value.
-                                                    self.wss.send_message(client, json.dumps({"cmd": "gmsg", "val": str(self.statedata["gmsg"])}))
-                                                    
-                                                    # Tell the client it has been trusted
-                                                    self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["OK"]}))
-                                            else:
-                                                self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["TAInvalid"]}))
-                                        else:
-                                            self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Datatype"]}))
+                                        self._server_packet_handler(client, server, message)
                                 else:
-                                    self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Refused"]}))
-                        else:
+                                    if (msg["cmd"] == "direct") or (msg["cmd"] == "gmsg"):
+                                        if self._is_obj_blocked(client):
+                                            if self.debug:
+                                                print("User {0} is IP blocked, not trusting".format(client["id"]))
+                                            # Tell the client it is IP blocked
+                                            self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Blocked"]}))
+                                        else:
+                                            if type(msg["val"]) == str:
+                                                if msg["val"] in self.statedata["secure_keys"]:
+                                                    if self._get_ip_of_obj(client) == None:
+                                                        if self.debug:
+                                                            print("User {0} has not set their IP address, not trusting".format(client["id"]))
+                                                        self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["IPRequred"]}))
+                                                    else:
+                                                        self.statedata["trusted"].append(client)
+                                                        if self.debug:
+                                                            print("Trusting user {0}".format(client["id"]))
+
+                                                        # Send the current username list.
+                                                        self.wss.send_message(client, json.dumps({"cmd": "ulist", "val": self._get_ulist()}))
+
+                                                        # Send the current global data stream value.
+                                                        self.wss.send_message(client, json.dumps({"cmd": "gmsg", "val": str(self.statedata["gmsg"])}))
+
+                                                        # Tell the client it has been trusted
+                                                        self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["OK"]}))
+                                                else:
+                                                    self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["TAInvalid"]}))
+                                            else:
+                                                self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Datatype"]}))
+                                    else:
+                                        self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Refused"]}))
+                            else:
+                                self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Syntax"]}))
+                        except json.decoder.JSONDecodeError:
+                            print("Error on _on_packet_server: Failed to parse JSON")
                             self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Syntax"]}))
-                    except json.decoder.JSONDecodeError:
-                        print("Error on _on_packet_server: Failed to parse JSON")
-                        self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["Syntax"]}))
+                    else:
+                        def run(*args):
+                            try:
+                                self._server_packet_handler(client, server, message)
+                            except Exception as e:
+                                if self.debug:
+                                    print("Error on _on_packet_server: {0}".format(e))
+                                self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["InternalServerError"]}))
+                        threading.Thread(target=run).start()
                 else:
                     def run(*args):
                         try:
@@ -933,19 +979,10 @@ class CloudLink(API):
                                 print("Error on _on_packet_server: {0}".format(e))
                             self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["InternalServerError"]}))
                     threading.Thread(target=run).start()
-            else:
-                def run(*args):
-                    try:
-                        self._server_packet_handler(client, server, message)
-                    except Exception as e:
-                        if self.debug:
-                            print("Error on _on_packet_server: {0}".format(e))
-                        self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["InternalServerError"]}))
-                threading.Thread(target=run).start()
-        except Exception as e:
-            if self.debug:
-                print("Error on _on_packet_server: {0}".format(e))
-            self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["InternalServerError"]}))
+            except Exception as e:
+                if self.debug:
+                    print("Error on _on_packet_server: {0}".format(e))
+                self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["InternalServerError"]}))
     
     def _on_connection_client(self, ws): # Client-side connection handler
         try:
