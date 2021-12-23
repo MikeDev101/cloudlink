@@ -7,6 +7,7 @@ It also enables full-duplex networking and limitless possibilities for Scratch 3
 
 ### [Discussion Forum](https://scratch.mit.edu/discuss/topic/398473)
 ### [HackMD Documentation](https://hackmd.io/G9q1kPqvQT6NrPobjjxSgg)
+### [CloudLink JS (cljs)](https://github.com/wgyt/cljs)
 
 ## Example code
 Example code can be downloaded in the GitHub repository.
