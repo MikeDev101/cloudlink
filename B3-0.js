@@ -400,7 +400,20 @@ class cloudlink {
 	}
 	openSocket(args) {
 		servIP = args.IP; // Begin the main updater scripts
-		clientip = "";
+		console.log("Getting client's IP address from " + String(ipfetcherurl))
+		try {
+			fetch(ipfetcherurl).then(response => {
+				return response.text();
+			}).then(data => {
+				console.log("Client's IP address: " + String(data));
+				clientip = data;
+			}).catch(err => {
+				console.log("Error while getting client's IP address: " + String(err));
+				clientip = "";
+			});
+		} catch(err) {
+			console.log(err);
+		};
 		if (!isRunning) {
 			sys_status = 1;
 			console.log("Establishing connection");
@@ -411,22 +424,6 @@ class cloudlink {
 					sys_status = 2; // Connected OK value
 					console.log("Connected");
 					wss.send(JSON.stringify({"cmd": "direct", "val": {"cmd": "type", "val": "scratch"}})); // Tell the server that the client is Scratch, which needs stringified nested JSON
-					
-					console.log("Getting client's IP address from " + String(ipfetcherurl))
-					try {
-						fetch(ipfetcherurl).then(response => {
-							return response.text();
-						}).then(data => {
-							console.log("Client's IP address: " + String(data));
-							clientip = data;
-						}).catch(err => {
-							console.log("Error while getting client's IP address: " + String(err));
-							clientip = "";
-						});
-					} catch(err) {
-						console.log(err);
-					};
-					
 					wss.send(JSON.stringify({"cmd": "direct", "val": {"cmd": "ip", "val": String(clientip)}})); // Tell the server the client's IP address
 				};
 				wss.onmessage = function(event) {
@@ -553,6 +550,20 @@ class cloudlink {
 		}
 		else if (!isRunning) {
 			sys_status = 1;
+			console.log("Getting client's IP address from " + String(ipfetcherurl))	
+			try {
+				fetch(ipfetcherurl).then(response => {
+					return response.text();
+				}).then(data => {
+					console.log("Client's IP address: " + String(data));
+					clientip = data;
+				}).catch(err => {
+					console.log("Error while getting client's IP address: " + String(err));
+					clientip = "";
+				});
+			} catch(err) {
+				console.log(err);
+			};
 			console.log("Establishing connection");
 			try {
 				wss = new WebSocket(servIP);
@@ -561,23 +572,6 @@ class cloudlink {
 					sys_status = 2; // Connected OK value
 					console.log("Connected");
 					wss.send(JSON.stringify({"cmd": "direct", "val": {"cmd": "type", "val": "scratch"}})); // Tell the server that the client is Scratch, which needs stringified nested JSON
-					console.log("Getting client's IP address from " + String(ipfetcherurl))
-					
-					try {
-						fetch(ipfetcherurl).then(response => {
-							return response.text();
-						}).then(data => {
-							console.log("Client's IP address: " + String(data));
-							clientip = data;
-						}).catch(err => {
-							console.log("Error while getting client's IP address: " + String(err));
-							clientip = "";
-						});
-					} catch(err) {
-						console.log(err);
-					};
-					
-					
 					wss.send(JSON.stringify({"cmd": "direct", "val": {"cmd": "ip", "val": String(clientip)}})); // Tell the server the client's IP address
 				};
 				wss.onmessage = function(event) {
