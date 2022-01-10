@@ -40,20 +40,8 @@ var gotNewDirectData = false; // Bool to check if new direct data has been writt
 
 var clientip = ""; // Client IP address tracer for CloudLink Trusted Access & IP blocking
 
-// Get the client's IP address, requirement for Trusted Access to work correctly
-try {
-	fetch('https://api.ipify.org/').then(response => {
-		return response.text();
-	}).then(data => {
-		console.log("Client's IP address: " + String(data));
-		clientip = data;
-	}).catch(err => {
-		console.log("Error while getting client's IP address: " + String(err));
-		clientip = "";
-	});
-} catch(err) {
-	console.log(err);
-};
+// Get the client's IP address, requirement for Trusted Access to work correctly, https://api.ipify.org/ or https://api.meower.org/ip
+var ipfetcherurl = "https://api.ipify.org/";
 
 // Get the server URL list
 try {
@@ -140,6 +128,10 @@ class cloudlink {
 				blockType: Scratch.BlockType.REPORTER,
 				text: 'Server MOTD',
 			},  {
+				opcode: 'returnClientIP',
+				blockType: Scratch.BlockType.REPORTER,
+				text: 'My IP Address',
+			}, 	{
 				opcode: 'returnVarData',
 				blockType: Scratch.BlockType.REPORTER,
 				text: '[TYPE] var [VAR] data',
@@ -223,6 +215,17 @@ class cloudlink {
 					},
 				},
 			}, {
+				opcode: 'changeIPFetcher', 
+				blockType: Scratch.BlockType.COMMAND,
+				text: 'Set IP Fetcher API to [url]',
+				arguments: {
+						url: {
+							type: Scratch.ArgumentType.STRING,
+							menu: 'ipfetchers',
+							defaultValue: 'Default'
+						}
+					}
+			},	{
 				opcode: 'openSocket',
 				blockType: Scratch.BlockType.COMMAND,
 				text: 'Connect to [IP]',
@@ -368,8 +371,23 @@ class cloudlink {
 				varmenu: {
 					items: ['Global', 'Private'],
 				},
+				ipfetchers: {
+					items: ['Default', 'Meower'],
+				},
 			}
 		};
+	};
+	returnClientIP() {
+		return clientip;
+	};
+	changeIPFetcher(args) {
+		console.log(args.url);
+		if (args.url == "Default") {
+			ipfetcherurl = "https://api.ipify.org/";
+		} else if (args.url == "Meower") {
+			ipfetcherurl = "https://api.meower.org/ip";
+		};
+		console.log(ipfetcherurl);
 	};
 	returnDirectData() {
 		return directData;
@@ -392,6 +410,22 @@ class cloudlink {
 					sys_status = 2; // Connected OK value
 					console.log("Connected");
 					wss.send(JSON.stringify({"cmd": "direct", "val": {"cmd": "type", "val": "scratch"}})); // Tell the server that the client is Scratch, which needs stringified nested JSON
+					
+					console.log("Getting client's IP address from " + String(ipfetcherurl))
+					try {
+						fetch(ipfetcherurl).then(response => {
+							return response.text();
+						}).then(data => {
+							console.log("Client's IP address: " + String(data));
+							clientip = data;
+						}).catch(err => {
+							console.log("Error while getting client's IP address: " + String(err));
+							clientip = "";
+						});
+					} catch(err) {
+						console.log(err);
+					};
+					
 					wss.send(JSON.stringify({"cmd": "direct", "val": {"cmd": "ip", "val": String(clientip)}})); // Tell the server the client's IP address
 				};
 				wss.onmessage = function(event) {
