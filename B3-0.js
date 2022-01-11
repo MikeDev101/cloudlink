@@ -204,7 +204,7 @@ class cloudlink {
 						defaultValue: 'Global',
 					},
 				},
-			}, {
+			},      {
 				opcode: 'checkForID',
 				blockType: Scratch.BlockType.BOOLEAN,
 				text: 'ID [ID] Connected?',
@@ -214,7 +214,7 @@ class cloudlink {
 						defaultValue: 'Another name',
 					},
 				},
-			}, {
+			},      {
 				opcode: 'getIPAddress', 
 				blockType: Scratch.BlockType.COMMAND,
 				text: 'Get IP address using [url] fetcher',
