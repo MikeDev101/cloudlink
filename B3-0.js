@@ -215,7 +215,7 @@ class cloudlink {
 					},
 				},
 			},      {
-				opcode: 'getIPAddress', 
+				opcode: 'changeIPFetcher', 
 				blockType: Scratch.BlockType.COMMAND,
 				text: 'Get IP address using [url] fetcher',
 				arguments: {
@@ -380,7 +380,7 @@ class cloudlink {
 	returnClientIP() {
 		return clientip;
 	};
-	getIPAddress(args) {
+	changeIPFetcher(args) {
 		if (args.url == "Default") {
 			ipfetcherurl = "https://api.ipify.org/";
 		} else if (args.url == "Meower") {
