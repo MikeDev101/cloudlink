@@ -215,9 +215,9 @@ class cloudlink {
 					},
 				},
 			}, {
-				opcode: 'changeIPFetcher', 
+				opcode: 'getIPAddress', 
 				blockType: Scratch.BlockType.COMMAND,
-				text: 'Set IP Fetcher API to [url]',
+				text: 'Get IP address using [url] fetcher',
 				arguments: {
 						url: {
 							type: Scratch.ArgumentType.STRING,
@@ -380,14 +380,26 @@ class cloudlink {
 	returnClientIP() {
 		return clientip;
 	};
-	changeIPFetcher(args) {
-		console.log(args.url);
+	getIPAddress(args) {
 		if (args.url == "Default") {
 			ipfetcherurl = "https://api.ipify.org/";
 		} else if (args.url == "Meower") {
 			ipfetcherurl = "https://api.meower.org/ip";
 		};
-		console.log(ipfetcherurl);
+		console.log("Getting client's IP address from " + String(ipfetcherurl));
+		try {
+			fetch(ipfetcherurl).then(response => {
+				return response.text();
+			}).then(data => {
+				console.log("Client's IP address: " + String(data));
+				clientip = data;
+			}).catch(err => {
+				console.log("Error while getting client's IP address: " + String(err));
+				clientip = "";
+			});
+		} catch(err) {
+			console.log(err);
+		};
 	};
 	returnDirectData() {
 		return directData;
@@ -400,21 +412,6 @@ class cloudlink {
 	}
 	openSocket(args) {
 		servIP = args.IP; // Begin the main updater scripts
-		var tmp_clientip = "";
-		console.log("Getting client's IP address from " + String(ipfetcherurl))
-		try {
-			fetch(ipfetcherurl).then(response => {
-				return response.text();
-			}).then(data => {
-				console.log("Client's IP address: " + String(data));
-				tmp_clientip = data;
-			}).catch(err => {
-				console.log("Error while getting client's IP address: " + String(err));
-				tmp_clientip = "";
-			});
-		} catch(err) {
-			console.log(err);
-		};
 		if (!isRunning) {
 			sys_status = 1;
 			console.log("Establishing connection");
@@ -425,8 +422,7 @@ class cloudlink {
 					sys_status = 2; // Connected OK value
 					console.log("Connected");
 					wss.send(JSON.stringify({"cmd": "direct", "val": {"cmd": "type", "val": "scratch"}})); // Tell the server that the client is Scratch, which needs stringified nested JSON
-					wss.send(JSON.stringify({"cmd": "direct", "val": {"cmd": "ip", "val": String(tmp_clientip)}})); // Tell the server the client's IP address
-					clientip = tmp_clientip;
+					wss.send(JSON.stringify({"cmd": "direct", "val": {"cmd": "ip", "val": String(clientip)}})); // Tell the server the client's IP address
 				};
 				wss.onmessage = function(event) {
 					var rawpacket = String(event.data);
@@ -510,7 +506,6 @@ class cloudlink {
 					gotNewStatusCode = false;
 					directData = "";
 					gotNewDirectData = false;
-					clientip = "";
 					console.log("Disconnected");
 					};
 			} catch(err) {
@@ -540,7 +535,6 @@ class cloudlink {
 			statusCode = "";
 			gotNewStatusCode = false;
 			wss = null;
-			clientip = "";
 		};
 	};
 	openSocketPublicServers(args) {
@@ -552,22 +546,6 @@ class cloudlink {
 		}
 		else if (!isRunning) {
 			sys_status = 1;
-			var tmp_clientip = "";
-			console.log("Getting client's IP address from " + String(ipfetcherurl))	
-			try {
-				fetch(ipfetcherurl).then(response => {
-					return response.text();
-				}).then(data => {
-					console.log("Client's IP address: " + String(data));
-					tmp_clientip = data;
-				}).catch(err => {
-					console.log("Error while getting client's IP address: " + String(err));
-					tmp_clientip = "";
-				});
-			} catch(err) {
-				console.log(err);
-			};
-			console.log("Establishing connection");
 			try {
 				wss = new WebSocket(servIP);
 				wss.onopen = function(e) {
@@ -575,8 +553,7 @@ class cloudlink {
 					sys_status = 2; // Connected OK value
 					console.log("Connected");
 					wss.send(JSON.stringify({"cmd": "direct", "val": {"cmd": "type", "val": "scratch"}})); // Tell the server that the client is Scratch, which needs stringified nested JSON
-					wss.send(JSON.stringify({"cmd": "direct", "val": {"cmd": "ip", "val": String(tmp_clientip)}})); // Tell the server the client's IP address
-					clientip = tmp_clientip;
+					wss.send(JSON.stringify({"cmd": "direct", "val": {"cmd": "ip", "val": String(clientip)}})); // Tell the server the client's IP address
 				};
 				wss.onmessage = function(event) {
 					var rawpacket = String(event.data);
@@ -659,7 +636,6 @@ class cloudlink {
 					gotNewStatusCode = false;
 					directData = "";
 					gotNewDirectData = false;
-					clientip = "";
 					console.log("Disconnected");
 					};
 			} catch(err) {
