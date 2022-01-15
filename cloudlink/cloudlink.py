@@ -17,13 +17,12 @@ MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPEC
 WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 """
-
 import json
 import sys
 import threading
 from websocket_server import WebsocketServer as ws_server
 import websocket as ws_client
-
+import time
 """
 Code formatting
 
@@ -96,7 +95,7 @@ class API:
             if self.state == 0:
                 # Change the link state to 2 (Client mode)
                 self.state = 2
-                self.LastSetUsernameTime = 0
+                
                 self.wss = ws_client.WebSocketApp(
                     ip,
                     on_message = self._on_packet_client,
@@ -419,6 +418,7 @@ class CloudLink(API):
             "Invalid": "E:118 | Invalid command",
             "Blocked": "E:119 | IP Blocked",
             "IPRequred": "E:120 | IP Address required"
+            "ToManyUserNameChanges" :"I:"
         }
         
         print("CloudLink v{0}".format(str(version))) # Report version number
