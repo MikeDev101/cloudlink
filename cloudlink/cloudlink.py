@@ -47,7 +47,7 @@ class API:
                     host=ip,
                     port=port
                 )
-                
+                self.ConnectedIps = {} 
                 # Set the server's callbacks to CloudLink's class functions
                 self.wss.set_fn_new_client(self._on_connection_server)
                 self.wss.set_fn_client_left(self._closed_connection_server)
@@ -588,8 +588,8 @@ class CloudLink(API):
                                                 if type(msg["val"]) == str:
                                                     if self.statedata["ulist"]["objs"][client['id']]["username"] == "":
                                                         if not msg["val"] in self.statedata["ulist"]["usernames"]:
-                                                             if not time.Time - self.LastSetUserNameTime > 60:   
-                                                                self.LastSetUserNameTime = time.time() 
+                                                             if not time.Time - API.connectedIps['ips'][API.getIPofObject(client)] > 60:   
+                                                                API.ConnectedIps['ips'].update({API.getIPofObject(client):time.Time()})
                                                                 # Add the username to the list
                                                                 self.statedata["ulist"]["usernames"][msg["val"]] = client["id"]
                                                                 # Set the object's username info
