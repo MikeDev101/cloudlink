@@ -96,6 +96,7 @@ class API:
             if self.state == 0:
                 # Change the link state to 2 (Client mode)
                 self.state = 2
+                self.LastSetUsernameTime = 0
                 self.wss = ws_client.WebSocketApp(
                     ip,
                     on_message = self._on_packet_client,
@@ -383,6 +384,7 @@ class CLTLS: #Feature NOT YET IMPLEMENTED
 
 class CloudLink(API):
     def __init__(self, debug=False): # Initializes CloudLink
+        self.LastSetUserNameTime = 0 
         self.wss = None # Websocket Object
         self.state = 0 # Module state
         self.userlist = [] # Stores usernames set on link
@@ -586,14 +588,19 @@ class CloudLink(API):
                                                 if type(msg["val"]) == str:
                                                     if self.statedata["ulist"]["objs"][client['id']]["username"] == "":
                                                         if not msg["val"] in self.statedata["ulist"]["usernames"]:
-                                                            # Add the username to the list
-                                                            self.statedata["ulist"]["usernames"][msg["val"]] = client["id"]
-                                                            # Set the object's username info
-                                                            self.statedata["ulist"]["objs"][client['id']]["username"] = msg["val"]
-                                                            self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["OK"]}))
-                                                            self._send_to_all({"cmd": "ulist", "val": self._get_ulist()})
-                                                            if self.debug:
-                                                                print("User {0} set username: {1}".format(client["id"], msg["val"]))
+                                                             if not time.Time - self.LastSetUserNameTime > 60:   
+                                                                self.LastSetUserNameTime = time.time() 
+                                                                # Add the username to the list
+                                                                self.statedata["ulist"]["usernames"][msg["val"]] = client["id"]
+                                                                # Set the object's username info
+                                                                self.statedata["ulist"]["objs"][client['id']]["username"] = msg["val"]
+                                                                self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["OK"]}))
+                                                                self._send_to_all({"cmd": "ulist", "val": self._get_ulist()})
+                                                                if self.debug:
+                                                                  print("User {0} set username: {1}".format(client["id"], msg["val"]))
+                                                              else:
+                                                                if self.debug:
+                                                                    print("error:refusing to set username due to setting username less then a minute ago")
                                                         else:
                                                             if self.debug:
                                                                 print('Error: Refusing to set username because it would cause a conflict')
