@@ -17,13 +17,12 @@ MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPEC
 WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 """
-
 import json
 import sys
 import threading
 from websocket_server import WebsocketServer as ws_server
 import websocket as ws_client
-
+import time
 """
 Code formatting
 
@@ -48,7 +47,7 @@ class API:
                     host=ip,
                     port=port
                 )
-                
+                self.ConnectedIps = {} 
                 # Set the server's callbacks to CloudLink's class functions
                 self.wss.set_fn_new_client(self._on_connection_server)
                 self.wss.set_fn_client_left(self._closed_connection_server)
@@ -96,6 +95,7 @@ class API:
             if self.state == 0:
                 # Change the link state to 2 (Client mode)
                 self.state = 2
+                
                 self.wss = ws_client.WebSocketApp(
                     ip,
                     on_message = self._on_packet_client,
@@ -383,6 +383,7 @@ class CLTLS: #Feature NOT YET IMPLEMENTED
 
 class CloudLink(API):
     def __init__(self, debug=False): # Initializes CloudLink
+        self.LastSetUserNameTime = 0 
         self.wss = None # Websocket Object
         self.state = 0 # Module state
         self.userlist = [] # Stores usernames set on link
@@ -417,6 +418,7 @@ class CloudLink(API):
             "Invalid": "E:118 | Invalid command",
             "Blocked": "E:119 | IP Blocked",
             "IPRequred": "E:120 | IP Address required"
+            "ToManyUserNameChanges" :"I:"
         }
         
         print("CloudLink v{0}".format(str(version))) # Report version number
@@ -586,14 +588,19 @@ class CloudLink(API):
                                                 if type(msg["val"]) == str:
                                                     if self.statedata["ulist"]["objs"][client['id']]["username"] == "":
                                                         if not msg["val"] in self.statedata["ulist"]["usernames"]:
-                                                            # Add the username to the list
-                                                            self.statedata["ulist"]["usernames"][msg["val"]] = client["id"]
-                                                            # Set the object's username info
-                                                            self.statedata["ulist"]["objs"][client['id']]["username"] = msg["val"]
-                                                            self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["OK"]}))
-                                                            self._send_to_all({"cmd": "ulist", "val": self._get_ulist()})
-                                                            if self.debug:
-                                                                print("User {0} set username: {1}".format(client["id"], msg["val"]))
+                                                             if not time.Time - API.connectedIps['ips'][API.getIPofObject(client)] > 60:   
+                                                                API.ConnectedIps['ips'].update({API.getIPofObject(client):time.Time()})
+                                                                # Add the username to the list
+                                                                self.statedata["ulist"]["usernames"][msg["val"]] = client["id"]
+                                                                # Set the object's username info
+                                                                self.statedata["ulist"]["objs"][client['id']]["username"] = msg["val"]
+                                                                self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["OK"]}))
+                                                                self._send_to_all({"cmd": "ulist", "val": self._get_ulist()})
+                                                                if self.debug:
+                                                                  print("User {0} set username: {1}".format(client["id"], msg["val"]))
+                                                              else:
+                                                                if self.debug:
+                                                                    print("error:refusing to set username due to setting username less then a minute ago")
                                                         else:
                                                             if self.debug:
                                                                 print('Error: Refusing to set username because it would cause a conflict')
