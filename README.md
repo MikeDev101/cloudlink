@@ -7,7 +7,6 @@ It permits cross-project (as well as cross-program) cloud variables.
 It also enables full-duplex networking and limitless possibilities for Scratch 3.0 projects.
 ## Links
 
-### [Discussion Forum](https://scratch.mit.edu/discuss/topic/398473)
 ### [HackMD Documentation](https://hackmd.io/G9q1kPqvQT6NrPobjjxSgg)
 ### [CloudLink JS (cljs)](https://github.com/wgyt/cljs)
 
@@ -17,8 +16,7 @@ Example code can be downloaded in the GitHub repository.
 #### Server: https://github.com/MikeDev101/cloudlink/blob/master/server_example.py
 #### Client: https://github.com/MikeDev101/cloudlink/blob/master/client_example.py
 
-Please report any bugs you find to the official [GitHub repository](https://github.com/MikeDev101/cloudlink/issues) or on
-my [Scratch profile.](https://scratch.mit.edu/users/MikeDEV/)
+Please report any bugs you find to the official [GitHub repository](https://github.com/MikeDev101/cloudlink/issues).
 
 
 # Scratch Extension
