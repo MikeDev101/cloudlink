@@ -618,7 +618,7 @@ class CloudLink(API):
                                                 if type(msg["val"]) == str:
                                                     if self.statedata["ulist"]["objs"][client['id']]["username"] == "":
                                                         if not msg["val"] in self.statedata["ulist"]["usernames"]:
-                                                            if (not time.time() - API.connectedIps['ips'][API.getIPofObject(client)] > 60) or (self.disabled_username_throttle):
+                                                            if (not time.time() - self.connectedIps['ips'][self.getIPofObject(client)] > 60) or (self.disabled_username_throttle):
                                                                 # Add the username to the list
                                                                 self.statedata["ulist"]["usernames"][msg["val"]] = client["id"]
                                                                 # Set the object's username info
