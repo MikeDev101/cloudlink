@@ -416,7 +416,7 @@ class cloudlink {
 			sys_status = 1;
 			console.log("Establishing connection");
 			try {
-				wss = new WebSocket(servIP,"websocket");
+				wss = new WebSocket(servIP);
 				wss.onopen = function(e) {
 					isRunning = true;
 					sys_status = 2; // Connected OK value
