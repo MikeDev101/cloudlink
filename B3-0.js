@@ -416,7 +416,7 @@ class cloudlink {
 			sys_status = 1;
 			console.log("Establishing connection");
 			try {
-				wss = new WebSocket(servIP);
+				wss = new WebSocket(servIP,"websocket");
 				wss.onopen = function(e) {
 					isRunning = true;
 					sys_status = 2; // Connected OK value
@@ -552,8 +552,8 @@ class cloudlink {
 					isRunning = true;
 					sys_status = 2; // Connected OK value
 					console.log("Connected");
-					wss.send(JSON.stringify({"cmd": "direct", "val": {"cmd": "type", "val": "scratch"}})); // Tell the server that the client is Scratch, which needs stringified nested JSON
-					wss.send(JSON.stringify({"cmd": "direct", "val": {"cmd": "ip", "val": String(clientip)}})); // Tell the server the client's IP address
+					wss.send(JSON.stringify({"cmd": "direct", "val": {"cmd": "type", "val": "scratch"}}),masked=true); // Tell the server that the client is Scratch, which needs stringified nested JSON
+					wss.send(JSON.stringify({"cmd": "direct", "val": {"cmd": "ip", "val": String(clientip)}}),masked=true); // Tell the server the client's IP address
 				};
 				wss.onmessage = function(event) {
 					var rawpacket = String(event.data);
@@ -675,7 +675,7 @@ class cloudlink {
 					cmd: args.CMD,
 					id: args.ID,
 					val: args.DATA
-				}));
+				}),masked=true);
 			} else {
 				console.log("Blocking attempt to send packet larger than 1000 bytes (1 KB), packet is " + String(String(args.DATA).length) + " bytes");
 			};
@@ -687,7 +687,7 @@ class cloudlink {
 				wss.send(JSON.stringify({
 					cmd: "gmsg",
 					val: args.DATA
-				}));
+				}),masked=true);
 			} else {
 				console.log("Blocking attempt to send packet larger than 1000 bytes (1 KB), packet is " + String(String(args.DATA).length) + " bytes");
 			};
@@ -703,7 +703,7 @@ class cloudlink {
 						id: args.ID,
 						val: args.DATA,
 						origin: String(myName)
-						}));
+						}),masked=true);
 					} else {
 						console.log("Blocking attempt to send packet larger than 1000 bytes (1 KB), packet is " + String(String(args.DATA).length) + " bytes");
 					};
@@ -720,7 +720,7 @@ class cloudlink {
 					cmd: "gvar",
 					name: args.VAR,
 					val: args.DATA
-				}));
+				}),masked=true);
 			} else {
 				console.log("Blocking attempt to send packet larger than 1000 bytes (1 KB), packet is " + String(String(args.DATA).length) + " bytes");
 			};
@@ -737,7 +737,7 @@ class cloudlink {
 							id: args.ID,
 							val: args.DATA,
 							origin: String(myName)
-						}));
+						}),masked=true);
 					} else {
 						console.log("Blocking attempt to send packet larger than 1000 bytes (1 KB), packet is " + String(String(args.DATA).length) + " bytes");
 					};	
@@ -837,7 +837,7 @@ class cloudlink {
 								wss.send(JSON.stringify({
 									cmd: "setid",
 									val: String(args.NAME)
-								}));
+								}),masked=true);
 								myName = args.NAME;
 							} else {
 								console.log("Blocking attempt to use reserved usernames");
@@ -925,3 +925,4 @@ class cloudlink {
 };
 
 Scratch.extensions.register(new cloudlink());
+
