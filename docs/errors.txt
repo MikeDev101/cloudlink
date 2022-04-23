@@ -8,7 +8,7 @@
 	The packet was not formatted correctly or has missing parameters.
 
 102 - Datatype error
-	A parameter was not the correct datat type.
+	A parameter was not the correct data type.
 
 103 - ID not found error
 	The client attempted to send/route a packet to an ID that currently doesn't exist.
@@ -20,7 +20,7 @@
 	While handing the request, the server predicted a loop would occur and has stopped the request.
 
 106 - Too many requests
-	The server is ratelimiting the request, and the request has been used too many times to quicky.
+	The server is rate limiting the request, and the request has been used too many times to quickly.
 
 107 - Packet too large
 	The packet size is too large to safely use.
@@ -59,9 +59,9 @@
 202 - Decryption error
 	CLTLS failed to decrypt the packet.
 
-203 - Algorithm type missmatch
+203 - Algorithm type mismatch
 	CLTLS detected that the algorithm types didn't match.
-	This error occurs after the algorithm handshake has occured and the client refuses to honor the
+	This error occurs after the algorithm handshake has occurred and the client refuses to honor the
 	accepted protocols the server has chosen.
 
 204 - Not a valid Public Key
