@@ -19,15 +19,11 @@ import time
 
 """
 Code formatting
-
 (Type):(Code) | (Description)
-
 Type: Letter
     I - Info
     E - Error
-
 Code: Number, defines the code
-
 Description: String, Describes the code
 """
 

@@ -41,6 +41,8 @@ def on_packet(message):
     {"cmd" "test", "val": "test", "origin" "(CLIENT'S ID)"}
     """
 
+	
+
 def on_close():
     print("Goodbye!")
 
