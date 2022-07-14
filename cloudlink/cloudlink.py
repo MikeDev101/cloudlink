@@ -45,7 +45,7 @@ class API:
                     port=port
                 )
                 
-                self.ConnectedIps = {} 
+                
                 
                 # Set the server's callbacks to CloudLink's class functions
                 self.wss.set_fn_new_client(self._on_connection_server)
@@ -66,7 +66,8 @@ class API:
                 self.statedata = {
                     "ulist": {
                         "usernames": {},
-                        "objs": {}
+                        "objs": {},
+                        "UserData":{}
                     }, # Username list for the "Usernames" block
                     "secure_enable": False, # Trusted Access enabler
                     "secure_keys": [], # Trusted Access keys
@@ -616,14 +617,27 @@ class CloudLink(API):
                                         if not len(str(msg["val"])) == 0:
                                             if not len(str(msg["val"])) > 1000:
                                                 if type(msg["val"]) == str:
+                                                    if not self.disabled_username_throttle:
+                                                        if self.statedata["ulist"]["UserData"].get(self.getIPofObject(client)) is None: # Makeing Sure That This exists
+                                                                self.statedata["ulist"]["UserData"][self.getIPofObject(client)] = {
+                                                                    "LastSetUsernameTime" = 0 # Creating If so
+                                                             }
+                                                    
+                                                    
                                                     if self.statedata["ulist"]["objs"][client['id']]["username"] == "":
                                                         if not msg["val"] in self.statedata["ulist"]["usernames"]:
-                                                            if (not time.time() - API.connectedIps['ips'][API.getIPofObject(client)] > 60) or (self.disabled_username_throttle):
+                                                            if (not time.time() - self.statedata['ulist']["UserData"][self.getIPofObject(client)]['LastSetUsernameTime'] > 60) or (self.disabled_username_throttle):
                                                                 # Add the username to the list
                                                                 self.statedata["ulist"]["usernames"][msg["val"]] = client["id"]
                                                                 # Set the object's username info
                                                                 self.statedata["ulist"]["objs"][client['id']]["username"] = msg["val"]
                                                                 
+                                                                # Set Last set Username Time
+                                                                if not self.disabled_username_throttle:
+                                                                    self.statedata['ulist']["UserData"][self.getIPofObject(client)]['LastSetUsernameTime'] = time.time()
+                                                                
+                                                                
+
                                                                 if listener_detected:
                                                                     self.wss.send_message(client, json.dumps({"cmd": "statuscode", "val": self.codes["OK"], "listener": listener_id}))
                                                                 else:
