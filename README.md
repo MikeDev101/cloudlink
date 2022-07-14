@@ -24,8 +24,7 @@ Example code can be downloaded in the GitHub repository.
 
 #### Client: https://github.com/MikeDev101/cloudlink/blob/master/client_example.py
 
-Please report any bugs you find to the official [GitHub repository](https://github.com/MikeDev101/cloudlink/issues) or on
-my [Scratch profile.](https://scratch.mit.edu/users/MikeDEV/)
+Please report any bugs you find to the official [GitHub repository](https://github.com/MikeDev101/cloudlink/issues).
 
 # Scratch Extension
 
