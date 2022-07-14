@@ -35,10 +35,10 @@ link - Connects to a webserver
 unlink - Disconnects from a webserver
 fetchid - Uses CLNS to find linked Plugins
 checkid - Reads status of user/webserver (online, version)
-host - Presents the plugin publically for access via CLNS
+host - Presents the plugin publicly for access via CLNS
 unhost - Removes plugin from CLNS
-prtclchk - Checks CloudLink server/client version & protcols supported
-prtclupg - Upgrades protcols for CloudLink client/server
+prtclchk - Checks CloudLink server/client version & protocols supported
+prtclupg - Upgrades protocols for CloudLink client/server
 omni - Experimental CloudLink to Scratch Cloud Variable Server bridge (powered by scratchclient)
 
 

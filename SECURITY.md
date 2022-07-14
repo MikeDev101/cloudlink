@@ -16,8 +16,7 @@ In the event of a security vulnerability is found, please use the following form
 2. A severity level, ranging from low, medium, or high
 3. Describe in detail what CloudLink should be doing.
 4. Describe in detail what CloudLink is actually doing.
-5. Provide a brief description of your application and environment. 
-Include details such as the presence of a reverse proxy/tunneling service, the server machine's OS, Hardware specs, etc.
+5. Provide a brief description of your application and environment. Include details such as the presence of a reverse proxy/tunneling service, the server machine's OS, Hardware specs, etc.
 6. List the steps needed to reproduce the vulnerability.
 
 Security vulnerabilities should be reported ASAP and will be taken care of as soon as I can.
