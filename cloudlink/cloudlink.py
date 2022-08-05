@@ -1005,7 +1005,7 @@ class CloudLink(API):
                     print("New connection: {0}".format(str(client['id'])))
 
                 # Add the client to the ulist object in memory.
-                self.statedata["ulist"]["objs"][client["id"]] = {"object": client, "username": "", "ip": None, "type": None}
+                self.statedata["ulist"]["objs"][client["id"]] = {"object": client, "username": "", "ip": client.remote_address, "type": None}
 
                 # Send the MOTD if enabled.
                 if self.statedata["motd_enable"]:
