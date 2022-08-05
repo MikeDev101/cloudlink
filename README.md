@@ -36,8 +36,9 @@ You can view the client-side extension using one of the following modded Scratch
 
 # Installing CloudLink
 
-## Method 1: using pip
 
+## PIP HAS NOT BEEN UPDATED, PLEASE MANUALLY DOWNLOAD THE SOURCE CODE
+### Method 1: using pip
 `pip install cloudlink`
 
 ## Method 2: Directly downloading cloudlink.py
