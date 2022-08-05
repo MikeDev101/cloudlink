@@ -384,12 +384,6 @@ class API:
             if self.debug:
                 print("Error: Cannot use the kick function in current state!")
 
-"""
-class CLTLS: #Feature NOT YET IMPLEMENTED
-    def __init__(self):
-        pass
-"""
-
 class CloudLink(API):
     def __init__(self, debug=False): # Initializes CloudLink
         self.wss = None # Websocket Object
