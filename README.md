@@ -11,7 +11,7 @@ CloudLink is a free and open-source, websocket-powered API optimized for Scratch
 ## Get started with CloudLink
 For full documentation of CloudLink, please visit CloudLink's [Documentation](https://hackmd.io/G9q1kPqvQT6NrPobjjxSgg) page.
 
-There are several publically-hosted CloudLink instances available, which can be found in [serverlist.json](https://github.com/MikeDev101/cloudlink/blob/cloudlink-4/serverlist.json) or through the Server List block. 
+There are several publically-hosted CloudLink instances available, which can be found in [serverlist.json](https://github.com/MikeDev101/cloudlink/blob/master/serverlist.json) or through the Server List block. 
 
 CloudLink was originally created for Scratch 3.0. You can view the latest version of CloudLink in any of these Scratch editors:
 - [TurboWarp](https://turbowarp.org/editor?extension=https://mikedev101.github.io/cloudlink/B3-0.js)
