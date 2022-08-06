@@ -1,49 +1,63 @@
-# NOTICE
-
-CloudLink is being rewritten as there are several security vulnerabilities that have been found, as well as improve performance and functionality.
-
+![183f4e881a0d0844718065a28101cb0e](https://user-images.githubusercontent.com/12957745/183234324-076aacc5-d7a9-4606-b741-db68498ac631.png)
 # CloudLink
+CloudLink is a free and open-source, websocket-powered API optimized for Scratch 3.0. CloudLink comes with several powerful utilities and features:
+* Multicast and unicasting messages - Perfect for high-speed projects
+* Friendly software suite for implementing project-specific features - Multi-project save files and more
+* Advanced packet queuing system - Messages are handled browser-level so your Scratch code doesn't need to do extra work
+* Support for sandboxed/unsandboxed extension modes
+* Proven reliability - Extensively tested and utilized in [The Meower Project](https://github.com/meower-media-co/)
+* Unique project identifiers to allow frictionless communication between projects and app servers over a single CloudLink Server
 
-CloudLink is a high-speed, reliable, and custom websocket extension for Scratch 3.0, with server code that runs on Python.
-It permits cross-project (as well as cross-program) cloud variables.
-It also enables full-duplex networking and limitless possibilities for Scratch 3.0 projects.
+## Get started with CloudLink
+For full documentation of CloudLink, please visit CloudLink's [Documentation](https://hackmd.io/G9q1kPqvQT6NrPobjjxSgg) page.
 
-## Links
+There are several publically-hosted CloudLink instances available, which can be found in [serverlist.json](https://github.com/MikeDev101/cloudlink/blob/cloudlink-4/serverlist.json) or through the Server List block. 
 
-### [Discussion Forum (Archive)](https://scratch.mit.edu/discuss/topic/398473)
-
-### [HackMD Documentation](https://hackmd.io/G9q1kPqvQT6NrPobjjxSgg)
-
-### [CloudLink JS "cljs" (discontinued)](https://github.com/wgyt/cljs)
-
-## Example code
-
-Example code can be downloaded in the GitHub repository.
-
-#### Server: https://github.com/MikeDev101/cloudlink/blob/master/server_example.py
-
-#### Client: https://github.com/MikeDev101/cloudlink/blob/master/client_example.py
-
-Please report any bugs you find to the official [GitHub repository](https://github.com/MikeDev101/cloudlink/issues).
-
-# Scratch Extension
-
-You can view the client-side extension using one of the following modded Scratch editors:
-
+CloudLink was originally created for Scratch 3.0. You can view the latest version of CloudLink in any of these Scratch editors:
 - [TurboWarp](https://turbowarp.org/editor?extension=https://mikedev101.github.io/cloudlink/B3-0.js)
 - [SheepTester's E 羊 icques](https://sheeptester.github.io/scratch-gui/?url=https://mikedev101.github.io/cloudlink/B3-0.js)
-- [Ogadaki's Adacraft (Manual load required)](https://adacraft.org/studio/)
+- [Ogadaki's Adacraft](https://adacraft.org/studio/)
+- [Ogadaki's Adacraft (Beta)](https://beta.adacraft.org/studio/)
 
-# Installing CloudLink
+CloudLink is also available as a Python module, which comes bundled with the CloudLink Server.
+There is even a web-friendly version of CloudLink available as CLJS. 
 
+### [Server Example Code](https://github.com/MikeDev101/cloudlink/blob/master/server_example.py)
+### [(Python) Client Example Code](https://github.com/MikeDev101/cloudlink/blob/master/client_example.py)
+### [Discussion Forum (Archive)](https://scratch.mit.edu/discuss/topic/398473)
+### [CloudLink JS "cljs" (discontinued)](https://github.com/wgyt/cljs)
 
-## PIP HAS NOT BEEN UPDATED, PLEASE MANUALLY DOWNLOAD THE SOURCE CODE
-### Method 1: using pip
-`pip install cloudlink`
+## FAQ
+> Will my B3-0 projects support CloudLink 4.0 Servers?
 
-## Method 2: Directly downloading cloudlink.py
+Yes, there will be no compatibility-breaking changes to how CloudLink 4.0 handles messages. 
 
-Simply download the [source code](https://github.com/MikeDev101/cloudlink/archive/refs/heads/master.zip), extract cloudlink.py, and import it as shown above. However, the following dependencies are required in order to take advantage of full functionality:
+> Will my Server (v0.1.7.x and older) need to be rewritten entirely to support CloudLink 4.0?
 
-- websocket-server `pip install websocket-server`
-- websocket-client `pip install websocket-client`
+No, you will only need to rewrite your custom packet handlers as CloudLink 4.0 will reimplement custom commands.
+
+> Will CloudLink 4.0 support SSL/TLS?
+
+Yes, CloudLink 4.0 will implement SSL/TLS.
+
+> Where can I find old versions of CloudLink?
+
+You can check the releases tab in Github for older versions, or you can download a complete archive of all old versions here (LINK TBD).
+
+> Will my older projects (prior to B3-0) work with CloudLink 4.0?
+
+No, only projects built with CloudLink B3-0 will work with CloudLink 4.0.
+
+> Does CloudLink 4.0 have the CloudLink Suite?
+
+Yes. CloudLink 4.0 will be a complete reimplementation of the original CloudLink Suite. 
+
+> What is the CloudLink Suite?
+
+The CloudLink Suite is a set of extra features built into the CloudLink Extension. It provides extra features for Scratch developers to implement in projects that would normally add extra bloat, but can be implemented in a few blocks. These features include:
+* CloudDisk: Completely free cloud storage (Up to 10 KB, or 10^4 Bytes, per account), and a cross-project, cross-platform save file system (Up to 1 KB, or 10^3 Bytes, per save file with a maximum of 10 save files).
+* CloudCoin: Simple per-project, per-user currency system and supports cross-project trading.
+* CloudAccount: Extremely easy-to-use username/password system as an alternative to the username block for user identification, and protects your CloudCoin and CloudDisk data from unwanted users.
+
+## Found an issue?
+Please report any bugs, glitches, and/or security vulnerabilities [here](https://github.com/MikeDev101/cloudlink/issues).
