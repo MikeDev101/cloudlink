@@ -30,7 +30,7 @@ There is even a web-friendly version of CloudLink available as CLJS.
 ## FAQ
 > Will my B3-0 projects support CloudLink 4.0 Servers?
 
-Yes, there will be no compatibility-breaking changes to how CloudLink 4.0 handles messages. 
+Yes, there will be no compatibility-breaking changes to how CloudLink 4.0 handles messages. However, the new custom command handler will bind all custom commands to use: `{"cmd": "(custom command here)"}` instead of using the Direct command, `{"cmd": "direct", "val": {"cmd": "(custom command here)"}}`
 
 > Will my Server (v0.1.7.x and older) need to be rewritten entirely to support CloudLink 4.0?
 
