@@ -1,5 +1,12 @@
 Packet format:
-{'cmd':(Command), 'name':(Variable name), 'id':(A user's ID), 'val':(Payload), 'origin':(User ID originally transmitting from)}
+{
+   'cmd':(Command),
+   'name':(Variable name),
+   'id':(A user's ID),
+   'val':(Payload),
+   'origin':(User ID originally transmitting from),
+   'listener':(Unique code for Scratch to handle packets)
+}
 
 CloudLink
 ds - Handles server soft-shutdown disconnect request
@@ -30,25 +37,11 @@ pvar - Sends private variable data
  > parameters: val (String/Int/Bool/JSON), id (String), name (String)
  > Sent by both parties (server & clients)
 
-
-link - Connects to a webserver
-unlink - Disconnects from a webserver
-fetchid - Uses CLNS to find linked Plugins
-checkid - Reads status of user/webserver (online, version)
-host - Presents the plugin publicly for access via CLNS
-unhost - Removes plugin from CLNS
-prtclchk - Checks CloudLink server/client version & protocols supported
-prtclupg - Upgrades protocols for CloudLink client/server
-omni - Experimental CloudLink to Scratch Cloud Variable Server bridge (powered by scratchclient)
-
+genprojectid - Generate a new project ID to identify a project on a CloudLink Server
+setprojectid - Specifies a project ID on a CloudLink Server
 
 CloudAccount:
-auth2fa - Authenticate using 2FA
- > parameters: none
- > Sends from client to server
- > Returns JSON w/ key for authenticator service
-
-auth - Authenticate using password
+auth - Authenticate using password, also generates a new account if not yet created
  > parameters: val - String
  > Sends from client to server
  > Returns JSON
@@ -59,11 +52,6 @@ deauth - Logout
  > Returns "OK"
 
 checkauth - Return account info
- > parameters: none
- > Sends from client to server
- > Returns JSON
-
-checkkeys - Check 2FA state and authenticate
  > parameters: none
  > Sends from client to server
  > Returns JSON
@@ -79,17 +67,17 @@ deauth - Removes access when finished
  > Sends from client to server
  > Returns "OK"
 
-getftpdir - Gets a list of all files/folders available in a directory within CFTP
+getftpdir - Gets a list of all files/folders available in a directory
  > Parameters: Parameters: val - String (Directory format: "/folder1/folder2")
  > Sends from client to server
  > Returns String (String as primitive array split by ",")
 
-getftpfile - Downloads a file from a server using CFTP (CloudLink FTP)
+getftpfile - Downloads a file from server
  > Parameters: Parameters: val - String (Directory format: "/folder1/folder2/file.extension")
  > Sends from client to server
  > Returns String or JSON
 
-putftp - Uploads a file to a server
+putftp - Uploads a file to server
  > Parameters: Parameters: val - JSON
 	> JSON format: 
 		{
@@ -124,7 +112,7 @@ putslot - Writes data into a slot
 setftpconfig - Configure a directory/file's permissions, access, visibility, and security settings
 getftpinfo - Gets a file/folder's metadata from a server
 
-CloudCoin:
+CloudCoin: (totally not crypto)
 auth - Verify access using an authentication token provided by CloudAccount
  > Parameters: val - String
  > Sends from client to server
@@ -135,7 +123,11 @@ deauth - Removes access when finished
  > Sends from client to server
  > Returns "OK"
 
-checkassets - Checks how many coins are in circulation
+checkassets - Checks how many coins are in circulation for a project ID
 getinfo - Get account info
-mine - Sends a mine check
-spend - Uses x amount of coins
+getcoinuuids - Returns a list of all coin uuids the user's account has accumulated
+mine - Attempts to mine a coin (RNG-based chance of generating a coin), generates a new coin with randomized value and uuid for earning/spending
+earn - Adds x amount of coins to a user's account, requires specifying coin uuids to be spent
+spend - Uses x amount of coins from a user's account, requires specifying coin uuids to be earnt
+convertlocaltoglobal - Converts a specific project ID's CloudCoin market value to the public CloudCoin market value.
+convertglobaltolocal - Converts the public CloudCoin market value to a specific project ID's CloudCoin market value.
