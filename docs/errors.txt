@@ -48,36 +48,3 @@
 
 115 - Refused 
 	The server refused to handle the packet.
-
-# CLTLS codes
-200 - OK
-	The CLTLS request was handled correctly.
-
-201 - Encryption error
-	CLTLS couldn't encrypt the packet correctly.
-
-202 - Decryption error
-	CLTLS failed to decrypt the packet.
-
-203 - Algorithm type mismatch
-	CLTLS detected that the algorithm types didn't match.
-	This error occurs after the algorithm handshake has occurred and the client refuses to honor the
-	accepted protocols the server has chosen.
-
-204 - Not a valid Public Key
-	CLTLS couldn't verify the public key.
-
-205 - Upgrade protocols
-	CLTLS detected that the client can support a better version and has upgraded the protocol.
-
-206 - Upgrade failed
-	CLTLS attempted to upgrade the protocol but it failed.
-
-207 - Link failure
-	CLTLS encountered an error while sending/routing a packet.
-
-208 - Request failed
-	CLTLS attempted to handle the request but it had failed.
-
-209 - Refused
-	CLTLS refused to handle the request.
