@@ -28,7 +28,7 @@ There is even a web-friendly version of CloudLink available as CLJS.
 ### [CloudLink JS "cljs" (discontinued)](https://github.com/wgyt/cljs)
 
 ## FAQ
-> Will my B3-0 projects support CloudLink 4.0 Servers?
+> Will my CloudLink 3.0/TURBO projects support CloudLink 4.0 Servers?
 
 Yes, there will be no compatibility-breaking changes to how CloudLink 4.0 handles messages. However, the new custom command handler will bind all custom commands to use: `{"cmd": "(custom command here)"}` instead of using the Direct command, `{"cmd": "direct", "val": {"cmd": "(custom command here)"}}`
 
@@ -44,9 +44,13 @@ Yes, CloudLink 4.0 will implement SSL/TLS.
 
 You can check the releases tab in Github for older versions, or you can download a complete archive of all old versions here (LINK TBD).
 
-> Will my older projects (prior to B3-0) work with CloudLink 4.0?
+> Will CloudLink 4.0 work with my project made for CloudLink TURBO?
 
-No, only projects built with CloudLink B3-0 will work with CloudLink 4.0.
+No, CloudLink 4.0 serves as a replacement of CloudLink TURBO. While CloudLink 4.0 is built upon CloudLink TURBO, it does not have the same blocks as CloudLink 3.0. In favor or retaining compatibility with CloudLink 3.0, CloudLink TURBO should not be used and will be retired.
+
+> Will my older projects (prior to CloudLink 3.0) work with CloudLink 4.0?
+
+No, only projects built with CloudLink 3.0 will work with CloudLink 4.0.
 
 > Does CloudLink 4.0 have the CloudLink Suite?
 
