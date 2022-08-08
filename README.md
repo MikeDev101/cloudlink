@@ -36,10 +36,6 @@ Yes, there will be no compatibility-breaking changes to how CloudLink 4.0 handle
 
 No, you will only need to rewrite your custom packet handlers as CloudLink 4.0 will reimplement custom commands.
 
-> Will CloudLink 4.0 support SSL/TLS?
-
-Yes, CloudLink 4.0 will implement SSL/TLS.
-
 > Where can I find old versions of CloudLink?
 
 You can check the releases tab in Github for older versions, or you can download a complete archive of all old versions here (LINK TBD).
