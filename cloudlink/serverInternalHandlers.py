@@ -10,7 +10,7 @@ class serverInternalHandlers():
     
     # Link client to a room/rooms
     def link(self, client, server, message, listener_detected, listener_id, room_id):
-        self.supporter.log(f"Client {client['id']} ({client['address']}) is linking to room(s): {message['val']}")
+        self.supporter.log(f"Client {client.id} ({client.full_ip}) is linking to room(s): {message['val']}")
         if self.supporter.readAttrFromClient(client)["username_set"]:
             if type(message["val"]) in [list, str]:
                 # Convert to list
@@ -36,7 +36,7 @@ class serverInternalHandlers():
     
     # Unlink client from all rooms, and then link the client to the default room
     def unlink(self, client, server, message, listener_detected, listener_id, room_id):
-        self.supporter.log(f"Client {client['id']} ({client['address']}) unlinking from all rooms")
+        self.supporter.log(f"Client {client.id} ({client.full_ip}) unlinking from all rooms")
         if self.supporter.readAttrFromClient(client)["username_set"]:
             # Temporarily save the client's old rooms data
             old_rooms = self.supporter.readAttrFromClient(client)["rooms"]
@@ -57,13 +57,13 @@ class serverInternalHandlers():
     
     # Direct messages
     def direct(self, client, server, message, listener_detected, listener_id, room_id):
-        self.supporter.log(f"Client {client['id']} ({client['address']}) sent direct data: \"{message}\"")
+        self.supporter.log(f"Client {client.id} ({client.full_ip}) sent direct data: \"{message}\"")
         # This functionality is pretty obsolete, since custom commands are loaded directly into Cloudlink instead of using direct in CL3. Idfk what this should do.
     
     # Global messages
     def gmsg(self, client, server, message, listener_detected, listener_id, room_id):
 
-        self.supporter.log(f"Client {client['id']} ({client['address']}) sent global message with data \"{message['val']}\"")
+        self.supporter.log(f"Client {client.id} ({client.full_ip}) sent global message with data \"{message['val']}\"")
 
         # Send the message to all clients except the origin
         ulist = self.cloudlink.all_clients.copy()
@@ -82,7 +82,7 @@ class serverInternalHandlers():
 
     # Global cloud variables
     def gvar(self, client, server, message, listener_detected, listener_id, room_id):
-        self.supporter.log(f"Client {client['id']} ({client['address']}) sent global variable with data \"{message['val']}\"")
+        self.supporter.log(f"Client {client.id} ({client.full_ip}) sent global variable with data \"{message['val']}\"")
 
         # Send the message to all clients except the origin
         ulist = self.cloudlink.all_clients.copy()
@@ -99,7 +99,7 @@ class serverInternalHandlers():
     
     # Private cloud variables
     def pvar(self, client, server, message, listener_detected, listener_id, room_id):
-        self.supporter.log(f"Client {client['id']} ({client['address']}) sent private message with data \"{message['val']}\" going to {message['id']}")
+        self.supporter.log(f"Client {client.id} ({client.full_ip}) sent private message with data \"{message['val']}\" going to {message['id']}")
         if self.supporter.readAttrFromClient(client)["username_set"]:
             if type(message["id"]) == list:
                 rx_client = self.supporter.selectMultiUserObjects(message["id"])
@@ -138,7 +138,7 @@ class serverInternalHandlers():
     
     # Private messages
     def pmsg(self, client, server, message, listener_detected, listener_id, room_id):
-        self.supporter.log(f"Client {client['id']} ({client['address']}) sent private message with data \"{message['val']}\" going to {message['id']}")
+        self.supporter.log(f"Client {client.id} ({client.full_ip}) sent private message with data \"{message['val']}\" going to {message['id']}")
         if self.supporter.readAttrFromClient(client)["username_set"]:
             if type(message["id"]) == list:
                 rx_client = self.supporter.selectMultiUserObjects(message["id"])
@@ -183,7 +183,7 @@ class serverInternalHandlers():
             if type(message["val"]) == str:
                 # Keep username sizes within a reasonable length
                 if len(message["val"]) in range(1, 21):
-                    self.supporter.log(f"Client {client['id']} ({client['address']}) specified username \"{message['val']}\"")
+                    self.supporter.log(f"Client {client.id} ({client.full_ip}) specified username \"{message['val']}\"")
                     self.supporter.writeAttrToClient(client, "friendly_username", str(message["val"]))
                     self.supporter.writeAttrToClient(client, "username_set", True)
 
@@ -191,7 +191,7 @@ class serverInternalHandlers():
                     clientAttrs = self.supporter.readAttrFromClient(client)
                     msg = {
                         "username": clientAttrs["friendly_username"], 
-                        "id": client['id']
+                        "id": client.id
                     }
                     self.cloudlink.sendCode(client, "OK", listener_detected, listener_id, msg)
 
@@ -199,12 +199,12 @@ class serverInternalHandlers():
                     self.cloudlink.sendPacket(self.cloudlink.all_clients, {"cmd": "ulist", "val": self.supporter.getUsernames()})
 
                 else:
-                    self.supporter.log(f"Client {client['id']} ({client['address']}) specified username \"{message['val']}\", but username is not within 1-20 characters!")
+                    self.supporter.log(f"Client {client.id} ({client.full_ip}) specified username \"{message['val']}\", but username is not within 1-20 characters!")
                     self.cloudlink.sendCode(client, "Refused", listener_detected, listener_id)
             else:
-                self.supporter.log(f"Client {client['id']} ({client['address']}) specified username \"{message['val']}\", but username is not the correct datatype!")
+                self.supporter.log(f"Client {client.id} ({client.full_ip}) specified username \"{message['val']}\", but username is not the correct datatype!")
                 self.cloudlink.sendCode(client, "Datatype", listener_detected, listener_id)
         else:
             existing_username = self.supporter.readAttrFromClient(client)["friendly_username"]
-            self.supporter.log(f"Client {client['id']} ({client['address']}) specified username \"{message['val']}\", but username was already set to \"{existing_username}\"")
+            self.supporter.log(f"Client {client.id} ({client.full_ip}) specified username \"{message['val']}\", but username was already set to \"{existing_username}\"")
             self.cloudlink.sendCode(client, "IDSet", listener_detected, listener_id)

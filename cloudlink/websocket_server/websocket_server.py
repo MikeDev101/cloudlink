@@ -132,7 +132,7 @@ class WebsocketServer(ThreadingMixIn, TCPServer, API):
         self.key = key
         self.cert = cert
 
-        self.clients = []
+        self.clients = set()
         self.id_counter = 0
         self.thread = None
 
@@ -159,7 +159,7 @@ class WebsocketServer(ThreadingMixIn, TCPServer, API):
             sys.exit(1)
 
     def _message_received_(self, handler, msg):
-        self.message_received(self.handler_to_client(handler), self, msg)
+        self.message_received(handler, self, msg)
 
     def _ping_received_(self, handler, msg):
         handler.send_pong(msg)
@@ -176,32 +176,24 @@ class WebsocketServer(ThreadingMixIn, TCPServer, API):
             return
 
         self.id_counter += 1
-        client = {
-            'id': self.id_counter,
-            'handler': handler,
-            'address': handler.client_address,
-            'headers': handler.headers
-        }
-        self.clients.append(client)
-        self.new_client(client, self)
+        handler.id = self.id_counter
+        handler.full_ip = f"{handler.client_address[0]}:{handler.client_address[1]}"
+        handler.friendly_ip = handler.client_address[0]
+        handler.friendly_string = str(f"__client-{handler.id}-{handler.full_ip}__")
+        self.clients.add(handler)
+        self.new_client(handler, self)
 
     def _client_left_(self, handler):
-        client = self.handler_to_client(handler)
-        self.client_left(client, self)
-        if client in self.clients:
-            self.clients.remove(client)
+        self.client_left(handler, self)
+        if handler in self.clients:
+            self.clients.discard(handler)
 
     def _unicast(self, receiver_client, msg):
-        receiver_client['handler'].send_message(msg)
+        receiver_client.send_message(msg)
 
     def _multicast(self, msg):
         for client in self.clients:
             self._unicast(client, msg)
-
-    def handler_to_client(self, handler):
-        for client in self.clients:
-            if client['handler'] == handler:
-                return client
 
     def _terminate_client_handler(self, handler):
         handler.keep_alive = False
@@ -213,7 +205,7 @@ class WebsocketServer(ThreadingMixIn, TCPServer, API):
         Ensures request handler for each client is terminated correctly
         """
         for client in self.clients:
-            self._terminate_client_handler(client["handler"])
+            self._terminate_client_handler(client)
 
     def _shutdown_gracefully(self, status=CLOSE_STATUS_NORMAL, reason=DEFAULT_CLOSE_REASON):
         """
@@ -238,7 +230,7 @@ class WebsocketServer(ThreadingMixIn, TCPServer, API):
         Terminate clients gracefully without shutting down the server
         """
         for client in self.clients:
-            client["handler"].send_close(status, reason)
+            client.send_close(status, reason)
         self._terminate_client_handlers()
 
     def _disconnect_clients_abruptly(self):

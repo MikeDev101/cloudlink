@@ -51,8 +51,8 @@ class supporter:
                     message["listener"] = listener_id
 
                 # Send the message (support for multicast)
-                if type(clients) == dict:
-                    clients = [clients]
+                if type(clients) != set:
+                    clients = set([clients])
                 for client in clients:
                     if rooms in [None, ["default"]]:
                         if "default" in self.readAttrFromClient(client)["rooms"]:
@@ -65,8 +65,8 @@ class supporter:
 
     def rejectClient(self, client, reason):
         if client in self.cloudlink.all_clients:
-            client["handler"].send_close(1000, bytes(reason, encoding='utf-8'))
-            self.cloudlink.wss._terminate_client_handler(client["handler"])
+            client.send_close(1000, bytes(reason, encoding='utf-8'))
+            self.cloudlink.wss._terminate_client_handler(client)
 
     def full_stack(self):
         exc = sys.exc_info()[0]
@@ -148,7 +148,7 @@ class supporter:
             clientAttrs = self.readAttrFromClient(client)
             clientId = {
                 "username": clientAttrs["friendly_username"],
-                "id": client['id']
+                "id": client.id
             }
             for room in rooms:
                 if room in clientAttrs["rooms"]:
@@ -163,7 +163,7 @@ class supporter:
             if clientAttrs["username_set"]:
                 return {
                     "username": clientAttrs["friendly_username"], 
-                    "id": client['id']
+                    "id": client.id
                 }
 
     def selectMultiUserObjects(self, identifiers:list):
@@ -206,7 +206,7 @@ class supporter:
             clientIDs = []
             clientObjs = []
             for client in self.cloudlink.all_clients:
-                clientIDs.append(client["id"])
+                clientIDs.append(client.id)
                 clientObjs.append(client)
             
             if identifier in clientIDs:
@@ -217,7 +217,7 @@ class supporter:
             clientIDs = []
             clientObjs = []
             for client in self.cloudlink.all_clients:
-                clientIDs.append(client["id"])
+                clientIDs.append(client.id)
                 clientObjs.append(client)
             
             if identifier["id"] in clientIDs:
@@ -227,23 +227,11 @@ class supporter:
         else:
             return TypeError
 
-    def generateClientString(self, client):
-        tmp_client = client.copy()
-        if type(tmp_client["address"]) == tuple:
-            tmp_client["address"] = f"{tmp_client['address'][0]}:{tmp_client['address'][1]}"
-        return str(f"__client-{tmp_client['id']}-{tmp_client['address']}__")
-
-    def getFriendlyClientIP(self, client):
-        tmp_client = client.copy()
-        if type(tmp_client["address"]) == tuple:
-            tmp_client["address"] = tmp_client['address'][0]
-        return tmp_client["address"]
-
     def getClientObjFromUsername(self, username):
         return self.getUserObject(username)
 
     def createAttrForClient(self, client):
-        attrstring = self.generateClientString(client)
+        attrstring = client.friendly_string
         if not(hasattr(self.cloudlink, attrstring)):
             setattr(self.cloudlink, attrstring, {
                 "friendly_username": "",
@@ -256,7 +244,7 @@ class supporter:
             return False
 
     def deleteAttrForClient(self, client):
-        attrstring = self.generateClientString(client)
+        attrstring = client.friendly_string
         if hasattr(self.cloudlink, attrstring):
             delattr(self.cloudlink, attrstring)
             return True
@@ -264,14 +252,14 @@ class supporter:
             return False
 
     def readAttrFromClient(self, client):
-        attrstring = self.generateClientString(client)
+        attrstring = client.friendly_string
         if hasattr(self.cloudlink, attrstring):
             return getattr(self.cloudlink, attrstring)
         else:
             return {}
 
     def writeAttrToClient(self, client, key, data):
-        attrstring = self.generateClientString(client)
+        attrstring = client.friendly_string
         if hasattr(self.cloudlink, attrstring):
             tmp_data = getattr(self.cloudlink, attrstring)
             tmp_data[key] = data

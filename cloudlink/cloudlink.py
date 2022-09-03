@@ -18,7 +18,7 @@ class Cloudlink:
 
     def server(self, logs=False):
         # Initialize Cloudlink server
-        from .server import server
+        from server import server
         return server(self, logs)
 
     def client(self, server_ip = "ws://127.0.0.1:3000/", logs=False):
@@ -96,6 +96,6 @@ if __name__ == "__main__":
     server.callback(server.on_close, dummy.on_close)
 
     server.loadCustomCommands(customCommands)
-    server.disableCommands(["gmsg"])
+    server.disableCommands([])
 
     server.run(host="0.0.0.0", port=3000)
