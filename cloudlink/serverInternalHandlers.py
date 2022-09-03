@@ -105,7 +105,7 @@ class serverInternalHandlers():
                 rx_client = self.supporter.selectMultiUserObjects(message["id"])
                 if not(len(rx_client) == 0):
                     # Send the message to all recipient IDs
-                    self.cloudlink.sendPacket(rx_client, {"cmd": "pvar", "val": message["val"], "name": message["name"], "origin": self.supporter.getUserObjectFromClientObj(client)}, room_id = room_id)
+                    self.cloudlink.sendPacket(rx_client, {"cmd": "pvar", "val": message["val"], "name": message["name"], "origin": self.supporter.getUserObjectFromClientObj(client)}, rooms = room_id)
 
                     # Tell the client that the messages were successfully sent
                     self.cloudlink.sendCode(client, "OK", listener_detected, listener_id)
