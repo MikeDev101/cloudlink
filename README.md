@@ -10,7 +10,7 @@ Cloudlink is a free and open-source, websocket-powered API optimized for Scratch
 * Unique project identifiers to allow frictionless communication between projects and app servers over a single Cloudlink Server
 
 ## Get started with Cloudlink
-For full documentation of Cloudlink, please visit Cloudlink's [Documentation](https://hackmd.io/G9q1kPqvQT6NrPobjjxSgg) page.
+For full documentation of Cloudlink, please visit Cloudlink's [Documentation](https://hackmd.io/g6BogABhT6ux1GA2oqaOXA) page.
 
 There are several publically-hosted Cloudlink instances available, which can be found in [serverlist.json](https://github.com/MikeDev101/cloudlink/blob/master/serverlist.json) or through the Server List block. 
 
