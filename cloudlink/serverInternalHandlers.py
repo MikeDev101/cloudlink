@@ -7,15 +7,18 @@ class serverInternalHandlers():
     def __init__(self, cloudlink):
         self.cloudlink = cloudlink
         self.supporter = self.cloudlink.supporter
+        self.importer_ignore_functions = ["relay"]
     
     # Link client to a room/rooms
     def link(self, client, server, message, listener_detected, listener_id, room_id):
         self.supporter.log(f"Client {client.id} ({client.full_ip}) is linking to room(s): {message['val']}")
         if self.supporter.readAttrFromClient(client)["username_set"]:
             if type(message["val"]) in [list, str]:
-                # Convert to list
+                # Convert to set
                 if type(message["val"]) == str:
-                    message["val"] = [message["val"]]
+                    message["val"] = set([message["val"]])
+                elif type(message["val"]) == list:
+                    message["val"] = set(message["val"])
 
                 # Add client to rooms
                 if not self.supporter.readAttrFromClient(client)["is_linked"]:
@@ -24,10 +27,10 @@ class serverInternalHandlers():
                 self.cloudlink.sendCode(client, "OK", listener_detected, listener_id)
 
                 # Update all client ulists for the default room
-                self.cloudlink.sendPacket(self.cloudlink.all_clients, {"cmd": "ulist", "val": self.supporter.getUsernames()}, listener_detected, listener_id)
+                self.cloudlink.sendPacket(self.supporter.getAllUsersInRoom("default"), {"cmd": "ulist", "val": self.supporter.getUsernames()})
 
-                # Update all client ulists in the room that the client joined
-                self.cloudlink.sendPacket(self.cloudlink.all_clients, {"cmd": "ulist", "val": self.supporter.getUsernames(message["val"])}, listener_detected, listener_id, message["val"])
+                # Update all client ulists in the rooms that the client joined
+                self.cloudlink.sendPacket(self.supporter.getAllUsersInManyRooms(message["val"]), {"cmd": "ulist", "val": self.supporter.getUsernames(message["val"])}, rooms = message["val"])
 
             else:
                 self.cloudlink.sendCode(client, "Datatype", listener_detected, listener_id)
@@ -38,27 +41,34 @@ class serverInternalHandlers():
     def unlink(self, client, server, message, listener_detected, listener_id, room_id):
         self.supporter.log(f"Client {client.id} ({client.full_ip}) unlinking from all rooms")
         if self.supporter.readAttrFromClient(client)["username_set"]:
-            # Temporarily save the client's old rooms data
-            old_rooms = self.supporter.readAttrFromClient(client)["rooms"]
-
-            # Remove the client from all rooms and set their room to the default room
             if self.supporter.readAttrFromClient(client)["is_linked"]:
-                self.supporter.writeAttrToClient(client, "is_linked", False)
-            self.supporter.writeAttrToClient(client, "rooms", ["default"])
-            self.cloudlink.sendCode(client, "OK", listener_detected, listener_id, room_id)
+                # Temporarily save the client's old rooms data
+                old_rooms = self.supporter.readAttrFromClient(client)["rooms"]
 
-            # Update all client ulists for the default room
-            self.cloudlink.sendPacket(self.cloudlink.all_clients, {"cmd": "ulist", "val": self.supporter.getUsernames()}, listener_detected, listener_id)
+                # Remove the client from all rooms and set their room to the default room
+                if self.supporter.readAttrFromClient(client)["is_linked"]:
+                    self.supporter.writeAttrToClient(client, "is_linked", False)
+                self.supporter.writeAttrToClient(client, "rooms", ["default"])
+                self.cloudlink.sendCode(client, "OK", listener_detected, listener_id)
 
-            # Update all client ulists in the room that the client left
-            self.cloudlink.sendPacket(self.cloudlink.all_clients, {"cmd": "ulist", "val": self.supporter.getUsernames(old_rooms)}, listener_detected, listener_id, old_rooms)
+                # Update all client ulists for the default room
+                self.cloudlink.sendPacket(self.supporter.getAllUsersInRoom("default"), {"cmd": "ulist", "val": self.supporter.getUsernames()})
+
+                # Update all client ulists in the room that the client left
+                self.cloudlink.sendPacket(self.supporter.getAllUsersInManyRooms(old_rooms), {"cmd": "ulist", "val": self.supporter.getUsernames(old_rooms)}, rooms = old_rooms)
+            else:
+                self.supporter.log(f"Client {client.id} ({client.full_ip}) was already unlinked!")
+                # Tell the client that it was already unlinked
+                self.cloudlink.sendCode(client, "OK", listener_detected, listener_id)
+
+                # Give the client the default room ulist
+                self.cloudlink.sendPacket(client, {"cmd": "ulist", "val": self.supporter.getUsernames()})
         else:
             self.cloudlink.sendCode(client, "IDRequired", listener_detected, listener_id)
     
-    # Direct messages
+    # Direct messages, this command is pretty obsolete, since custom commands are loaded directly into Cloudlink instead of using direct in CL3. Idfk what this should do.
     def direct(self, client, server, message, listener_detected, listener_id, room_id):
         self.supporter.log(f"Client {client.id} ({client.full_ip}) sent direct data: \"{message}\"")
-        # This functionality is pretty obsolete, since custom commands are loaded directly into Cloudlink instead of using direct in CL3. Idfk what this should do.
     
     # Global messages
     def gmsg(self, client, server, message, listener_detected, listener_id, room_id):
@@ -196,15 +206,19 @@ class serverInternalHandlers():
                     self.cloudlink.sendCode(client, "OK", listener_detected, listener_id, msg)
 
                     # Update all clients with the updated userlist
-                    self.cloudlink.sendPacket(self.cloudlink.all_clients, {"cmd": "ulist", "val": self.supporter.getUsernames()})
+                    self.cloudlink.sendPacket(self.supporter.getAllUsersInRoom("default"), {"cmd": "ulist", "val": self.supporter.getUsernames()})
 
                 else:
                     self.supporter.log(f"Client {client.id} ({client.full_ip}) specified username \"{message['val']}\", but username is not within 1-20 characters!")
                     self.cloudlink.sendCode(client, "Refused", listener_detected, listener_id)
             else:
                 self.supporter.log(f"Client {client.id} ({client.full_ip}) specified username \"{message['val']}\", but username is not the correct datatype!")
-                self.cloudlink.sendCode(client, "Datatype", listener_detected, listener_id)
+                self.cloudlink.sendCode(client, "DataType", listener_detected, listener_id)
         else:
             existing_username = self.supporter.readAttrFromClient(client)["friendly_username"]
             self.supporter.log(f"Client {client.id} ({client.full_ip}) specified username \"{message['val']}\", but username was already set to \"{existing_username}\"")
             self.cloudlink.sendCode(client, "IDSet", listener_detected, listener_id)
+
+    # WIP
+    def relay(self, client, server, message, listener_detected, listener_id, room_id):
+        pass

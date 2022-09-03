@@ -37,8 +37,8 @@ class serverRootHandlers:
                 # Report to the client the currently cached global message
                 self.cloudlink.sendPacket(client, {"cmd": "gmsg", "val": self.cloudlink.global_msg})
 
-                # Update all clients with the updated userlist
-                self.cloudlink.sendPacket(self.cloudlink.all_clients, {"cmd": "ulist", "val": self.supporter.getUsernames()})
+                # Update the client's userlist
+                self.cloudlink.sendPacket(client, {"cmd": "ulist", "val": self.supporter.getUsernames()})
 
                 # Tell the client the server's Message-Of-The-Day (MOTD)
                 if self.cloudlink.motd_enable:
@@ -86,16 +86,27 @@ class serverRootHandlers:
                                 listener_id = message["val"]["listener"]
                 
                         room_id = None
+                        ignore_check = False
                         if self.supporter.readAttrFromClient(client)["is_linked"]:
+                            ignore_check = True
                             room_id = self.supporter.readAttrFromClient(client)["rooms"]
 
-                        if "room" in message:
-                            if type(message["room"]) in [str, list]:
-                                # Convert to list
-                                if type(message["room"]) == str:
-                                    message["room"] = [message["room"]]
-
-                                room_id = message["room"]
+                        if "rooms" in message:
+                            if type(message["rooms"]) in [str, list]:
+                                # Convert to set
+                                if type(message["rooms"]) == str:
+                                    message["rooms"] = set([message["rooms"]])
+                                elif type(message["rooms"]) == list:
+                                    message["rooms"] = set(message["rooms"])
+                                room_id = message["rooms"]
+                            
+                            # Remove unlinked rooms
+                            if not ignore_check:
+                                tmp_room_id = room_id.copy()
+                                for room in tmp_room_id:
+                                    if not room in self.supporter.readAttrFromClient(client)["rooms"]:
+                                        self.supporter.log(f"Client {client.id} ({client.full_ip}) attempted to access room {room}, but was blocked!")
+                                        room_id.remove(room)
 
                         # Check if the command is a built-in Cloudlink command
                         if ((message["cmd"] in self.cloudlink.builtInCommands) and not(message["cmd"] == "direct")):

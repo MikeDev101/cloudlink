@@ -6,7 +6,7 @@ import json
 
 class supporter:
     """
-    This module provides basic functionality for Cloudlink.
+    This module provides extended functionality for Cloudlink.
     """
 
     def __init__(self, cloudlink, enable_logs:bool):
@@ -27,6 +27,7 @@ class supporter:
             "Refused": "E:108 | Refused",
             "Invalid": "E:109 | Invalid command",
             "Disabled": "E:110 | Command disabled",
+            "IDRequired": "E:111 | ID required",
         }
     
     def sendCode(self, client:dict, code:str, listener_detected:bool = False, listener_id:str = "", extra_data = None):
@@ -57,6 +58,7 @@ class supporter:
                     clients = set([clients])
                 for client in clients:
                     if rooms in [None, ["default"]]:
+                        message["room"] = "default"
                         if "default" in self.readAttrFromClient(client)["rooms"]:
                             self.cloudlink.wss.send_message(client, self.json.dumps(message))
                     else:
@@ -64,6 +66,81 @@ class supporter:
                             if room in self.readAttrFromClient(client)["rooms"]:
                                 message["room"] = room
                                 self.cloudlink.wss.send_message(client, self.json.dumps(message))
+    
+    def setClientUsername(self, client, username):
+        if type(username) == str:
+            if client in self.cloudlink.all_clients:
+                if not self.supporter.readAttrFromClient(client)["username_set"]:
+                    self.supporter.log(f"Manually setting client {client.id} ({client.full_ip}) username to {username}...")
+                    self.supporter.writeAttrToClient(client, "friendly_username", username)
+                    self.supporter.writeAttrToClient(client, "username_set", True)
+        else:
+            raise TypeError
+    
+    def linkClientToRooms(self, client, rooms):
+        if type(rooms) in [str, list, set]:
+            if client in self.cloudlink.all_clients:
+                if type(rooms) in [list, str]:
+                    # Convert to set
+                    if type(rooms) == str:
+                        rooms = set([rooms])
+                    elif type(rooms) == list:
+                        rooms = set(rooms)
+                self.supporter.log(f"Manually linking client {client.id} ({client.full_ip}) to rooms {list(rooms)}...")
+
+                # Add client to rooms
+                self.supporter.writeAttrToClient(client, "is_linked", True)
+                self.supporter.writeAttrToClient(client, "rooms", rooms)
+        else:
+            raise TypeError
+    
+    def unlinkClientFromRooms(self, client):
+        if client in self.cloudlink.all_clients:
+            self.supporter.log(f"Manually unlinking client {client.id} ({client.full_ip}) from rooms...")
+
+            # Reset client rooms
+            self.supporter.writeAttrToClient(client, "is_linked", False)
+            self.supporter.writeAttrToClient(client, "rooms", ["default"])
+
+    def getAllUsersInManyRooms(self, room_ids):
+        if type(room_ids) == str:
+            room_ids = set([room_ids])
+        elif type(room_ids) == list:
+            room_ids = set(room_ids)
+        elif type(room_ids) == set:
+            pass
+        else:
+            raise TypeError
+        allclients = set()
+        for room in room_ids:
+            tmp = self.getAllUsersInRoom(room)
+            for tmp_add in tmp:
+                allclients.add(tmp_add)
+        return allclients
+    
+    def getAllUsersInRoom(self, room_id):
+        if type(room_id) != str:
+            raise TypeError
+        clients = set()
+        if room_id in self.getAllRooms():
+            for client in self.cloudlink.all_clients:
+                if room_id in self.getAllClientRooms(client):
+                    clients.add(client)
+        return clients
+
+    def getAllRooms(self):
+        roomlist = set()
+        roomlist.add("default")
+        for client in self.cloudlink.all_clients:
+            for room in self.readAttrFromClient(client)["rooms"]:
+                roomlist.add(room)
+        return roomlist
+    
+    def getAllClientRooms(self, client):
+        roomlist = set()
+        for room in self.readAttrFromClient(client)["rooms"]:
+            roomlist.add(room)
+        return roomlist
 
     def rejectClient(self, client, reason):
         if client in self.cloudlink.all_clients:
@@ -97,7 +174,7 @@ class supporter:
                 else:
                     self.log(f"Attempted to disable command {functionEntry} but either the command was already unloaded, it was not valid, or was not loaded beforehand.");
 
-    def loadCustomCommands(self, classes):
+    def loadCustomCommands(self, classes, custom:dict = None):
         # Make it not require putting single classes into a list.
         if type(classes) == type:
             classes = [classes]
@@ -111,8 +188,12 @@ class supporter:
                     
                     # Create a new inter class within self and initialize it
                     if not hasattr(self.cloudlink, str(classEntry)):
-                        setattr(self.cloudlink, str(classEntry), classEntry(self.cloudlink))
-                        
+
+                        if (custom != None) and (classEntry in custom):
+                            setattr(self.cloudlink, str(classEntry), classEntry(self.cloudlink, custom[classEntry]))
+                        else:
+                            setattr(self.cloudlink, str(classEntry), classEntry(self.cloudlink))
+                    
                     for functionEntry in classFunctions:
                         # Check if a function within class is a private function
                         try:
@@ -139,8 +220,16 @@ class supporter:
             # Check if a function within self.serverInternalHandlers is a private function
             if (not("__" in functionEntry) and (not(hasattr(self.cloudlink, functionEntry)))): 
                 try:
-                    self.cloudlink.builtInCommands.append(str(functionEntry))
-                    setattr(self.cloudlink, str(functionEntry), getattr(self.cloudlink.serverInternalHandlers, str(functionEntry)))
+                    # Check if a function is marked as ignore
+                    shouldAdd = True
+                    if hasattr(self.cloudlink.serverInternalHandlers, "importer_ignore_functions"):
+                        if type(self.cloudlink.serverInternalHandlers.importer_ignore_functions) == list:
+                            if str(functionEntry) in self.cloudlink.serverInternalHandlers.importer_ignore_functions:
+                                shouldAdd = False
+                
+                    if shouldAdd:
+                        self.cloudlink.builtInCommands.append(str(functionEntry))
+                        setattr(self.cloudlink, str(functionEntry), getattr(self.cloudlink.serverInternalHandlers, str(functionEntry)))
                 except:
                     self.log(f"An exception has occurred whilst loading a built-in command: {self.full_stack()}")
 
