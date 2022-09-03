@@ -1,9 +1,9 @@
 import sys
-from websocket_server import WebsocketServer
-from supporter import supporter
-from serverRootHandlers import serverRootHandlers
-from serverInternalHandlers import serverInternalHandlers
 import logging
+from .websocket_server import WebsocketServer
+from .supporter import supporter
+from .serverRootHandlers import serverRootHandlers
+from .serverInternalHandlers import serverInternalHandlers
 
 class server:
     def __init__(self, parentCl, enable_logs):
