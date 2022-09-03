@@ -73,16 +73,13 @@ class demoCallbacks:
         pass
 
     def on_packet(self, client, server, message):
-        #print("on_packet")
-        pass
+        print("on_packet")
     
     def on_connect(self, client, server):
-        #print("on_connect")
-        pass
+        print("on_connect")
 
     def on_close(self, client, server):
-        #print("on_close")
-        pass
+        print("on_close")
 
 if __name__ == "__main__":
     cl = Cloudlink()
@@ -96,6 +93,6 @@ if __name__ == "__main__":
     server.callback(server.on_close, dummy.on_close)
 
     server.loadCustomCommands(customCommands)
-    server.disableCommands(["gmsg"])
+    #server.disableCommands(["gmsg"])
 
     server.run(host="0.0.0.0", port=3000)
