@@ -51,6 +51,8 @@ class supporter:
                     message["listener"] = listener_id
 
                 # Send the message (support for multicast)
+                if type(clients) == list:
+                    clients = set(clients)
                 if type(clients) != set:
                     clients = set([clients])
                 for client in clients:
