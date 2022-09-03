@@ -12,24 +12,24 @@ class serverRootHandlers:
     def on_connect(self, client, server):
         if not(client == None):
             if self.cloudlink.rejectClientMode:
-                self.supporter.log(f"Client {client['id']} ({client['address']}) was rejected.")
+                self.supporter.log(f"Client {client.id} ({client.full_ip}) was rejected.")
 
                 # Reject the client
                 self.supporter.rejectClient(client, "Connection rejected")
 
-            elif self.supporter.getFriendlyClientIP(client) in self.cloudlink.ipblocklist:
-                self.supporter.log(f"Client {client['id']} ({client['address']}) was blocked from connecting.")
+            elif client.friendly_ip in self.cloudlink.ipblocklist:
+                self.supporter.log(f"Client {client.id} ({client.full_ip}) was blocked from connecting.")
 
                 # Block the client
                 self.supporter.rejectClient(client, "IP blocked")
             else:
-                self.supporter.log(f"Client {client['id']} ({client['address']}) connected.")
+                self.supporter.log(f"Client {client.id} ({client.full_ip}) connected.")
 
                 # Create attributes for the client
                 self.supporter.createAttrForClient(client)
 
                 # Report to the client it's IP address
-                self.cloudlink.sendPacket(client, {"cmd": "client_ip", "val": str(client["address"])})
+                self.cloudlink.sendPacket(client, {"cmd": "client_ip", "val": str(client.full_ip)})
 
                 # Report to the client the CL Server version
                 self.cloudlink.sendPacket(client, {"cmd": "server_version", "val": str(self.cloudlink.version)})
@@ -50,7 +50,7 @@ class serverRootHandlers:
     
     def on_close(self, client, server):
         if not(client == None):
-            self.supporter.log(f"Client {client['id']} ({client['address']}) disconnected.")
+            self.supporter.log(f"Client {client.id} ({client.full_ip}) disconnected.")
             self.supporter.deleteAttrForClient(client)
 
             if self.on_close in self.cloudlink.usercallbacks:
@@ -60,7 +60,7 @@ class serverRootHandlers:
     def on_packet(self, client, server, message):
         if not(client == None):
             if len(message) == 0:
-                self.supporter.log(f"Packet from {client['id']} was blank!")
+                self.supporter.log(f"Packet from {client.id} was blank!")
                 self.cloudlink.sendCode(client, "EmptyPacket")
             else:
                 try:
@@ -120,20 +120,20 @@ class serverRootHandlers:
                                 isValid = False
                             if isValid:
                                 if isLegacy:
-                                    self.supporter.log(f"Client {client['id']} ({client['address']}) sent legacy custom command \"{message['val']['cmd']}\"")
+                                    self.supporter.log(f"Client {client.id} ({client.full_ip}) sent legacy custom command \"{message['val']['cmd']}\"")
                                     getattr(self.cloudlink, str(message["val"]["cmd"]))(client, server, message, listener_detected, listener_id, room_id)
                                 else:
                                     if isCustom:
-                                        self.supporter.log(f"Client {client['id']} ({client['address']}) sent custom command \"{message['cmd']}\"")
+                                        self.supporter.log(f"Client {client.id} ({client.full_ip}) sent custom command \"{message['cmd']}\"")
                                         getattr(self.cloudlink, str(message["cmd"]))(client, server, message, listener_detected, listener_id, room_id)
                                     else:
                                         getattr(self.cloudlink, "direct")(client, server, message, listener_detected, listener_id, room_id)
                             else:
                                 if message["cmd"] in self.cloudlink.disabledCommands:
-                                    self.supporter.log(f"Client {client['id']} ({client['address']}) sent custom command \"{message['cmd']}\", but the command is disabled.")
+                                    self.supporter.log(f"Client {client.id} ({client.full_ip}) sent custom command \"{message['cmd']}\", but the command is disabled.")
                                     self.cloudlink.sendCode(client, "Disabled")
                                 else:
-                                    self.supporter.log(f"Client {client['id']} ({client['address']}) sent custom command \"{message['cmd']}\", but the command is invalid or it was not loaded.")
+                                    self.supporter.log(f"Client {client.id} ({client.full_ip}) sent custom command \"{message['cmd']}\", but the command is invalid or it was not loaded.")
                                     self.cloudlink.sendCode(client, "Invalid")
 
                         if self.on_packet in self.cloudlink.usercallbacks:
