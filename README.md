@@ -15,8 +15,8 @@ For full documentation of Cloudlink, please visit Cloudlink's [Documentation](ht
 There are several publically-hosted Cloudlink instances available, which can be found in [serverlist.json](https://github.com/MikeDev101/cloudlink/blob/master/serverlist.json) or through the Server List block. 
 
 Cloudlink was originally created for Scratch 3.0. You can view the latest version of Cloudlink in any of these Scratch editors:
-- [TurboWarp](https://turbowarp.org/editor?extension=https://mikedev101.github.io/cloudlink/B3-0.js)
-- [SheepTester's E 羊 icques](https://sheeptester.github.io/scratch-gui/?url=https://mikedev101.github.io/cloudlink/B3-0.js)
+- [TurboWarp](https://turbowarp.org/editor?extension=https://mikedev101.github.io/cloudlink/S4-0-nosuite.js)
+- [SheepTester's E 羊 icques](https://sheeptester.github.io/scratch-gui/?url=https://mikedev101.github.io/cloudlink/S4-0-nosuite.js)
 - [Ogadaki's Adacraft](https://adacraft.org/studio/)
 - [Ogadaki's Adacraft (Beta)](https://beta.adacraft.org/studio/)
 
