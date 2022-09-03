@@ -1,4 +1,5 @@
-![CLOUDLINK 4](https://user-images.githubusercontent.com/12957745/188250679-1fde2876-c845-47e3-ac52-ff29d55d5049.png)
+![CLOUDLINK 4 BANNER](https://user-images.githubusercontent.com/12957745/188282246-a221e66a-5d8a-4516-9ae2-79212b745d91.png)
+##### CL4 banner(s) made by [@zedthehedgehog](https://github.com/zedthehedgehog)
 
 # Cloudlink
 Cloudlink is a free and open-source, websocket-powered API optimized for Scratch 3.0. Cloudlink comes with several powerful utilities and features:
