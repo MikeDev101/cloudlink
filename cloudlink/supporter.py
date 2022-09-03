@@ -51,8 +51,8 @@ class supporter:
                     message["listener"] = listener_id
 
                 # Send the message (support for multicast)
-                if type(clients) != list:
-                    clients = [clients]
+                if type(clients) != set:
+                    clients = set([clients])
                 for client in clients:
                     if rooms in [None, ["default"]]:
                         if "default" in self.readAttrFromClient(client)["rooms"]:
