@@ -86,9 +86,10 @@ class serverRootHandlers:
                             listener_id = message["listener"]
                         else:
                             # Check for old layout (Mainly for Direct command) listeners
-                            listener_detected = ("listener" in message["val"])
-                            if listener_detected:
-                                listener_id = message["val"]["listener"]
+                            if type(message["val"]) == str:
+                                listener_detected = ("listener" in message["val"])
+                                if listener_detected:
+                                    listener_id = message["val"]["listener"]
                 
                         room_id = None
                         if client.is_linked:
