@@ -18,7 +18,7 @@ class Cloudlink:
 
     def server(self, logs=False):
         # Initialize Cloudlink server
-        from server import server
+        from .server import server
         return server(self, logs)
 
     def client(self, server_ip = "ws://127.0.0.1:3000/", logs=False):
