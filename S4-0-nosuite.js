@@ -88,6 +88,7 @@ class CloudLink {
 
         // Rooms stuff
         this.enableRoom = false;
+        this.isRoomSetting = false;
         this.selectRoom = "";
         
         // Remapping stuff
@@ -800,9 +801,9 @@ class CloudLink {
     
     returnVarData({ TYPE, VAR }) {
         if (this.isRunning) {
-            if (self.varData.hasOwnProperty(this.menuRemap[TYPE])) {
-                if (self.varData[this.menuRemap[TYPE]].hasOwnProperty(VAR)) {
-                    return self.varData[this.menuRemap[TYPE]][VAR].value;
+            if (this.varData.hasOwnProperty(this.menuRemap[TYPE])) {
+                if (this.varData[this.menuRemap[TYPE]].hasOwnProperty(VAR)) {
+                    return this.varData[this.menuRemap[TYPE]][VAR].value;
                 } else {
                     return "";
                 };
@@ -811,7 +812,7 @@ class CloudLink {
             };
         } else {
             return "";
-        }
+        };
     };
     
     parseJSON({PATH, JSON_STRING}) {
@@ -935,10 +936,11 @@ class CloudLink {
     };
 
     onNewVar({ TYPE, VAR }) {
+        const self = this;
         if (this.isRunning) {
-            if (self.varData.hasOwnProperty(this.menuRemap[TYPE])) {
-                if (self.varData[this.menuRemap[TYPE]].hasOwnProperty(VAR)) {
-                    if (self.varData[this.menuRemap[TYPE]][VAR].isNew) {
+            if (this.varData.hasOwnProperty(this.menuRemap[TYPE])) {
+                if (this.varData[this.menuRemap[TYPE]].hasOwnProperty(VAR)) {
+                    if (this.varData[this.menuRemap[TYPE]][VAR].isNew) {
                         self.varData[this.menuRemap[TYPE]][VAR].isNew = false;
                         return true;
                     } else {
@@ -985,9 +987,9 @@ class CloudLink {
 
     returnIsNewVarData({ TYPE, VAR }) {
         if (this.isRunning) {
-            if (self.varData.hasOwnProperty(this.menuRemap[TYPE])) {
-                if (self.varData[this.menuRemap[TYPE]].hasOwnProperty(VAR)) {
-                    return self.varData[this.menuRemap[TYPE]][VAR].isNew;
+            if (this.varData.hasOwnProperty(this.menuRemap[TYPE])) {
+                if (this.varData[this.menuRemap[TYPE]].hasOwnProperty(VAR)) {
+                    return this.varData[this.menuRemap[TYPE]][VAR].isNew;
                 } else {
                     return false;
                 };
@@ -1076,8 +1078,10 @@ class CloudLink {
                             self.isUsernameSyncing = false;
                         };
                     } else if (tmp_socketData.listener == "roomLink") {
+                        self.isRoomSetting = false;
                         if (tmp_socketData.code == "I:100 | OK") {
                             console.log("Linking to room(s) was accepted by the server!");
+                            self.isLinked = true;
                         } else {
                             console.warn("Linking to room(s) was rejected by the server. Error code:", String(tmp_socketData.code));
                             self.enableRoom = false;
@@ -1130,6 +1134,7 @@ class CloudLink {
                 self.enableRoom = false;
                 self.selectRoom = "";
                 self.isLinked = false;
+                self.isRoomSetting = false;
 
                 if (self.link_status != 1) {
                     if (self.disconnectWasClean) {
@@ -1228,22 +1233,24 @@ class CloudLink {
     linkToRooms({ ROOMS }) {
         const self = this;
         if (this.isRunning) {
-            if (!(String(ROOMS).length > 1000)) {
-                let tmp_msg = {
-                    cmd: "link",
-                    val: ROOMS,
-                    listener: "roomLink"
+            if (!this.isRoomSetting) {
+                if (!(String(ROOMS).length > 1000)) {
+                    let tmp_msg = {
+                        cmd: "link",
+                        val: ROOMS,
+                        listener: "roomLink"
+                    };
+
+                    console.log("TX:", tmp_msg);
+                    mWS.send(JSON.stringify(tmp_msg));
+
+                    self.isRoomSetting = true;
+
+                } else {
+                    console.warn("Blocking attempt to send a room ID / room list larger than 1000 bytes (1 KB), room ID / room list is " + String(ROOMS).length + " bytes");
                 };
-
-                console.log("TX:", tmp_msg);
-                mWS.send(JSON.stringify(tmp_msg));
-
-                if (!(this.isLinked)) {
-                    self.isLinked = true;
-                };
-
             } else {
-                console.warn("Blocking attempt to send a room ID / room list larger than 1000 bytes (1 KB), room ID / room list is " + String(ROOMS).length + " bytes");
+                console.warn("Still linking to rooms!");
             };
         } else {
             console.warn("Socket is not open.");

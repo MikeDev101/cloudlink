@@ -81,7 +81,7 @@ class serverInternalHandlers():
         self.supporter.log(f"Client {client.id} ({client.full_ip}) sent global message with data \"{message['val']}\"")
 
         # Send the message to all clients except the origin
-        ulist = self.cloudlink.all_clients.copy()
+        ulist = self.supporter.getAllUsersInManyRooms(room_id)
         ulist.remove(client)
         msg = {
             "cmd": "gmsg",
@@ -100,7 +100,7 @@ class serverInternalHandlers():
         self.supporter.log(f"Client {client.id} ({client.full_ip}) sent global variable with data \"{message['val']}\"")
 
         # Send the message to all clients except the origin
-        ulist = self.cloudlink.all_clients.copy()
+        ulist = self.supporter.getAllUsersInManyRooms(room_id)
         ulist.remove(client)
         msg = {
             "cmd": "gvar",
@@ -110,7 +110,7 @@ class serverInternalHandlers():
         self.cloudlink.sendPacket(ulist, msg, rooms=room_id)
 
         # Send the message back to origin
-        self.cloudlink.sendPacket(client, msg, listener_detected, listener_id)
+        self.cloudlink.sendPacket(client, msg, listener_detected, listener_id, room_id)
     
     # Private cloud variables
     def pvar(self, client, server, message, listener_detected, listener_id, room_id):

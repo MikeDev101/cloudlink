@@ -176,7 +176,12 @@ class supporter:
             if (len(self.cloudlink.roomData[room_id]) == 0) and (room_id != "default"): 
                 del self.cloudlink.roomData[room_id]
 
-    def getAllUsersInManyRooms(self, room_ids):
+    def getAllUsersInManyRooms(self, room_ids = ["default"]):
+        # Bugfix
+        if room_ids == None:
+            room_ids = set(["default"])
+        
+        # Convert to set
         if type(room_ids) == str:
             room_ids = set([room_ids])
         elif type(room_ids) == list:
