@@ -9,6 +9,11 @@ class serverInternalHandlers():
         self.supporter = self.cloudlink.supporter
         self.importer_ignore_functions = ["relay"]
     
+    # Ping
+    def ping(self, client, server, message, listener_detected, listener_id, room_id):
+        self.supporter.log(f"Client {client.id} ({client.full_ip}) pinged the server!")
+        self.cloudlink.sendCode(client, "OK", listener_detected, listener_id)
+
     # Link client to a room/rooms
     def link(self, client, server, message, listener_detected, listener_id, room_id):
         self.supporter.log(f"Client {client.id} ({client.full_ip}) is linking to room(s): {message['val']}")

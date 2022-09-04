@@ -59,11 +59,11 @@ if __name__ == "__main__":
     server = cl.server(logs=True)
     server.setMOTD(True, "CloudLink 4 Test")
 
-    server.callback(server.on_packet, dummy.on_packet)
-    server.callback(server.on_connect, dummy.on_connect)
-    server.callback(server.on_close, dummy.on_close)
+    #server.callback(server.on_packet, dummy.on_packet)
+    #server.callback(server.on_connect, dummy.on_connect)
+    #server.callback(server.on_close, dummy.on_close)
 
-    server.loadCustomCommands(customCommands)
+    #server.loadCustomCommands(customCommands)
     #server.disableCommands(["gmsg"])
 
     server.run(host="0.0.0.0", port=3000)

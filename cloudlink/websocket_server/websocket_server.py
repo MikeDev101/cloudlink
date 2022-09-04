@@ -442,9 +442,20 @@ class WebSocketHandler(StreamRequestHandler):
             self.keep_alive = False
             return
         
-        # CloudFlared support
+        # Guard cases
+        ipcheck = False
+
+        # Cloudflare support
         if "cf-connecting-ip" in self.headers:
-            self.client_address = self.headers["cf-connecting-ip"]
+            if not ipcheck:
+                ipcheck = True
+                self.client_address = self.headers["cf-connecting-ip"]
+        
+        # X-Forwarded-For support
+        if "x-forwarded-for" in self.headers:
+            if not ipcheck:
+                ipcheck = True
+                self.client_address = self.headers["x-forwarded-for"].split(",")[0]
         
         response = self.make_handshake_response(key)
         with self._send_lock:
