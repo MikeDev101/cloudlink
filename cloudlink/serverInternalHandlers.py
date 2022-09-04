@@ -12,7 +12,7 @@ class serverInternalHandlers():
     # Link client to a room/rooms
     def link(self, client, server, message, listener_detected, listener_id, room_id):
         self.supporter.log(f"Client {client.id} ({client.full_ip}) is linking to room(s): {message['val']}")
-        if self.supporter.readAttrFromClient(client)["username_set"]:
+        if client.username_set:
             if type(message["val"]) in [list, str]:
                 # Convert to set
                 if type(message["val"]) == str:
@@ -21,9 +21,9 @@ class serverInternalHandlers():
                     message["val"] = set(message["val"])
 
                 # Add client to rooms
-                if not self.supporter.readAttrFromClient(client)["is_linked"]:
-                    self.supporter.writeAttrToClient(client, "is_linked", True)
-                self.supporter.writeAttrToClient(client, "rooms", message["val"])
+                if not client.is_linked:
+                    client.is_linked = True
+                client.rooms = message["val"]
                 self.cloudlink.sendCode(client, "OK", listener_detected, listener_id)
 
                 # Update all client ulists for the default room
@@ -40,15 +40,15 @@ class serverInternalHandlers():
     # Unlink client from all rooms, and then link the client to the default room
     def unlink(self, client, server, message, listener_detected, listener_id, room_id):
         self.supporter.log(f"Client {client.id} ({client.full_ip}) unlinking from all rooms")
-        if self.supporter.readAttrFromClient(client)["username_set"]:
-            if self.supporter.readAttrFromClient(client)["is_linked"]:
+        if client.username_set:
+            if client.is_linked:
                 # Temporarily save the client's old rooms data
-                old_rooms = self.supporter.readAttrFromClient(client)["rooms"]
+                old_rooms = client.rooms
 
                 # Remove the client from all rooms and set their room to the default room
-                if self.supporter.readAttrFromClient(client)["is_linked"]:
-                    self.supporter.writeAttrToClient(client, "is_linked", False)
-                self.supporter.writeAttrToClient(client, "rooms", ["default"])
+                if client.is_linked:
+                    client.is_linked = False
+                client.rooms = ["default"]
                 self.cloudlink.sendCode(client, "OK", listener_detected, listener_id)
 
                 # Update all client ulists for the default room
@@ -110,7 +110,7 @@ class serverInternalHandlers():
     # Private cloud variables
     def pvar(self, client, server, message, listener_detected, listener_id, room_id):
         self.supporter.log(f"Client {client.id} ({client.full_ip}) sent private message with data \"{message['val']}\" going to {message['id']}")
-        if self.supporter.readAttrFromClient(client)["username_set"]:
+        if client.username_set:
             if type(message["id"]) == list:
                 rx_client = self.supporter.selectMultiUserObjects(message["id"])
                 if not(len(rx_client) == 0):
@@ -149,7 +149,7 @@ class serverInternalHandlers():
     # Private messages
     def pmsg(self, client, server, message, listener_detected, listener_id, room_id):
         self.supporter.log(f"Client {client.id} ({client.full_ip}) sent private message with data \"{message['val']}\" going to {message['id']}")
-        if self.supporter.readAttrFromClient(client)["username_set"]:
+        if client.username_set:
             if type(message["id"]) == list:
                 rx_client = self.supporter.selectMultiUserObjects(message["id"])
                 if not(len(rx_client) == 0):
@@ -188,19 +188,18 @@ class serverInternalHandlers():
     # Set username
     def setid(self, client, server, message, listener_detected, listener_id, room_id):
         # Prevent clients from being able to rewrite their username
-        if not self.supporter.readAttrFromClient(client)["username_set"]:
+        if not client.username_set:
             # Only support strings for usernames
             if type(message["val"]) == str:
                 # Keep username sizes within a reasonable length
                 if len(message["val"]) in range(1, 21):
                     self.supporter.log(f"Client {client.id} ({client.full_ip}) specified username \"{message['val']}\"")
-                    self.supporter.writeAttrToClient(client, "friendly_username", str(message["val"]))
-                    self.supporter.writeAttrToClient(client, "username_set", True)
+                    client.friendly_username = str(message["val"])
+                    client.username_set = True
 
                     # Report to the client that the username was accepted
-                    clientAttrs = self.supporter.readAttrFromClient(client)
                     msg = {
-                        "username": clientAttrs["friendly_username"], 
+                        "username": client.friendly_username, 
                         "id": client.id
                     }
                     self.cloudlink.sendCode(client, "OK", listener_detected, listener_id, msg)
@@ -215,8 +214,7 @@ class serverInternalHandlers():
                 self.supporter.log(f"Client {client.id} ({client.full_ip}) specified username \"{message['val']}\", but username is not the correct datatype!")
                 self.cloudlink.sendCode(client, "DataType", listener_detected, listener_id)
         else:
-            existing_username = self.supporter.readAttrFromClient(client)["friendly_username"]
-            self.supporter.log(f"Client {client.id} ({client.full_ip}) specified username \"{message['val']}\", but username was already set to \"{existing_username}\"")
+            self.supporter.log(f"Client {client.id} ({client.full_ip}) specified username \"{message['val']}\", but username was already set to \"{client.friendly_username}\"")
             self.cloudlink.sendCode(client, "IDSet", listener_detected, listener_id)
 
     # WIP

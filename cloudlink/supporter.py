@@ -59,21 +59,21 @@ class supporter:
                 for client in clients:
                     if rooms in [None, ["default"]]:
                         message["room"] = "default"
-                        if "default" in self.readAttrFromClient(client)["rooms"]:
+                        if "default" in client.rooms:
                             self.cloudlink.wss.send_message(client, self.json.dumps(message))
                     else:
                         for room in rooms:
-                            if room in self.readAttrFromClient(client)["rooms"]:
+                            if room in client.rooms:
                                 message["room"] = room
                                 self.cloudlink.wss.send_message(client, self.json.dumps(message))
     
     def setClientUsername(self, client, username):
         if type(username) == str:
             if client in self.cloudlink.all_clients:
-                if not self.supporter.readAttrFromClient(client)["username_set"]:
+                if not client.username_set:
                     self.supporter.log(f"Manually setting client {client.id} ({client.full_ip}) username to {username}...")
-                    self.supporter.writeAttrToClient(client, "friendly_username", username)
-                    self.supporter.writeAttrToClient(client, "username_set", True)
+                    client.friendly_username = username
+                    client.username_set = True
         else:
             raise TypeError
     
@@ -89,8 +89,8 @@ class supporter:
                 self.supporter.log(f"Manually linking client {client.id} ({client.full_ip}) to rooms {list(rooms)}...")
 
                 # Add client to rooms
-                self.supporter.writeAttrToClient(client, "is_linked", True)
-                self.supporter.writeAttrToClient(client, "rooms", rooms)
+                client.is_linked = True
+                client.rooms = rooms
         else:
             raise TypeError
     
@@ -99,8 +99,8 @@ class supporter:
             self.supporter.log(f"Manually unlinking client {client.id} ({client.full_ip}) from rooms...")
 
             # Reset client rooms
-            self.supporter.writeAttrToClient(client, "is_linked", False)
-            self.supporter.writeAttrToClient(client, "rooms", ["default"])
+            client.is_linked = False
+            client.rooms = ["default"]
 
     def getAllUsersInManyRooms(self, room_ids):
         if type(room_ids) == str:
@@ -132,13 +132,13 @@ class supporter:
         roomlist = set()
         roomlist.add("default")
         for client in self.cloudlink.all_clients:
-            for room in self.readAttrFromClient(client)["rooms"]:
+            for room in client.rooms:
                 roomlist.add(room)
         return roomlist
     
     def getAllClientRooms(self, client):
         roomlist = set()
-        for room in self.readAttrFromClient(client)["rooms"]:
+        for room in client.rooms:
             roomlist.add(room)
         return roomlist
 
@@ -236,24 +236,22 @@ class supporter:
     def getUsernames(self, rooms:list = ["default"]):
         userlist = []
         for client in self.cloudlink.all_clients:
-            clientAttrs = self.readAttrFromClient(client)
             clientId = {
-                "username": clientAttrs["friendly_username"],
+                "username": client.friendly_username,
                 "id": client.id
             }
             for room in rooms:
-                if room in clientAttrs["rooms"]:
-                    if clientAttrs["username_set"]:
+                if room in client.rooms:
+                    if client.username_set:
                         if not clientId in userlist:
                             userlist.append(clientId)
         return userlist
 
     def getUserObjectFromClientObj(self, client):
         if client in self.cloudlink.all_clients:
-            clientAttrs = self.readAttrFromClient(client)
-            if clientAttrs["username_set"]:
+            if client.username_set:
                 return {
-                    "username": clientAttrs["friendly_username"], 
+                    "username": client.friendly_username, 
                     "id": client.id
                 }
 
@@ -275,7 +273,7 @@ class supporter:
             clientIDs = []
             clientObjs = []
             for client in self.cloudlink.all_clients:
-                clientIDs.append(self.readAttrFromClient(client)["friendly_username"])
+                clientIDs.append(client.friendly_username)
                 clientObjs.append(client)
             
             if identifier in clientIDs:
@@ -322,42 +320,10 @@ class supporter:
         return self.getUserObject(username)
 
     def createAttrForClient(self, client):
-        attrstring = client.friendly_string
-        if not(hasattr(self.cloudlink, attrstring)):
-            setattr(self.cloudlink, attrstring, {
-                "friendly_username": "",
-                "username_set": False,
-                "rooms": ["default"],
-                "is_linked": False
-            })
-            return True
-        else:
-            return False
-
-    def deleteAttrForClient(self, client):
-        attrstring = client.friendly_string
-        if hasattr(self.cloudlink, attrstring):
-            delattr(self.cloudlink, attrstring)
-            return True
-        else:
-            return False
-
-    def readAttrFromClient(self, client):
-        attrstring = client.friendly_string
-        if hasattr(self.cloudlink, attrstring):
-            return getattr(self.cloudlink, attrstring)
-        else:
-            return {}
-
-    def writeAttrToClient(self, client, key, data):
-        attrstring = client.friendly_string
-        if hasattr(self.cloudlink, attrstring):
-            tmp_data = getattr(self.cloudlink, attrstring)
-            tmp_data[key] = data
-            setattr(self.cloudlink, attrstring, tmp_data)
-            return True
-        else:
-            return False
+        client.friendly_username = ""
+        client.username_set = False
+        client.rooms = ["default"]
+        client.is_linked = False
 
     def log(self, event):
         if self.enable_logs:

@@ -51,7 +51,6 @@ class serverRootHandlers:
     def on_close(self, client, server):
         if not(client == None):
             self.supporter.log(f"Client {client.id} ({client.full_ip}) disconnected.")
-            self.supporter.deleteAttrForClient(client)
 
             if self.on_close in self.cloudlink.usercallbacks:
                 if self.cloudlink.usercallbacks[self.on_close] != None:
@@ -86,10 +85,8 @@ class serverRootHandlers:
                                 listener_id = message["val"]["listener"]
                 
                         room_id = None
-                        ignore_check = False
-                        if self.supporter.readAttrFromClient(client)["is_linked"]:
-                            ignore_check = True
-                            room_id = self.supporter.readAttrFromClient(client)["rooms"]
+                        if client.is_linked:
+                            room_id = client.rooms
 
                         if "rooms" in message:
                             if type(message["rooms"]) in [str, list]:
@@ -101,12 +98,11 @@ class serverRootHandlers:
                                 room_id = message["rooms"]
                             
                             # Remove unlinked rooms
-                            if not ignore_check:
-                                tmp_room_id = room_id.copy()
-                                for room in tmp_room_id:
-                                    if not room in self.supporter.readAttrFromClient(client)["rooms"]:
-                                        self.supporter.log(f"Client {client.id} ({client.full_ip}) attempted to access room {room}, but was blocked!")
-                                        room_id.remove(room)
+                            tmp_room_id = room_id.copy()
+                            for room in tmp_room_id:
+                                if not room in client.rooms:
+                                    self.supporter.log(f"Client {client.id} ({client.full_ip}) attempted to access room {room}, but was blocked!")
+                                    room_id.remove(room)
 
                         # Check if the command is a built-in Cloudlink command
                         if ((message["cmd"] in self.cloudlink.builtInCommands) and not(message["cmd"] == "direct")):

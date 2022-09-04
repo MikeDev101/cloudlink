@@ -179,7 +179,6 @@ class WebsocketServer(ThreadingMixIn, TCPServer, API):
         handler.id = self.id_counter
         handler.full_ip = f"{handler.client_address[0]}:{handler.client_address[1]}"
         handler.friendly_ip = handler.client_address[0]
-        handler.friendly_string = str(f"__client-{handler.id}-{handler.full_ip}__")
         self.clients.add(handler)
         self.new_client(handler, self)
 
@@ -443,7 +442,8 @@ class WebSocketHandler(StreamRequestHandler):
         
         # CloudFlared support
         if "cf-connecting-ip" in self.headers:
-            self.client_address = self.headers["cf-connecting-ip"]
+            # Client's handler.full_ip expects a tuple.
+            self.client_address = (self.headers["cf-connecting-ip"], 0)
         
         response = self.make_handshake_response(key)
         with self._send_lock:
