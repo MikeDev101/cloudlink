@@ -4,19 +4,7 @@
 		"url": "ws://127.0.0.1:3000/"
 	},
 	"1": {
-		"id": "CloudLink Public Test Link (OUT OF DATE)",
-		"url": "wss://cloudlink-sample-server.mikedev101.repl.co/"
-	},
-	"2": {
-		"id": "@CST1229's 30-Day Server (OUT OF DATE)",
-		"url": "wss://cloudserver1.cst1229.repl.co/"
-	},
-	"3": {
-		"id": "silvxrserver (OUT OF DATE)",
-		"url": "wss://server.silvxrcat.repl.co"
-	},
-	"4": {
-		"id": "@RandomCocconut - Another wss:// server (OUT OF DATE)",
-		"url": "wss://CloudLink-Sample-Server-2.randomcocconut1.repl.co"
+		"id": "CloudLink 4 Demo Server - Provided by Meower Media Co.",
+		"url": "wss://cl4-test.meower.org/"
 	}
 }
