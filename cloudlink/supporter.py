@@ -429,7 +429,7 @@ class supporter:
                                     is_sane = False
 
                     if "val" in tmp_msg:
-                        if type(tmp_msg["val"]) == int:
+                        if not(type(tmp_msg["val"]) in [str, dict, list]):
                             tmp_msg["val"] = str(tmp_msg["val"])
                         if len(tmp_msg["val"]) > datalimit:
                             is_sane = False
