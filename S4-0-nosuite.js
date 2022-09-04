@@ -3,16 +3,16 @@ let mWS = null;
 
 // Get the server URL list
 try {
-	fetch('https://mikedev101.github.io/cloudlink/serverlist.json').then(response => {
-		return response.text();
-	}).then(data => {
-		servers = JSON.parse(data);
-	}).catch(err => {
-		console.log(err);
+    fetch('https://mikedev101.github.io/cloudlink/serverlist.json').then(response => {
+        return response.text();
+    }).then(data => {
+        servers = JSON.parse(data);
+    }).catch(err => {
+        console.log(err);
         servers = {};
-	});
+    });
 } catch(err) {
-	console.log(err);
+    console.log(err);
     servers = {};
 };
 
@@ -28,12 +28,12 @@ function jsonCheck(JSON_STRING) {
 class CloudLink {
     constructor (runtime, extensionId) {
         // Extension stuff
-		this.runtime = runtime;
-        this.cl_icon = 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyNS4yLjMsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0iTGF5ZXJfMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayIgeD0iMHB4IiB5PSIwcHgiDQoJIHZpZXdCb3g9IjAgMCA0NSA0NSIgc3R5bGU9ImVuYWJsZS1iYWNrZ3JvdW5kOm5ldyAwIDAgNDUgNDU7IiB4bWw6c3BhY2U9InByZXNlcnZlIj4NCjxzdHlsZSB0eXBlPSJ0ZXh0L2NzcyI+DQoJLnN0MHtmaWxsOiMwRkJEOEM7fQ0KCS5zdDF7ZmlsbDpub25lO3N0cm9rZTojRkZGRkZGO3N0cm9rZS13aWR0aDo0O3N0cm9rZS1saW5lY2FwOnJvdW5kO3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxMDt9DQo8L3N0eWxlPg0KPGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoLTIxNy41MDAxNCwtMTU3LjUwMDEzKSI+DQoJPGc+DQoJCTxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik0yMTcuNSwxODBjMC0xMi40LDEwLjEtMjIuNSwyMi41LTIyLjVzMjIuNSwxMC4xLDIyLjUsMjIuNXMtMTAuMSwyMi41LTIyLjUsMjIuNVMyMTcuNSwxOTIuNCwyMTcuNSwxODANCgkJCUwyMTcuNSwxODB6Ii8+DQoJCTxnPg0KCQkJPHBhdGggY2xhc3M9InN0MSIgZD0iTTIzMC4zLDE4MC4xYzUuNy00LjcsMTMuOS00LjcsMTkuNiwwIi8+DQoJCQk8cGF0aCBjbGFzcz0ic3QxIiBkPSJNMjI1LjMsMTc1LjFjOC40LTcuNCwyMS03LjQsMjkuNCwwIi8+DQoJCQk8cGF0aCBjbGFzcz0ic3QxIiBkPSJNMjM1LjIsMTg1YzIuOS0yLjEsNi44LTIuMSw5LjcsMCIvPg0KCQkJPHBhdGggY2xhc3M9InN0MSIgZD0iTTI0MCwxOTAuNEwyNDAsMTkwLjQiLz4NCgkJPC9nPg0KCTwvZz4NCjwvZz4NCjwvc3ZnPg0K';
-		this.cl_block = 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyNS4yLjMsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiA2LjAwIEJ1aWxkIDApICAtLT4NCjxzdmcgdmVyc2lvbj0iMS4xIiBpZD0iTGF5ZXJfMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayIgeD0iMHB4IiB5PSIwcHgiDQoJIHZpZXdCb3g9IjAgMCA0NSA0NSIgc3R5bGU9ImVuYWJsZS1iYWNrZ3JvdW5kOm5ldyAwIDAgNDUgNDU7IiB4bWw6c3BhY2U9InByZXNlcnZlIj4NCjxzdHlsZSB0eXBlPSJ0ZXh0L2NzcyI+DQoJLnN0MHtmaWxsOm5vbmU7c3Ryb2tlOiNGRkZGRkY7c3Ryb2tlLXdpZHRoOjQ7c3Ryb2tlLWxpbmVjYXA6cm91bmQ7c3Ryb2tlLWxpbmVqb2luOnJvdW5kO3N0cm9rZS1taXRlcmxpbWl0OjEwO30NCjwvc3R5bGU+DQo8Zz4NCgk8cGF0aCBjbGFzcz0ic3QwIiBkPSJNMTIuOCwyMi42YzUuNy00LjcsMTMuOS00LjcsMTkuNiwwIi8+DQoJPHBhdGggY2xhc3M9InN0MCIgZD0iTTcuOCwxNy42YzguNC03LjQsMjEtNy40LDI5LjQsMCIvPg0KCTxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik0xNy43LDI3LjVjMi45LTIuMSw2LjgtMi4xLDkuNywwIi8+DQoJPHBhdGggY2xhc3M9InN0MCIgZD0iTTIyLjUsMzIuOUwyMi41LDMyLjkiLz4NCjwvZz4NCjwvc3ZnPg0K';
-		
+        this.runtime = runtime;
+        this.cl_icon = 'data:image/svg+xml;base64,PHN2ZyB2ZXJzaW9uPSIxLjEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHdpZHRoPSIyMjUuMzU0OCIgaGVpZ2h0PSIyMjUuMzU0OCIgdmlld0JveD0iMCwwLDIyNS4zNTQ4LDIyNS4zNTQ4Ij48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMTI3LjMyMjYsLTY3LjMyMjYpIj48ZyBkYXRhLXBhcGVyLWRhdGE9InsmcXVvdDtpc1BhaW50aW5nTGF5ZXImcXVvdDs6dHJ1ZX0iIHN0cm9rZT0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9ImJ1dHQiIHN0cm9rZS1saW5lam9pbj0ibWl0ZXIiIHN0cm9rZS1taXRlcmxpbWl0PSIxMCIgc3Ryb2tlLWRhc2hhcnJheT0iIiBzdHJva2UtZGFzaG9mZnNldD0iMCIgc3R5bGU9Im1peC1ibGVuZC1tb2RlOiBub3JtYWwiPjxwYXRoIGQ9Ik0xMjcuMzIyNiwxODBjMCwtNjIuMjMwMDEgNTAuNDQ3MzksLTExMi42Nzc0IDExMi42Nzc0LC0xMTIuNjc3NGM2Mi4yMzAwMSwwIDExMi42Nzc0LDUwLjQ0NzM5IDExMi42Nzc0LDExMi42Nzc0YzAsNjIuMjMwMDEgLTUwLjQ0NzM5LDExMi42Nzc0IC0xMTIuNjc3NCwxMTIuNjc3NGMtNjIuMjMwMDEsMCAtMTEyLjY3NzQsLTUwLjQ0NzM5IC0xMTIuNjc3NCwtMTEyLjY3NzR6IiBmaWxsPSIjMDBjMjhjIiBmaWxsLXJ1bGU9Im5vbnplcm8iIHN0cm9rZS13aWR0aD0iMCIvPjxnIGZpbGwtcnVsZT0iZXZlbm9kZCIgc3Ryb2tlLXdpZHRoPSIxIj48cGF0aCBkPSJNMjg2LjEyMDM3LDE1MC41NTc5NWMyMy4yNDA4NiwwIDQyLjA3ODksMTguODM5NDYgNDIuMDc4OSw0Mi4wNzg5YzAsMjMuMjM5NDQgLTE4LjgzODAzLDQyLjA3ODkgLTQyLjA3ODksNDIuMDc4OWgtOTIuMjQwNzRjLTIzLjI0MDg2LDAgLTQyLjA3ODksLTE4LjgzOTQ2IC00Mi4wNzg5LC00Mi4wNzg5YzAsLTIzLjIzOTQ0IDE4LjgzODAzLC00Mi4wNzg5IDQyLjA3ODksLTQyLjA3ODloNC4xODg4N2MxLjgxMTUzLC0yMS41NzA1NSAxOS44OTM1NywtMzguNTEyODkgNDEuOTMxNSwtMzguNTEyODljMjIuMDM3OTMsMCA0MC4xMTk5NywxNi45NDIzNCA0MS45MzE1LDM4LjUxMjg5eiIgZmlsbD0iI2ZmZmZmZiIvPjxwYXRoIGQ9Ik0yODkuMDg2NTUsMjEwLjM0MTE0djkuMDQ2NjdoLTI2LjkxNjYzaC05LjA0NjY3di05LjA0NjY3di01NC41MDMzOWg5LjA0NjY3djU0LjUwMzM5eiIgZmlsbD0iIzAwYzI4YyIvPjxwYXRoIGQ9Ik0yMjIuNDA5MjUsMjE5LjM4NzgxYy04LjM1MzIsMCAtMTYuMzY0MzEsLTMuMzE4MzQgLTIyLjI3MDksLTkuMjI0OTJjLTUuOTA2NjEsLTUuOTA2NTggLTkuMjI0OTEsLTEzLjkxNzY4IC05LjIyNDkxLC0yMi4yNzA4OWMwLC04LjM1MzIgMy4zMTgyOSwtMTYuMzY0MzEgOS4yMjQ5MSwtMjIuMjcwOWM1LjkwNjU5LC01LjkwNjYxIDEzLjkxNzcsLTkuMjI0OTEgMjIuMjcwOSwtOS4yMjQ5MWgyMS4xMDg5djguOTM0OThoLTIxLjEwODl2MC4xMDI1N2MtNS45NTYyOCwwIC0xMS42Njg2NCwyLjM2NjE2IC0xNS44ODAzNyw2LjU3Nzg5Yy00LjIxMTczLDQuMjExNzMgLTYuNTc3ODksOS45MjQwOCAtNi41Nzc4OSwxNS44ODAzN2MwLDUuOTU2MjggMi4zNjYxNiwxMS42Njg2NCA2LjU3Nzg5LDE1Ljg4MDM3YzQuMjExNzMsNC4yMTE3MyA5LjkyNDA4LDYuNTc3OTMgMTUuODgwMzcsNi41Nzc5M3YwLjEwMjUzaDIxLjEwODl2OC45MzQ5OHoiIGZpbGw9IiMwMGMyOGMiLz48L2c+PC9nPjwvZz48L3N2Zz48IS0tcm90YXRpb25DZW50ZXI6MTEyLjY3NzQwNDA4NDA4MzkyOjExMi42Nzc0MDQwODQwODQwMy0tPg==';
+        this.cl_block = 'data:image/svg+xml;base64,PHN2ZyB2ZXJzaW9uPSIxLjEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHdpZHRoPSIxNzYuMzk4NTQiIGhlaWdodD0iMTIyLjY3MDY5IiB2aWV3Qm94PSIwLDAsMTc2LjM5ODU0LDEyMi42NzA2OSI+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoLTE1MS44MDA3MywtMTE4LjY2NDY2KSI+PGcgZGF0YS1wYXBlci1kYXRhPSJ7JnF1b3Q7aXNQYWludGluZ0xheWVyJnF1b3Q7OnRydWV9IiBmaWxsLXJ1bGU9ImV2ZW5vZGQiIHN0cm9rZT0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIxIiBzdHJva2UtbGluZWNhcD0iYnV0dCIgc3Ryb2tlLWxpbmVqb2luPSJtaXRlciIgc3Ryb2tlLW1pdGVybGltaXQ9IjEwIiBzdHJva2UtZGFzaGFycmF5PSIiIHN0cm9rZS1kYXNob2Zmc2V0PSIwIiBzdHlsZT0ibWl4LWJsZW5kLW1vZGU6IG5vcm1hbCI+PGc+PHBhdGggZD0iTTI4Ni4xMjAzNywxNTcuMTc3NTVjMjMuMjQwODYsMCA0Mi4wNzg5LDE4LjgzOTQ2IDQyLjA3ODksNDIuMDc4OWMwLDIzLjIzOTQ0IC0xOC44MzgwMyw0Mi4wNzg5IC00Mi4wNzg5LDQyLjA3ODloLTkyLjI0MDc0Yy0yMy4yNDA4NiwwIC00Mi4wNzg5LC0xOC44Mzk0NiAtNDIuMDc4OSwtNDIuMDc4OWMwLC0yMy4yMzk0NCAxOC44MzgwMywtNDIuMDc4OSA0Mi4wNzg5LC00Mi4wNzg5aDQuMTg4ODdjMS44MTE1MywtMjEuNTcwNTUgMTkuODkzNTcsLTM4LjUxMjg5IDQxLjkzMTUsLTM4LjUxMjg5YzIyLjAzNzkzLDAgNDAuMTE5OTcsMTYuOTQyMzQgNDEuOTMxNSwzOC41MTI4OXoiIGZpbGw9IiNmZmZmZmYiLz48cGF0aCBkPSJNMjg5LjA4NjU1LDIxNi45NjA3NHY5LjA0NjY3aC0yNi45MTY2M2gtOS4wNDY2N3YtOS4wNDY2N3YtNTQuNTAzMzloOS4wNDY2N3Y1NC41MDMzOXoiIGZpbGw9IiMwMGMyOGMiLz48cGF0aCBkPSJNMjIyLjQwOTI1LDIyNi4wMDc0MWMtOC4zNTMyLDAgLTE2LjM2NDMxLC0zLjMxODM0IC0yMi4yNzA5LC05LjIyNDkyYy01LjkwNjYxLC01LjkwNjU4IC05LjIyNDkxLC0xMy45MTc2OCAtOS4yMjQ5MSwtMjIuMjcwODljMCwtOC4zNTMyIDMuMzE4MjksLTE2LjM2NDMxIDkuMjI0OTEsLTIyLjI3MDljNS45MDY1OSwtNS45MDY2MSAxMy45MTc3LC05LjIyNDkxIDIyLjI3MDksLTkuMjI0OTFoMjEuMTA4OXY4LjkzNDk4aC0yMS4xMDg5djAuMTAyNTdjLTUuOTU2MjgsMCAtMTEuNjY4NjQsMi4zNjYxNiAtMTUuODgwMzcsNi41Nzc4OWMtNC4yMTE3Myw0LjIxMTczIC02LjU3Nzg5LDkuOTI0MDggLTYuNTc3ODksMTUuODgwMzdjMCw1Ljk1NjI4IDIuMzY2MTYsMTEuNjY4NjQgNi41Nzc4OSwxNS44ODAzN2M0LjIxMTczLDQuMjExNzMgOS45MjQwOCw2LjU3NzkzIDE1Ljg4MDM3LDYuNTc3OTN2MC4xMDI1M2gyMS4xMDg5djguOTM0OTh6IiBmaWxsPSIjMDBjMjhjIi8+PC9nPjwvZz48L2c+PC9zdmc+PCEtLXJvdGF0aW9uQ2VudGVyOjg4LjE5OTI2OTk5OTk5OTk4OjYxLjMzNTM0NDk5OTk5OTk5LS0+';
+
         // Socket data
-		this.socketData = {
+        this.socketData = {
             "gmsg": [],
             "pmsg": [],
             "direct": [],
@@ -55,35 +55,40 @@ class CloudLink {
     
         // Listeners
         this.socketListeners = {};
-		this.newSocketData = {
-			"gmsg": false,
-			"pmsg": false,
-			"direct": false,
-			"statuscode": false,
-			"gvar": false,
-			"pvar": false
-		};
-		
+        this.newSocketData = {
+            "gmsg": false,
+            "pmsg": false,
+            "direct": false,
+            "statuscode": false,
+            "gvar": false,
+            "pvar": false
+        };
+        
         // Edge-triggered hat blocks
-		this.connect_hat = 0;
-		this.packet_hat = 0;
-		this.close_hat = 0;
+        this.connect_hat = 0;
+        this.packet_hat = 0;
+        this.close_hat = 0;
         
         // Status stuff
         this.isRunning = false;
         this.isLinked = false;
         this.version = "S4.0";
-		this.link_status = 0;
+        this.link_status = 0;
         this.username = "";
-		this.tmp_username = "";
-		this.isUsernameSyncing = false;
-		this.disconnectWasClean = false;
-		this.wasConnectionDropped = false;
+        this.tmp_username = "";
+        this.isUsernameSyncing = false;
+        this.isUsernameSet = false;
+        this.disconnectWasClean = false;
+        this.wasConnectionDropped = false;
         this.didConnectionFail = false;
 
         // Listeners stuff
         this.enableListener = false;
         this.setListener = "";
+
+        // Rooms stuff
+        this.enableRoom = false;
+        this.selectRoom = "";
         
         // Remapping stuff
         this.menuRemap = {
@@ -101,39 +106,39 @@ class CloudLink {
         return {
             "id": 'cloudlink',
             "name": 'CloudLink',
-			"blockIconURI": this.cl_block,
-			"menuIconURI": this.cl_icon,
+            "blockIconURI": this.cl_block,
+            "menuIconURI": this.cl_icon,
             "blocks": [
-				{
-                	"opcode": 'returnGlobalData',
+                {
+                    "opcode": 'returnGlobalData',
                     "blockType": "reporter",
                     "text": "Global data"
                 },
                 {
-                	"opcode": 'returnPrivateData',
+                    "opcode": 'returnPrivateData',
                     "blockType": "reporter",
                     "text": "Private data"
                 },
-				{
-                	"opcode": 'returnDirectData',
+                {
+                    "opcode": 'returnDirectData',
                     "blockType": "reporter",
                     "text": "Direct Data"
                 },
-				{
-                	"opcode": 'returnLinkData',
+                {
+                    "opcode": 'returnLinkData',
                     "blockType": "reporter",
                     "text": "Link status"
                 },
-				{
-                	"opcode": 'returnStatusCode',
+                {
+                    "opcode": 'returnStatusCode',
                     "blockType": "reporter",
                     "text": "Status code"
                 },
-				{
-					"opcode": 'returnUserListData', 
-					"blockType": "reporter",
-					"text": "Usernames"
-				},
+                {
+                    "opcode": 'returnUserListData', 
+                    "blockType": "reporter",
+                    "text": "Usernames"
+                },
                 {
                     "opcode": "returnUsernameData",
                     "blockType": "reporter",
@@ -176,7 +181,7 @@ class CloudLink {
                         },
                     },
                 },
-				{
+                {
                     "opcode": "readQueueData",
                     "blockType": "reporter",
                     "text": "Packet queue for [TYPE]",
@@ -205,35 +210,35 @@ class CloudLink {
                     },
                 },
                 {
-					"opcode": 'parseJSON',
-					"blockType": "reporter",
-					"text": '[PATH] of [JSON_STRING]',
-					"arguments": {
-						"PATH": {
-							"type": "string",
-							"defaultValue": 'fruit/apples',
-						},
-						"JSON_STRING": {
-							"type": "string",
-							"defaultValue": '{"fruit": {"apples": 2, "bananas": 3}, "total_fruit": 5}',
-						},
-					},
-				},
+                    "opcode": 'parseJSON',
+                    "blockType": "reporter",
+                    "text": '[PATH] of [JSON_STRING]',
+                    "arguments": {
+                        "PATH": {
+                            "type": "string",
+                            "defaultValue": 'fruit/apples',
+                        },
+                        "JSON_STRING": {
+                            "type": "string",
+                            "defaultValue": '{"fruit": {"apples": 2, "bananas": 3}, "total_fruit": 5}',
+                        },
+                    },
+                },
                 {
-					"opcode": 'getFromJSONArray',
-					"blockType": "reporter",
-					"text": 'Get [NUM] from JSON array [ARRAY]',
-					"arguments": {
-						"NUM": {
-							"type": "number",
-							"defaultValue": 0,
-						},
-						"ARRAY": {
-							"type": "string",
-							"defaultValue": '["foo","bar"]',
-						}
-					}
-				},
+                    "opcode": 'getFromJSONArray',
+                    "blockType": "reporter",
+                    "text": 'Get [NUM] from JSON array [ARRAY]',
+                    "arguments": {
+                        "NUM": {
+                            "type": "number",
+                            "defaultValue": 0,
+                        },
+                        "ARRAY": {
+                            "type": "string",
+                            "defaultValue": '["foo","bar"]',
+                        }
+                    }
+                },
                 {
                     "opcode": 'fetchURL',
                     "blockType": "reporter",
@@ -247,19 +252,19 @@ class CloudLink {
                     },
                 },
                 {
-					"opcode": 'requestURL', 
-					"blockType": "reporter",
-					"blockAllThreads": "true",
-					"text": 'Send request with method [method] for URL [url] with data [data] and headers [headers]',
-					"arguments": {
+                    "opcode": 'requestURL', 
+                    "blockType": "reporter",
+                    "blockAllThreads": "true",
+                    "text": 'Send request with method [method] for URL [url] with data [data] and headers [headers]',
+                    "arguments": {
                         "method": {
-							"type": "string",
-							"defaultValue": 'GET',
-						},
-						"url": {
-							"type": "string",
-							"defaultValue": 'https://mikedev101.github.io/cloudlink/fetch_test',
-						},
+                            "type": "string",
+                            "defaultValue": 'GET',
+                        },
+                        "url": {
+                            "type": "string",
+                            "defaultValue": 'https://mikedev101.github.io/cloudlink/fetch_test',
+                        },
                         "data": {
                             "type": "string",
                             "defaultValue": '{}'
@@ -268,34 +273,34 @@ class CloudLink {
                             "type": "string",
                             "defaultValue": '{}'
                         },
-					}
-				},
+                    }
+                },
                 
                 {
-                	"opcode": 'makeJSON',
+                    "opcode": 'makeJSON',
                     "blockType": "reporter",
                     "text": 'Convert [toBeJSONified] to JSON',
-					"arguments": {
-						"toBeJSONified": {
-							"type": "string",
-							"defaultValue": '{"test": true}',
-						},
-					}
+                    "arguments": {
+                        "toBeJSONified": {
+                            "type": "string",
+                            "defaultValue": '{"test": true}',
+                        },
+                    }
                 },
                 {
-                	"opcode": 'onConnect',
+                    "opcode": 'onConnect',
                     "blockType": "hat",
                     "text": 'When connected',
                     "blockAllThreads": "true"
                 },
                 {
-                	"opcode": 'onClose',
+                    "opcode": 'onClose',
                     "blockType": "hat",
                     "text": 'When disconnected',
                     "blockAllThreads": "true"
                 },
                 {
-                	"opcode": 'onListener',
+                    "opcode": 'onListener',
                     "blockType": "hat",
                     "text": 'When I receive new packet with listener [ID]',
                     "blockAllThreads": "true",
@@ -337,7 +342,7 @@ class CloudLink {
                     },
                 },
                 {
-                	"opcode": 'getComState',
+                    "opcode": 'getComState',
                     "blockType": "Boolean",
                     "text": 'Connected?',
                 },
@@ -346,48 +351,48 @@ class CloudLink {
                     "blockType": "Boolean",
                     "text": 'Linked to rooms?',
                 },
-				{
-                	"opcode": 'getComLostConnectionState',
+                {
+                    "opcode": 'getComLostConnectionState',
                     "blockType": "Boolean",
                     "text": 'Lost connection?',
                 },
-				{
-                	"opcode": 'getComFailedConnectionState',
+                {
+                    "opcode": 'getComFailedConnectionState',
                     "blockType": "Boolean",
                     "text": 'Failed to connnect?',
                 },
                 {
-                	"opcode": 'getUsernameState',
+                    "opcode": 'getUsernameState',
                     "blockType": "Boolean",
                     "text": 'Username synced?',
                 },
                 {
-                	"opcode": 'returnIsNewData',
+                    "opcode": 'returnIsNewData',
                     "blockType": "Boolean",
                     "text": 'Got New [TYPE]?',
-					"arguments": {
-						"TYPE": {
-							"type": "string",
+                    "arguments": {
+                        "TYPE": {
+                            "type": "string",
                             "menu": "datamenu",
-							"defaultValue": 'Global data',
-						},
-					},
+                            "defaultValue": 'Global data',
+                        },
+                    },
                 },
                 {
-                	"opcode": 'returnIsNewVarData',
+                    "opcode": 'returnIsNewVarData',
                     "blockType": "Boolean",
                     "text": 'Got New [TYPE] data for variable [VAR]?',
-					"arguments": {
-						"TYPE": {
-							"type": "string",
+                    "arguments": {
+                        "TYPE": {
+                            "type": "string",
                             "menu": "varmenu",
-							"defaultValue": 'Global variables',
-						},
+                            "defaultValue": 'Global variables',
+                        },
                         "VAR": {
                             "type": "string",
-							"defaultValue": 'Apple',
+                            "defaultValue": 'Apple',
                         },
-					},
+                    },
                 },
                 {
                     "opcode": 'returnIsNewListener',
@@ -402,55 +407,55 @@ class CloudLink {
                     },
                 },
                 {
-                	"opcode": 'checkForID',
+                    "opcode": 'checkForID',
                     "blockType": "Boolean",
                     "text": 'ID [ID] connected?',
-					"arguments": {
-						"ID": {
-							"type": "string",
-							"defaultValue": 'Another name',
-						},
-					},
+                    "arguments": {
+                        "ID": {
+                            "type": "string",
+                            "defaultValue": 'Another name',
+                        },
+                    },
                 },
-				{
-                	"opcode": 'isValidJSON',
+                {
+                    "opcode": 'isValidJSON',
                     "blockType": "Boolean",
                     "text": 'Is [JSON_STRING] valid JSON?',
-					"arguments": {
-						"JSON_STRING": {
-							"type": "string",
-							"defaultValue": '{"fruit": {"apples": 2, "bananas": 3}, "total_fruit": 5}',
-						},
-					},
+                    "arguments": {
+                        "JSON_STRING": {
+                            "type": "string",
+                            "defaultValue": '{"fruit": {"apples": 2, "bananas": 3}, "total_fruit": 5}',
+                        },
+                    },
                 },
                 {
                     "opcode": 'openSocket',
                     "blockType": "command",
                     "text": 'Connect to [IP]',
-					"blockAllThreads": "true",
-					"arguments": {
-						"IP": {
-							"type": "string",
-							"defaultValue": 'ws://127.0.0.1:3000/',
-						},
-					},
+                    "blockAllThreads": "true",
+                    "arguments": {
+                        "IP": {
+                            "type": "string",
+                            "defaultValue": 'ws://127.0.0.1:3000/',
+                        },
+                    },
                 },
                 {
                     "opcode": 'openSocketPublicServers',
                     "blockType": "command",
                     "text": 'Connect to server [ID]',
-					"blockAllThreads": "true",
-					"arguments": {
-						"ID": {
-							"type": "number",
-							"defaultValue": '',
-						},
-					},
+                    "blockAllThreads": "true",
+                    "arguments": {
+                        "ID": {
+                            "type": "number",
+                            "defaultValue": '',
+                        },
+                    },
                 },
                 {
-                	"opcode": 'closeSocket',
+                    "opcode": 'closeSocket',
                     "blockType": "command",
-					"blockAllThreads": "true",
+                    "blockAllThreads": "true",
                     "text": 'Disconnect',
                 },
                 {
@@ -458,12 +463,12 @@ class CloudLink {
                     "blockType": "command",
                     "text": 'Set [NAME] as username',
                     "blockAllThreads": "true",
-					"arguments": {
-						"NAME": {
-							"type": "string",
-							"defaultValue": "A name",
-						},
-					},
+                    "arguments": {
+                        "NAME": {
+                            "type": "string",
+                            "defaultValue": "A name",
+                        },
+                    },
                 },
                 {
                     "opcode": 'createListener',
@@ -485,9 +490,21 @@ class CloudLink {
                     "arguments": {
                         "ROOMS": {
                             "type": "string",
-                            "defaultValue": '["Test"]',
+                            "defaultValue": '["test"]',
                         },
                     }
+                },
+                {
+                    "opcode": 'selectRoomsInNextPacket',
+                    "blockType": "command",
+                    "text": 'Select room(s) [ROOMS] for next packet',
+                    "blockAllThreads": "true",
+                    "arguments": {
+                        "ROOMS": {
+                            "type": "string",
+                            "defaultValue": '["test"]',
+                        },
+                    },
                 },
                 {
                     "opcode": 'unlinkFromRooms',
@@ -496,10 +513,10 @@ class CloudLink {
                     "blockAllThreads": "true"
                 },
                 {
-                	"opcode": 'sendGData',
+                    "opcode": 'sendGData',
                     "blockType": "command",
                     "text": 'Send [DATA]',
-					"blockAllThreads": "true",
+                    "blockAllThreads": "true",
                     "arguments": {
                         "DATA": {
                             "type": "string",
@@ -508,10 +525,10 @@ class CloudLink {
                     }
                 },
                 {
-                	"opcode": 'sendPData',
+                    "opcode": 'sendPData',
                     "blockType": "command",
                     "text": 'Send [DATA] to [ID]',
-					"blockAllThreads": "true",
+                    "blockAllThreads": "true",
                     "arguments": {
                         "DATA": {
                             "type": "string",
@@ -524,10 +541,10 @@ class CloudLink {
                     }
                 },
                 {
-                	"opcode": 'sendGDataAsVar',
+                    "opcode": 'sendGDataAsVar',
                     "blockType": "command",
                     "text": 'Send variable [VAR] with data [DATA]',
-					"blockAllThreads": "true",
+                    "blockAllThreads": "true",
                     "arguments": {
                         "DATA": {
                             "type": "string",
@@ -540,10 +557,10 @@ class CloudLink {
                     }
                 },
                 {
-                	"opcode": 'sendPDataAsVar',
+                    "opcode": 'sendPDataAsVar',
                     "blockType": "command",
                     "text": 'Send variable [VAR] to [ID] with data [DATA]',
-					"blockAllThreads": "true",
+                    "blockAllThreads": "true",
                     "arguments": {
                         "DATA": {
                             "type": "string",
@@ -560,10 +577,10 @@ class CloudLink {
                     }
                 },
                 {
-                	"opcode": 'runCMD',
+                    "opcode": 'runCMD',
                     "blockType": "command",
                     "text": 'Send command [CMD] [ID] [DATA]',
-					"blockAllThreads": "true",
+                    "blockAllThreads": "true",
                     "arguments": {
                         "CMD": {
                             "type": "string",
@@ -580,10 +597,10 @@ class CloudLink {
                     }
                 },
                 {
-                	"opcode": 'resetNewData',
+                    "opcode": 'resetNewData',
                     "blockType": "command",
                     "text": 'Reset got new [TYPE] status',
-					"blockAllThreads": "true",
+                    "blockAllThreads": "true",
                     "arguments": {
                         "TYPE": {
                             "type": "string",
@@ -593,10 +610,10 @@ class CloudLink {
                     }
                 },
                 {
-                	"opcode": 'resetNewVarData',
+                    "opcode": 'resetNewVarData',
                     "blockType": "command",
                     "text": 'Reset got new [TYPE] [VAR] status',
-					"blockAllThreads": "true",
+                    "blockAllThreads": "true",
                     "arguments": {
                         "TYPE": {
                             "type": "string",
@@ -622,7 +639,7 @@ class CloudLink {
                     }
                 },
                 {
-	                "opcode": 'clearAllPackets',
+                    "opcode": 'clearAllPackets',
                     "blockType": "command",
                     "text": "Clear all packets for [TYPE]",
                     "arguments": {
@@ -633,7 +650,7 @@ class CloudLink {
                         },
                     },
                 }
-			],
+            ],
             "menus": {
                 "coms": {
                     "items": ["Connected", "Username synced"]
@@ -665,14 +682,14 @@ class CloudLink {
                 data = JSON.stringify(data); // Make the JSON safe for Scratch
             }
 
-        	return data;
-		} else {
-			return "";
-		};
+            return data;
+        } else {
+            return "";
+        };
     };
     
     returnPrivateData() {
-		if (this.socketData.pmsg.length != 0) {
+        if (this.socketData.pmsg.length != 0) {
             let data = (this.socketData.pmsg[this.socketData.pmsg.length - 1].val);
 
             if (typeof (data) == "object") {
@@ -680,9 +697,9 @@ class CloudLink {
             }
 
             return data;
-		} else {
-			return "";
-		};
+        } else {
+            return "";
+        };
     };
     
     returnDirectData() {
@@ -694,9 +711,9 @@ class CloudLink {
             }
 
             return data;
-		} else {
-			return "";
-		};
+        } else {
+            return "";
+        };
     };
     
     returnLinkData() {
@@ -704,7 +721,7 @@ class CloudLink {
     };
     
     returnStatusCode() {
-		if (this.socketData.statuscode.length != 0) {
+        if (this.socketData.statuscode.length != 0) {
             let data = (this.socketData.statuscode[this.socketData.statuscode.length - 1].code);
 
             if (typeof (data) == "object") {
@@ -712,9 +729,9 @@ class CloudLink {
             }
 
             return data;
-		} else {
-			return "";
-		};
+        } else {
+            return "";
+        };
     };
     
     returnUserListData() {
@@ -750,37 +767,37 @@ class CloudLink {
     returnClientIP() {
         return String(this.socketData.client_ip);
     };
-	
+    
     readQueueSize({TYPE}) {
-		if (this.menuRemap[String(TYPE)] == "all") {
-			let tmp_size = 0;
-			tmp_size = tmp_size + this.socketData.gmsg.length;
-			tmp_size = tmp_size + this.socketData.pmsg.length;
-			tmp_size = tmp_size + this.socketData.direct.length;
-			tmp_size = tmp_size + this.socketData.statuscode.length;
-			tmp_size = tmp_size + this.socketData.gvar.length;
-			tmp_size = tmp_size + this.socketData.pvar.length;
-			return tmp_size;
-		} else {
-        	return this.socketData[this.menuRemap[String(TYPE)]].length;
-		};
+        if (this.menuRemap[String(TYPE)] == "all") {
+            let tmp_size = 0;
+            tmp_size = tmp_size + this.socketData.gmsg.length;
+            tmp_size = tmp_size + this.socketData.pmsg.length;
+            tmp_size = tmp_size + this.socketData.direct.length;
+            tmp_size = tmp_size + this.socketData.statuscode.length;
+            tmp_size = tmp_size + this.socketData.gvar.length;
+            tmp_size = tmp_size + this.socketData.pvar.length;
+            return tmp_size;
+        } else {
+            return this.socketData[this.menuRemap[String(TYPE)]].length;
+        };
     };
     
-	readQueueData({TYPE}) {
-		if (this.menuRemap[String(TYPE)] == "all") {
-			let tmp_socketData = JSON.parse(JSON.stringify(this.socketData)); // Deep copy
-			
-			delete tmp_socketData.motd;
-			delete tmp_socketData.client_ip;
-			delete tmp_socketData.ulist;
-			delete tmp_socketData.server_version;
-			
-			return JSON.stringify(tmp_socketData);
-		} else {
-        	return JSON.stringify(this.socketData[this.menuRemap[String(TYPE)]]);
-		};
+    readQueueData({TYPE}) {
+        if (this.menuRemap[String(TYPE)] == "all") {
+            let tmp_socketData = JSON.parse(JSON.stringify(this.socketData)); // Deep copy
+            
+            delete tmp_socketData.motd;
+            delete tmp_socketData.client_ip;
+            delete tmp_socketData.ulist;
+            delete tmp_socketData.server_version;
+            
+            return JSON.stringify(tmp_socketData);
+        } else {
+            return JSON.stringify(this.socketData[this.menuRemap[String(TYPE)]]);
+        };
     };
-	
+    
     returnVarData({ TYPE, VAR }) {
         if (this.isRunning) {
             if (self.varData.hasOwnProperty(this.menuRemap[TYPE])) {
@@ -798,25 +815,25 @@ class CloudLink {
     };
     
     parseJSON({PATH, JSON_STRING}) {
-		try {
-			const path = PATH.toString().split('/').map(prop => decodeURIComponent(prop));
-			if (path[0] === '') path.splice(0, 1);
-			if (path[path.length - 1] === '') path.splice(-1, 1);
-			let json;
-			try {
-				json = JSON.parse(' ' + JSON_STRING);
-			} catch (e) {
-				return e.message;
-			};
-			path.forEach(prop => json = json[prop]);
-			if (json === null) return 'null';
-			else if (json === undefined) return '';
-			else if (typeof json === 'object') return JSON.stringify(json);
-			else return json.toString();
-		} catch (err) {
-			return '';
-		};
-	};
+        try {
+            const path = PATH.toString().split('/').map(prop => decodeURIComponent(prop));
+            if (path[0] === '') path.splice(0, 1);
+            if (path[path.length - 1] === '') path.splice(-1, 1);
+            let json;
+            try {
+                json = JSON.parse(' ' + JSON_STRING);
+            } catch (e) {
+                return e.message;
+            };
+            path.forEach(prop => json = json[prop]);
+            if (json === null) return 'null';
+            else if (json === undefined) return '';
+            else if (typeof json === 'object') return JSON.stringify(json);
+            else return json.toString();
+        } catch (err) {
+            return '';
+        };
+    };
     
     getFromJSONArray({NUM, ARRAY}) {
         var json_array = JSON.parse(ARRAY);
@@ -834,10 +851,10 @@ class CloudLink {
     };
     
     fetchURL(args) {
-		return fetch(args.url, {
+        return fetch(args.url, {
             method: "GET"
         }).then(response => response.text());
-	};
+    };
     
     requestURL(args) {
         if (args.method == "GET" || args.method == "HEAD") {
@@ -852,45 +869,45 @@ class CloudLink {
                 body: JSON.parse(args.data)
             }).then(response => response.text());
         } 
-	};
+    };
     
     isValidJSON({JSON_STRING}) {
         return jsonCheck(JSON_STRING);
-	};
+    };
     
     makeJSON({toBeJSONified}) {
-		if (typeof(toBeJSONified) == "string") {
-			try {
-				JSON.parse(toBeJSONified);
-				return String(toBeJSONified);
-			} catch(err) {
-				return "Not JSON!";
-			}
-		} else if (typeof(toBeJSONified) == "object") {
-			return JSON.stringify(toBeJSONified);
-		} else {
-			return "Not JSON!";
-		};
-	};
-	
+        if (typeof(toBeJSONified) == "string") {
+            try {
+                JSON.parse(toBeJSONified);
+                return String(toBeJSONified);
+            } catch(err) {
+                return "Not JSON!";
+            }
+        } else if (typeof(toBeJSONified) == "object") {
+            return JSON.stringify(toBeJSONified);
+        } else {
+            return "Not JSON!";
+        };
+    };
+    
     onConnect() {
-		const self = this;
-		if (self.connect_hat == 0 && self.isRunning) {
-			self.connect_hat = 1;
-			return true;
-		} else {
-			return false;
-		};
-	};
+        const self = this;
+        if (self.connect_hat == 0 && self.isRunning) {
+            self.connect_hat = 1;
+            return true;
+        } else {
+            return false;
+        };
+    };
     
     onClose() {
-		const self = this;
-		if (self.close_hat == 0 && !self.isRunning) {
-			self.close_hat = 1;
-			return true;
-		} else {
-			return false;
-		};
+        const self = this;
+        if (self.close_hat == 0 && !self.isRunning) {
+            self.close_hat = 1;
+            return true;
+        } else {
+            return false;
+        };
     };
 
     onListener({ ID }) {
@@ -946,24 +963,24 @@ class CloudLink {
         return this.isLinked;
     };
 
-	getComLostConnectionState() {
-		return this.wasConnectionDropped;
-	};
-	
-	getComFailedConnectionState() {
-		return this.didConnectionFail;
-	};
+    getComLostConnectionState() {
+        return this.wasConnectionDropped;
+    };
+    
+    getComFailedConnectionState() {
+        return this.didConnectionFail;
+    };
     
     getUsernameState(){
-        return ((this.username != "") && (this.socketData.ulist.includes(String(this.username))));
+        return this.isUsernameSet;
     };
     
     returnIsNewData({TYPE}){
         if (this.isRunning) {
-			return this.newSocketData[this.menuRemap[String(TYPE)]];
-		} else {
-			return false;
-		};
+            return this.newSocketData[this.menuRemap[String(TYPE)]];
+        } else {
+            return false;
+        };
     };
 
     returnIsNewVarData({ TYPE, VAR }) {
@@ -1005,121 +1022,137 @@ class CloudLink {
     };
     
     openSocket({IP}) {
-		const self = this;
-    	if (!self.isRunning) {
-    		console.log("Starting socket.");
-			self.link_status = 1;
-			
-			self.disconnectWasClean = false;
-			self.wasConnectionDropped = false;
-			self.didConnectionFail = false;
-			
-    		mWS = new WebSocket(String(IP));
-    		
-    		mWS.onerror = function(){
-    			self.isRunning = false;
-    		};
-			
-    		mWS.onopen = function(){
-    			self.isRunning = true;
-				self.packet_queue = {};
-				self.link_status = 2;
-    			console.log("Successfully opened socket.");
-    		};
-			
-			mWS.onmessage = function(event){
-   				let tmp_socketData = JSON.parse(event.data);
+        const self = this;
+        if (!self.isRunning) {
+            console.log("Starting socket.");
+            self.link_status = 1;
+            
+            self.disconnectWasClean = false;
+            self.wasConnectionDropped = false;
+            self.didConnectionFail = false;
+            
+            mWS = new WebSocket(String(IP));
+            
+            mWS.onerror = function(){
+                self.isRunning = false;
+            };
+            
+            mWS.onopen = function(){
+                self.isRunning = true;
+                self.packet_queue = {};
+                self.link_status = 2;
+                console.log("Successfully opened socket.");
+            };
+            
+            mWS.onmessage = function(event){
+                let tmp_socketData = JSON.parse(event.data);
                 console.log("RX:", tmp_socketData);
 
                 if (self.queueableCmds.includes(tmp_socketData.cmd)) {
                     self.socketData[tmp_socketData.cmd].push(tmp_socketData);
-				} else {
-					self.socketData[tmp_socketData.cmd] = tmp_socketData.val;
-				};
-				
-				if (self.newSocketData.hasOwnProperty(tmp_socketData.cmd)) {
-					self.newSocketData[tmp_socketData.cmd] = true;
-				};
-				
+                } else {
+                    self.socketData[tmp_socketData.cmd] = tmp_socketData.val;
+                };
+                
+                if (self.newSocketData.hasOwnProperty(tmp_socketData.cmd)) {
+                    self.newSocketData[tmp_socketData.cmd] = true;
+                };
+                
                 if (self.varCmds.includes(tmp_socketData.cmd)) {
                     self.varData[tmp_socketData.cmd][tmp_socketData.name] = {
                         "value": tmp_socketData.val,
                         "isNew": true
                     };
                 };
-
-				if (tmp_socketData.hasOwnProperty("listener")) {
-					if (tmp_socketData.listener == "setusername") {
-						if (tmp_socketData.code == "I:100 | OK") {
+                if (tmp_socketData.hasOwnProperty("listener")) {
+                    if (tmp_socketData.listener == "setusername") {
+                        if (tmp_socketData.code == "I:100 | OK") {
                             self.username = tmp_socketData.val;
-							self.isUsernameSyncing = false;
-							console.log("Username was accepted by the server, and has been set to:", self.username);
-						} else {
-                            console.warn("Username was rejected by the server. Error code:", String(tmp_socketData.statuscode));
-							self.isUsernameSyncing = false;
-						};
-					} else {
-						if (self.socketListeners.hasOwnProperty(tmp_socketData.listener)) {
-							self.socketListeners[tmp_socketData.listener] = true;
-						};
-					};
-				};
-				self.packet_hat = 0;
-   			};
-			
-			mWS.onclose = function() {
-				self.isRunning = false;
-				self.connect_hat = 0;
-				self.packet_hat = 0;
-				if (self.close_hat == 1) {
-					self.close_hat = 0;
-				};
-				self.socketData = {
-					"gmsg": [],
-					"pmsg": [],
-					"direct": [],
-					"statuscode": [],
-					"gvar": [],
-					"pvar": [],
-					"motd": "",
-					"client_ip": "",
-					"ulist": [],
-					"server_version": ""
-				};
-				self.newSocketData = {
-					"gmsg": false,
-					"pmsg": false,
-					"direct": false,
-					"statuscode": false,
-					"gvar": false,
-					"pvar": false
-				};
-				self.socketListeners = {};
-				self.username = "";
-				self.tmp_username = "";
-				self.isUsernameSyncing = false;
-				if (self.link_status != 1) {
-					if (self.disconnectWasClean) {
-						self.link_status = 3;
-						console.log("Socket closed.");
-						self.wasConnectionDropped = false;
-						self.didConnectionFail = false;
-					} else {
-						self.link_status = 4;
-						console.error("Lost connection to the server.");
-						self.wasConnectionDropped = true;
-						self.didConnectionFail = false;
-					};
-				} else {
-					self.link_status = 4;
-					console.error("Failed to connect to server.");
-					self.wasConnectionDropped = false;
-					self.didConnectionFail = true;
-				};
-			};
-    	} else {
-    		console.warn("Socket is already open.");
-    	};
+                            self.isUsernameSyncing = false;
+                            self.isUsernameSet = true;
+                            console.log("Username was accepted by the server, and has been set to:", self.username);
+                        } else {
+                            console.warn("Username was rejected by the server. Error code:", String(tmp_socketData.code));
+                            self.isUsernameSyncing = false;
+                        };
+                    } else if (tmp_socketData.listener == "roomLink") {
+                        if (tmp_socketData.code == "I:100 | OK") {
+                            console.log("Linking to room(s) was accepted by the server!");
+                        } else {
+                            console.warn("Linking to room(s) was rejected by the server. Error code:", String(tmp_socketData.code));
+                            self.enableRoom = false;
+                            self.isLinked = false;
+                            self.selectRoom = "";
+                        };
+                    } else {
+                        if (self.socketListeners.hasOwnProperty(tmp_socketData.listener)) {
+                            self.socketListeners[tmp_socketData.listener] = true;
+                        };
+                    };
+                };
+                self.packet_hat = 0;
+            };
+            
+            mWS.onclose = function() {
+                self.isRunning = false;
+                self.connect_hat = 0;
+                self.packet_hat = 0;
+                if (self.close_hat == 1) {
+                    self.close_hat = 0;
+                };
+                self.socketData = {
+                    "gmsg": [],
+                    "pmsg": [],
+                    "direct": [],
+                    "statuscode": [],
+                    "gvar": [],
+                    "pvar": [],
+                    "motd": "",
+                    "client_ip": "",
+                    "ulist": [],
+                    "server_version": ""
+                };
+                self.newSocketData = {
+                    "gmsg": false,
+                    "pmsg": false,
+                    "direct": false,
+                    "statuscode": false,
+                    "gvar": false,
+                    "pvar": false
+                };
+                self.socketListeners = {};
+                self.username = "";
+                self.tmp_username = "";
+                self.isUsernameSyncing = false;
+                self.isUsernameSet = false;
+                self.enableListener = false;
+                self.setListener = "";
+                self.enableRoom = false;
+                self.selectRoom = "";
+                self.isLinked = false;
+
+                if (self.link_status != 1) {
+                    if (self.disconnectWasClean) {
+                        self.link_status = 3;
+                        console.log("Socket closed.");
+                        self.wasConnectionDropped = false;
+                        self.didConnectionFail = false;
+                    } else {
+                        self.link_status = 4;
+                        console.error("Lost connection to the server.");
+                        self.wasConnectionDropped = true;
+                        self.didConnectionFail = false;
+                    };
+                } else {
+                    self.link_status = 4;
+                    console.error("Failed to connect to server.");
+                    self.wasConnectionDropped = false;
+                    self.didConnectionFail = true;
+                };
+            };
+        } else {
+            console.warn("Socket is already open.");
+        };
     }
     
     openSocketPublicServers({ ID }){
@@ -1130,24 +1163,24 @@ class CloudLink {
     };
     
     closeSocket(){
-		const self = this;
+        const self = this;
         if (this.isRunning) {
-    		console.log("Closing socket...");
-    		mWS.close(1000,'script closure');
-			self.disconnectWasClean = true;
-    	} else {
-    		console.warn("Socket is not open.");
-    	};
+            console.log("Closing socket...");
+            mWS.close(1000,'script closure');
+            self.disconnectWasClean = true;
+        } else {
+            console.warn("Socket is not open.");
+        };
     }
     
     setMyName({NAME}) {
-		const self = this;
-		if (this.isRunning) {
-			if (!this.isUsernameSyncing) {
-				if (this.username == ""){
-					if (String(NAME) != "") {
-						if ((!(String(NAME).length > 20))) {
-							if (!(String(NAME) == "%CA%" || String(NAME) == "%CC%" || String(NAME) == "%CD%" || String(NAME) == "%MS%")){
+        const self = this;
+        if (this.isRunning) {
+            if (!this.isUsernameSyncing) {
+                if (!this.isUsernameSet){
+                    if (String(NAME) != "") {
+                        if ((!(String(NAME).length > 20))) {
+                            if (!(String(NAME) == "%CA%" || String(NAME) == "%CC%" || String(NAME) == "%CD%" || String(NAME) == "%MS%")){
                                 let tmp_msg = {
                                     cmd: "setid",
                                     val: String(NAME),
@@ -1156,33 +1189,37 @@ class CloudLink {
 
                                 console.log("TX:", tmp_msg);
                                 mWS.send(JSON.stringify(tmp_msg));
-								
-								self.tmp_username = String(NAME);
-								self.isUsernameSyncing = true;
-									
-							} else {
-								console.log("Blocking attempt to use reserved usernames");
-							};
-						} else {
-							console.log("Blocking attempt to use username larger than 20 characters, username is " + String(NAME).length + " characters long");
-						};
-					} else {
-						console.log("Blocking attempt to use blank username");
-					};
-				} else {
-					console.warn("Username already has been set!");
-				};
-			} else {
-				console.warn("Username is still syncing!");
-			};
-		};
+                                
+                                self.tmp_username = String(NAME);
+                                self.isUsernameSyncing = true;
+                                    
+                            } else {
+                                console.log("Blocking attempt to use reserved usernames");
+                            };
+                        } else {
+                            console.log("Blocking attempt to use username larger than 20 characters, username is " + String(NAME).length + " characters long");
+                        };
+                    } else {
+                        console.log("Blocking attempt to use blank username");
+                    };
+                } else {
+                    console.warn("Username already has been set!");
+                };
+            } else {
+                console.warn("Username is still syncing!");
+            };
+        };
     };
 
     createListener({ ID }) {
         self = this;
         if (this.isRunning) {
-            self.enableListener = true;
-            self.setListener = String(ID);
+            if (!this.enableListener) {
+                self.enableListener = true;
+                self.setListener = String(ID);
+            } else {
+                console.warn("Listeners were already created!");
+            };
         } else {
             console.log("Cannot assign a listener to a packet while disconnected");
         };
@@ -1194,22 +1231,12 @@ class CloudLink {
             if (!(String(ROOMS).length > 1000)) {
                 let tmp_msg = {
                     cmd: "link",
-                    val: ROOMS
-                };
-
-                if (this.enableListener) {
-                    tmp_msg["listener"] = String(this.setListener);
+                    val: ROOMS,
+                    listener: "roomLink"
                 };
 
                 console.log("TX:", tmp_msg);
                 mWS.send(JSON.stringify(tmp_msg));
-
-                if (this.enableListener) {
-                    if (!self.socketListeners.hasOwnProperty(this.setListener)) {
-                        self.socketListeners[this.setListener] = false;
-                    };
-                    self.enableListener = false;
-                };
 
                 if (!(this.isLinked)) {
                     self.isLinked = true;
@@ -1217,6 +1244,28 @@ class CloudLink {
 
             } else {
                 console.warn("Blocking attempt to send a room ID / room list larger than 1000 bytes (1 KB), room ID / room list is " + String(ROOMS).length + " bytes");
+            };
+        } else {
+            console.warn("Socket is not open.");
+        };
+    };
+
+    selectRoomsInNextPacket({ROOMS}) {
+        const self = this;
+        if (this.isRunning) {
+            if (this.isLinked) {
+                if (!this.enableRoom) {
+                    if (!(String(ROOMS).length > 1000)) {
+                        self.enableRoom = true;
+                        self.selectRoom = ROOMS;
+                    } else {
+                        console.warn("Blocking attempt to select a room ID / room list larger than 1000 bytes (1 KB), room ID / room list is " + String(ROOMS).length + " bytes");
+                    };
+                } else {
+                    console.warn("Rooms were already selected!");
+                };
+            } else {
+                console.warn("Not linked to any room(s)!");
             };
         } else {
             console.warn("Socket is not open.");
@@ -1256,9 +1305,9 @@ class CloudLink {
     };
 
     sendGData({DATA}){
-		const self = this;
+        const self = this;
         if (this.isRunning) {
-    		if (!(String(DATA).length > 1000)) {
+            if (!(String(DATA).length > 1000)) {
                 let tmp_msg = {
                     cmd: "gmsg",
                     val: DATA
@@ -1268,36 +1317,8 @@ class CloudLink {
                     tmp_msg["listener"] = String(this.setListener);
                 };
 
-				console.log("TX:", tmp_msg);
-                mWS.send(JSON.stringify(tmp_msg));
-
-                if (this.enableListener) {
-                    if (!self.socketListeners.hasOwnProperty(this.setListener)) {
-                        self.socketListeners[this.setListener] = false;
-                    };
-                    self.enableListener = false;
-                };
-				
-			} else {
-				console.warn("Blocking attempt to send packet larger than 1000 bytes (1 KB), packet is " + String(DATA).length + " bytes");
-			};
-    	} else {
-    		console.warn("Socket is not open.");
-    	};
-    };
-    
-    sendPData({DATA, ID}) {
-		const self = this;
-        if (this.isRunning) {
-            if (!(String(DATA).length > 1000)) {
-                let tmp_msg = {
-                    cmd: "pmsg",
-                    val: DATA,
-                    id: String(ID)
-                }
-
-                if (this.enableListener) {
-                    tmp_msg["listener"] = String(this.setListener);
+                if (this.enableRoom) {
+                    tmp_msg["rooms"] = String(this.selectRoom);
                 };
 
                 console.log("TX:", tmp_msg);
@@ -1309,12 +1330,56 @@ class CloudLink {
                     };
                     self.enableListener = false;
                 };
-			} else {
-				console.warn("Blocking attempt to send packet larger than 1000 bytes (1 KB), packet is " + String(DATA).length + " bytes");
-			};
-    	} else {
-    		console.warn("Socket is not open.");
-    	};
+                if (this.enableRoom) {
+                    self.enableRoom = false;
+                    self.selectRoom = "";
+                };
+                
+            } else {
+                console.warn("Blocking attempt to send packet larger than 1000 bytes (1 KB), packet is " + String(DATA).length + " bytes");
+            };
+        } else {
+            console.warn("Socket is not open.");
+        };
+    };
+    
+    sendPData({DATA, ID}) {
+        const self = this;
+        if (this.isRunning) {
+            if (!(String(DATA).length > 1000)) {
+                let tmp_msg = {
+                    cmd: "pmsg",
+                    val: DATA,
+                    id: String(ID)
+                }
+
+                if (this.enableListener) {
+                    tmp_msg["listener"] = String(this.setListener);
+                };
+                if (this.enableRoom) {
+                    tmp_msg["rooms"] = String(this.selectRoom);
+                };
+
+                console.log("TX:", tmp_msg);
+                mWS.send(JSON.stringify(tmp_msg));
+
+                if (this.enableListener) {
+                    if (!self.socketListeners.hasOwnProperty(this.setListener)) {
+                        self.socketListeners[this.setListener] = false;
+                    };
+                    self.enableListener = false;
+                };
+                if (this.enableRoom) {
+                    self.enableRoom = false;
+                    self.selectRoom = "";
+                };
+
+            } else {
+                console.warn("Blocking attempt to send packet larger than 1000 bytes (1 KB), packet is " + String(DATA).length + " bytes");
+            };
+        } else {
+            console.warn("Socket is not open.");
+        };
     };
     
     sendGDataAsVar({VAR, DATA }) {
@@ -1330,6 +1395,9 @@ class CloudLink {
                 if (this.enableListener) {
                     tmp_msg["listener"] = String(this.setListener);
                 };
+                if (this.enableRoom) {
+                    tmp_msg["rooms"] = String(this.selectRoom);
+                };
 
                 console.log("TX:", tmp_msg);
                 mWS.send(JSON.stringify(tmp_msg));
@@ -1340,6 +1408,11 @@ class CloudLink {
                     };
                     self.enableListener = false;
                 };
+                if (this.enableRoom) {
+                    self.enableRoom = false;
+                    self.selectRoom = "";
+                };
+
             } else {
                 console.warn("Blocking attempt to send packet larger than 1000 bytes (1 KB), packet is " + String(DATA).length + " bytes");
             };
@@ -1362,6 +1435,9 @@ class CloudLink {
                 if (this.enableListener) {
                     tmp_msg["listener"] = String(this.setListener);
                 };
+                if (this.enableRoom) {
+                    tmp_msg["rooms"] = String(this.selectRoom);
+                };
 
                 console.log("TX:", tmp_msg);
                 mWS.send(JSON.stringify(tmp_msg));
@@ -1372,6 +1448,11 @@ class CloudLink {
                     };
                     self.enableListener = false;
                 };
+                if (this.enableRoom) {
+                    self.enableRoom = false;
+                    self.selectRoom = "";
+                };
+
             } else {
                 console.warn("Blocking attempt to send packet larger than 1000 bytes (1 KB), packet is " + String(DATA).length + " bytes");
             };
@@ -1381,16 +1462,16 @@ class CloudLink {
     };
     
     runCMD({CMD, ID, DATA}) {
-		const self = this;
-		
-		let tmp_DATA = DATA;
-		if (this.isValidJSON({"JSON_STRING": DATA})) {
-			tmp_DATA = JSON.parse(DATA);
-		};
-		console.log(tmp_DATA);
-		
+        const self = this;
+        
+        let tmp_DATA = DATA;
+        if (this.isValidJSON({"JSON_STRING": DATA})) {
+            tmp_DATA = JSON.parse(DATA);
+        };
+        console.log(tmp_DATA);
+        
         if (this.isRunning) {
-    		if (!(String(CMD).length > 100) || !(String(ID).length > 20) || !(String(DATA).length > 1000)) {
+            if (!(String(CMD).length > 100) || !(String(ID).length > 20) || !(String(DATA).length > 1000)) {
                 let tmp_msg = {
                     cmd: String(CMD),
                     id: String(ID),
@@ -1400,29 +1481,37 @@ class CloudLink {
                 if (this.enableListener) {
                     tmp_msg["listener"] = String(this.setListener);
                 };
+                if (this.enableRoom) {
+                    tmp_msg["rooms"] = String(this.selectRoom);
+                };
 
                 console.log("TX:", tmp_msg);
                 mWS.send(JSON.stringify(tmp_msg));
-				
+                
                 if (this.enableListener) {
                     if (!self.socketListeners.hasOwnProperty(this.setListener)) {
                         self.socketListeners[this.setListener] = false;
                     };
                     self.enableListener = false;
                 };
-			} else {
-				console.warn("Blocking attempt to send packet with questionably long arguments");
-			};
-    	} else {
-    		console.warn("Socket is not open.");
-    	};
+                if (this.enableRoom) {
+                    self.enableRoom = false;
+                    self.selectRoom = "";
+                };
+
+            } else {
+                console.warn("Blocking attempt to send packet with questionably long arguments");
+            };
+        } else {
+            console.warn("Socket is not open.");
+        };
     };
     
     resetNewData({TYPE}){
-		const self = this;
+        const self = this;
         if (this.isRunning) {
-			self.newSocketData[this.menuRemap[String(TYPE)]] = false;
-		};
+            self.newSocketData[this.menuRemap[String(TYPE)]] = false;
+        };
     };
     
     resetNewVarData({ TYPE, VAR }) {
@@ -1445,17 +1534,17 @@ class CloudLink {
     };
 
     clearAllPackets({TYPE}){
-		const self = this;
-		if (this.menuRemap[String(TYPE)] == "all") {
-			self.socketData.gmsg = [];
-			self.socketData.pmsg = [];
-			self.socketData.direct = [];
-			self.socketData.statuscode = [];
-			self.socketData.gvar = [];
-			self.socketData.pvar = [];
-		} else {
-			self.socketData[this.menuRemap[String(TYPE)]] = [];
-		};
+        const self = this;
+        if (this.menuRemap[String(TYPE)] == "all") {
+            self.socketData.gmsg = [];
+            self.socketData.pmsg = [];
+            self.socketData.direct = [];
+            self.socketData.statuscode = [];
+            self.socketData.gvar = [];
+            self.socketData.pvar = [];
+        } else {
+            self.socketData[this.menuRemap[String(TYPE)]] = [];
+        };
     };
 };
 
@@ -1463,11 +1552,11 @@ class CloudLink {
     var extensionClass = CloudLink;
     if (typeof window === "undefined" || !window.vm) {
         Scratch.extensions.register(new extensionClass());
-		console.log("CloudLink 4.0 loaded. Detecting sandboxed mode, performance will suffer. Please load CloudLink in Unsandboxed mode.");
+        console.log("CloudLink 4.0 loaded. Detecting sandboxed mode, performance will suffer. Please load CloudLink in Unsandboxed mode.");
     } else {
         var extensionInstance = new extensionClass(window.vm.extensionManager.runtime);
         var serviceName = window.vm.extensionManager._registerInternalExtension(extensionInstance);
         window.vm.extensionManager._loadedExtensions.set(extensionInstance.getInfo().id, serviceName);
-		console.log("CloudLink 4.0 loaded. Detecting unsandboxed mode.");
+        console.log("CloudLink 4.0 loaded. Detecting unsandboxed mode.");
     };
 })()
