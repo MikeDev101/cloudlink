@@ -143,18 +143,18 @@ class supporter:
     def joinRoom(self, room_id, client):
         # Automatically create rooms
         if not room_id in self.cloudlink.roomData:
-            self.cloudlink.roomData[room_id] = []
+            self.cloudlink.roomData[room_id] = set()
         
         # Add the client object to the room
         if not client in self.cloudlink.roomData[room_id]:
-            self.cloudlink.roomData[room_id].append(client)
+            self.cloudlink.roomData[room_id].add(client)
 
     def leaveRoom(self, room_id, client):
         # Check if room exists
         if room_id in self.cloudlink.roomData:
             # Check if client object is in the room
             if client in self.cloudlink.roomData[room_id]:
-                self.cloudlink.roomData[room_id].remove(client)
+                self.cloudlink.roomData[room_id].discard(client)
             
             # Automatically remove empty rooms, and prevent accidental deletion of the default room
             if (len(self.cloudlink.roomData[room_id]) == 0) and (room_id != "default"): 
