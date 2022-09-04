@@ -14,7 +14,7 @@ Please see https://github.com/MikeDev101/cloudlink for more details.
 
 class Cloudlink:
     def __init__(self):
-        self.version = "0.1.8.1"
+        self.version = "0.1.8.2"
 
     def server(self, logs=False):
         # Initialize Cloudlink server
