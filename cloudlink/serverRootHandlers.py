@@ -28,6 +28,9 @@ class serverRootHandlers:
                 # Create attributes for the client
                 self.supporter.createAttrForClient(client)
 
+                # Join default room
+                self.supporter.linkClientToRooms(client, "default")
+
                 # Report to the client it's IP address
                 self.cloudlink.sendPacket(client, {"cmd": "client_ip", "val": str(client.full_ip)})
 
@@ -51,6 +54,9 @@ class serverRootHandlers:
     def on_close(self, client, server):
         if not(client == None):
             self.supporter.log(f"Client {client.id} ({client.full_ip}) disconnected.")
+            
+            # Remove client from all rooms (Required to prevent BrokenPipeErrors)
+            self.supporter.removeClientFromAllRooms(client)
 
             if self.on_close in self.cloudlink.usercallbacks:
                 if self.cloudlink.usercallbacks[self.on_close] != None:

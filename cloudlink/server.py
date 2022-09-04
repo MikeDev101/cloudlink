@@ -12,6 +12,12 @@ class server:
 
         # Init stuff for the server
         self.userlist = []
+
+        # Rooms system
+        self.roomData = {
+            "default": []
+        }
+
         self.motd_enable = False
         self.motd_msg = ""
         self.global_msg = ""
@@ -33,11 +39,21 @@ class server:
         self.ipblocklist = [] # Use to block IP addresses
         self.rejectClientMode = False # Set to true to reject future clients until false
         
-        # Create API for friendlier callbacks
+        # Create API
         self.loadCustomCommands = self.supporter.loadCustomCommands
         self.disableCommands = self.supporter.disableCommands
         self.sendPacket = self.supporter.sendPacket
         self.sendCode = self.supporter.sendCode
+        self.linkClientToRooms = self.supporter.linkClientToRooms
+        self.unlinkClientFromRooms = self.supporter.unlinkClientFromRooms
+        self.getAllUsersInRoom = self.supporter.getAllUsersInRoom
+        self.getAllUsersInManyRooms = self.supporter.getAllUsersInManyRooms
+        self.getAllRooms = self.supporter.getAllRooms
+        self.getAllClientRooms = self.supporter.getAllClientRooms
+        self.getUsernames = self.supporter.getUsernames
+        self.setClientUsername = self.supporter.setClientUsername
+        
+        # Create stuff for the callback system
         self.on_packet = self.serverRootHandlers.on_packet
         self.on_connect = self.serverRootHandlers.on_connect
         self.on_close = self.serverRootHandlers.on_close

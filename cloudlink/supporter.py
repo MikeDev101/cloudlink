@@ -51,27 +51,32 @@ class supporter:
                 if listener_detected:
                     message["listener"] = listener_id
 
-                # Send the message (support for multicast)
+                # Convert clients to set
                 if type(clients) == list:
                     clients = set(clients)
                 if type(clients) != set:
                     clients = set([clients])
+                
+                # Send to all specified clients
                 for client in clients:
-                    if rooms in [None, ["default"]]:
-                        message["room"] = "default"
-                        if "default" in client.rooms:
-                            self.cloudlink.wss.send_message(client, self.json.dumps(message))
-                    else:
-                        for room in rooms:
-                            if room in client.rooms:
-                                message["room"] = room
+                    try:
+                        if rooms in [None, ["default"]]:
+                            message["room"] = "default"
+                            if "default" in client.rooms:
                                 self.cloudlink.wss.send_message(client, self.json.dumps(message))
+                        else:
+                            for room in rooms:
+                                if room in client.rooms:
+                                    message["room"] = room
+                                    self.cloudlink.wss.send_message(client, self.json.dumps(message))
+                    except BrokenPipeError:
+                        self.log(f"Broken Pipe Error: Attempted to send packet {message} to {client.id} ({client.full_ip})!")
     
     def setClientUsername(self, client, username):
         if type(username) == str:
             if client in self.cloudlink.all_clients:
                 if not client.username_set:
-                    self.supporter.log(f"Manually setting client {client.id} ({client.full_ip}) username to {username}...")
+                    self.log(f"Setting client {client.id} ({client.full_ip}) username to \"{username}\"...")
                     client.friendly_username = username
                     client.username_set = True
         else:
@@ -80,27 +85,80 @@ class supporter:
     def linkClientToRooms(self, client, rooms):
         if type(rooms) in [str, list, set]:
             if client in self.cloudlink.all_clients:
+                # Convert to set
                 if type(rooms) in [list, str]:
-                    # Convert to set
                     if type(rooms) == str:
                         rooms = set([rooms])
                     elif type(rooms) == list:
                         rooms = set(rooms)
-                self.supporter.log(f"Manually linking client {client.id} ({client.full_ip}) to rooms {list(rooms)}...")
+                self.log(f"Linking client {client.id} ({client.full_ip}) to rooms {list(rooms)}...")
 
-                # Add client to rooms
-                client.is_linked = True
+                # Remove client from all rooms
+                self.removeClientFromAllRooms(client)
+
+                # Add client to new rooms
+                self.roomHandler(1, client, rooms)
                 client.rooms = rooms
+
+                # Marked as linked
+                client.is_linked = True
         else:
             raise TypeError
     
     def unlinkClientFromRooms(self, client):
-        if client in self.cloudlink.all_clients:
-            self.supporter.log(f"Manually unlinking client {client.id} ({client.full_ip}) from rooms...")
+        if client in self.cloudlink.all_clients: 
+            self.log(f"Unlinking client {client.id} ({client.full_ip}) from rooms...")
+            # Remove client from all rooms
+            self.removeClientFromAllRooms(client)
 
-            # Reset client rooms
-            client.is_linked = False
+            # Add client to default room
             client.rooms = ["default"]
+            self.roomHandler(1, client, ["default"])
+
+            # Mark as not linked
+            client.is_linked = False
+    
+    def removeClientFromAllRooms(self, client):
+        if client in self.cloudlink.all_clients: 
+            self.roomHandler(2, client, client.rooms)
+
+    def roomHandler(self, mode, client, room_ids):
+        if type(room_ids) == str:
+            room_ids = set([room_ids])
+        elif type(room_ids) == list:
+            room_ids = set(room_ids)
+        elif type(room_ids) == set:
+            pass
+        else:
+            raise TypeError
+        if mode == 1: # Create rooms
+            for room in room_ids:
+                self.joinRoom(room, client)
+        elif mode == 2: # Leave rooms
+            for room in room_ids:
+                self.leaveRoom(room, client)
+        else:
+            raise NotImplementedError
+
+    def joinRoom(self, room_id, client):
+        # Automatically create rooms
+        if not room_id in self.cloudlink.roomData:
+            self.cloudlink.roomData[room_id] = []
+        
+        # Add the client object to the room
+        if not client in self.cloudlink.roomData[room_id]:
+            self.cloudlink.roomData[room_id].append(client)
+
+    def leaveRoom(self, room_id, client):
+        # Check if room exists
+        if room_id in self.cloudlink.roomData:
+            # Check if client object is in the room
+            if client in self.cloudlink.roomData[room_id]:
+                self.cloudlink.roomData[room_id].remove(client)
+            
+            # Automatically remove empty rooms, and prevent accidental deletion of the default room
+            if (len(self.cloudlink.roomData[room_id]) == 0) and (room_id != "default"): 
+                del self.cloudlink.roomData[room_id]
 
     def getAllUsersInManyRooms(self, room_ids):
         if type(room_ids) == str:
@@ -111,30 +169,24 @@ class supporter:
             pass
         else:
             raise TypeError
-        allclients = set()
+        allclients = []
         for room in room_ids:
             tmp = self.getAllUsersInRoom(room)
             for tmp_add in tmp:
-                allclients.add(tmp_add)
+                if not tmp_add in allclients:
+                    allclients.append(tmp_add)
         return allclients
     
     def getAllUsersInRoom(self, room_id):
         if type(room_id) != str:
             raise TypeError
-        clients = set()
-        if room_id in self.getAllRooms():
-            for client in self.cloudlink.all_clients:
-                if room_id in self.getAllClientRooms(client):
-                    clients.add(client)
-        return clients
-
+        if room_id in self.cloudlink.roomData:
+            return self.cloudlink.roomData[room_id]
+        else:
+            return []
+    
     def getAllRooms(self):
-        roomlist = set()
-        roomlist.add("default")
-        for client in self.cloudlink.all_clients:
-            for room in client.rooms:
-                roomlist.add(room)
-        return roomlist
+        return list(self.cloudlink.roomData.keys())
     
     def getAllClientRooms(self, client):
         roomlist = set()

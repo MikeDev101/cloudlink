@@ -21,9 +21,9 @@ class serverInternalHandlers():
                     message["val"] = set(message["val"])
 
                 # Add client to rooms
-                if not client.is_linked:
-                    client.is_linked = True
-                client.rooms = message["val"]
+                self.supporter.linkClientToRooms(client, message["val"])
+
+                # Tell the client that they were linked
                 self.cloudlink.sendCode(client, "OK", listener_detected, listener_id)
 
                 # Update all client ulists for the default room
@@ -46,9 +46,9 @@ class serverInternalHandlers():
                 old_rooms = client.rooms
 
                 # Remove the client from all rooms and set their room to the default room
-                if client.is_linked:
-                    client.is_linked = False
-                client.rooms = ["default"]
+                self.supporter.unlinkClientFromRooms(client)
+
+                # Tell the client that they were unlinked
                 self.cloudlink.sendCode(client, "OK", listener_detected, listener_id)
 
                 # Update all client ulists for the default room
