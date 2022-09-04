@@ -1,5 +1,3 @@
-import sys
-import logging
 from .websocket_server import WebsocketServer
 from .supporter import supporter
 from .serverRootHandlers import serverRootHandlers
@@ -24,7 +22,6 @@ class server:
         
         # Init modules
         self.supporter = supporter(self, enable_logs)
-        self.log = self.supporter.log
         self.serverRootHandlers = serverRootHandlers(self)
         self.serverInternalHandlers = serverInternalHandlers(self)
         
@@ -52,6 +49,7 @@ class server:
         self.getAllClientRooms = self.supporter.getAllClientRooms
         self.getUsernames = self.supporter.getUsernames
         self.setClientUsername = self.supporter.setClientUsername
+        self.log = self.supporter.log
         
         # Create stuff for the callback system
         self.on_packet = self.serverRootHandlers.on_packet

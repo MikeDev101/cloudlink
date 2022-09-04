@@ -32,20 +32,20 @@ class serverRootHandlers:
                 self.supporter.linkClientToRooms(client, "default")
 
                 # Report to the client it's IP address
-                self.cloudlink.sendPacket(client, {"cmd": "client_ip", "val": str(client.full_ip)})
+                self.cloudlink.sendPacket(client, {"cmd": "client_ip", "val": str(client.full_ip)}, ignore_rooms = True)
 
                 # Report to the client the CL Server version
-                self.cloudlink.sendPacket(client, {"cmd": "server_version", "val": str(self.cloudlink.version)})
+                self.cloudlink.sendPacket(client, {"cmd": "server_version", "val": str(self.cloudlink.version)}, ignore_rooms = True)
 
                 # Report to the client the currently cached global message
-                self.cloudlink.sendPacket(client, {"cmd": "gmsg", "val": self.cloudlink.global_msg})
+                self.cloudlink.sendPacket(client, {"cmd": "gmsg", "val": self.cloudlink.global_msg}, ignore_rooms = True)
 
                 # Update the client's userlist
-                self.cloudlink.sendPacket(client, {"cmd": "ulist", "val": self.supporter.getUsernames()})
+                self.cloudlink.sendPacket(client, {"cmd": "ulist", "val": self.supporter.getUsernames()}, ignore_rooms = True)
 
                 # Tell the client the server's Message-Of-The-Day (MOTD)
                 if self.cloudlink.motd_enable:
-                    self.cloudlink.sendPacket(client, {"cmd": "motd", "val": self.cloudlink.motd_msg})
+                    self.cloudlink.sendPacket(client, {"cmd": "motd", "val": self.cloudlink.motd_msg}, ignore_rooms = True)
 
                 if self.on_connect in self.cloudlink.usercallbacks:
                     if self.cloudlink.usercallbacks[self.on_connect] != None:
@@ -57,6 +57,12 @@ class serverRootHandlers:
             
             # Remove client from all rooms (Required to prevent BrokenPipeErrors)
             self.supporter.removeClientFromAllRooms(client)
+
+            # Update ulists in all rooms
+            for room in self.cloudlink.roomData:
+                clist = self.cloudlink.getAllUsersInRoom(room)
+                ulist = self.supporter.getUsernames(room)
+                self.supporter.sendPacket(clist, {"cmd": "ulist", "val": ulist}, rooms = room)
 
             if self.on_close in self.cloudlink.usercallbacks:
                 if self.cloudlink.usercallbacks[self.on_close] != None:

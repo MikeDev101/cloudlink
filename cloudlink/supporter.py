@@ -1,4 +1,3 @@
-from cgitb import enable
 from datetime import datetime
 import traceback
 import sys
@@ -9,7 +8,7 @@ class supporter:
     This module provides extended functionality for Cloudlink.
     """
 
-    def __init__(self, cloudlink, enable_logs:bool):
+    def __init__(self, cloudlink, enable_logs):
         self.cloudlink = cloudlink
         self.json = json
         self.datetime = datetime
@@ -44,7 +43,7 @@ class supporter:
 
         self.cloudlink.wss.send_message(client, self.json.dumps(message))
 
-    def sendPacket(self, clients, message:dict, listener_detected:bool = False, listener_id:str = "", rooms:list = None):
+    def sendPacket(self, clients, message:dict, listener_detected:bool = False, listener_id:str = "", rooms:list = None, ignore_rooms:bool = False):
         if type(message) == dict:
             if self.isPacketSane(message, ["cmd"]):
                 # Attach listener (if applied to origin message)
@@ -57,20 +56,37 @@ class supporter:
                 if type(clients) != set:
                     clients = set([clients])
                 
+                # Convert rooms to set
+                if type(rooms) == list:
+                    rooms = set(rooms)
+                if type(rooms) != set:
+                    rooms = set([rooms])
+                
                 # Send to all specified clients
                 for client in clients:
-                    try:
-                        if rooms in [None, ["default"]]:
-                            message["room"] = "default"
-                            if "default" in client.rooms:
-                                self.cloudlink.wss.send_message(client, self.json.dumps(message))
-                        else:
-                            for room in rooms:
-                                if room in client.rooms:
-                                    message["room"] = room
+                    if not ignore_rooms:
+                        for room in rooms:
+                            if room in ["default", None]:
+                                room = "default"
+                            else:
+                                message["room"] = room
+                            if room in list(client.rooms):
+                                self.log(f"Sending packet to client {client.id} ({client.full_ip}): {message}")
+                                try:
                                     self.cloudlink.wss.send_message(client, self.json.dumps(message))
-                    except BrokenPipeError:
-                        self.log(f"Broken Pipe Error: Attempted to send packet {message} to {client.id} ({client.full_ip})!")
+                                except BrokenPipeError:
+                                    self.log(f"Broken Pipe Error: Attempted to send packet {message} to {client.id} ({client.full_ip})!")
+                                except Exception as e:
+                                    self.log(f"Exception: {e}, Attempted to send packet {message} to {client.id} ({client.full_ip})!")
+                    else:
+                        self.log(f"Sending packet to client (while ignoring rooms) {client.id} ({client.full_ip}): {message}")
+                        try:
+                            self.cloudlink.wss.send_message(client, self.json.dumps(message))
+                        except BrokenPipeError:
+                            self.log(f"Broken Pipe Error: Attempted to send packet {message} to {client.id} ({client.full_ip}) (while ignoring rooms)!")
+                        except Exception as e:
+                            self.log(f"Exception: {e}, Attempted to send packet {message} to {client.id} ({client.full_ip}) (while ignoring rooms)!")
+                            
     
     def setClientUsername(self, client, username):
         if type(username) == str:
@@ -287,16 +303,18 @@ class supporter:
 
     def getUsernames(self, rooms:list = ["default"]):
         userlist = []
-        for client in self.cloudlink.all_clients:
-            clientId = {
-                "username": client.friendly_username,
-                "id": client.id
-            }
-            for room in rooms:
-                if room in client.rooms:
-                    if client.username_set:
-                        if not clientId in userlist:
-                            userlist.append(clientId)
+        if type(rooms) in [str, list, set]:
+            if type(rooms) == str:
+                rooms = set([rooms])
+            elif type(rooms) == list:
+                rooms = set(rooms)
+        else:
+            raise TypeError
+        for room in rooms:
+            for client in self.getAllUsersInRoom(room):
+                result = self.getUserObjectFromClientObj(client)
+                if result != None:
+                    userlist.append(result)
         return userlist
 
     def getUserObjectFromClientObj(self, client):
