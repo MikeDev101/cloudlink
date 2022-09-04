@@ -1522,9 +1522,10 @@ class CloudLink {
     };
     
     resetNewVarData({ TYPE, VAR }) {
+        const self = this;
         if (this.isRunning) {
-            if (self.varData.hasOwnProperty(this.menuRemap[TYPE])) {
-                if (self.varData[this.menuRemap[TYPE]].hasOwnProperty(VAR)) {
+            if (this.varData.hasOwnProperty(this.menuRemap[TYPE])) {
+                if (this.varData[this.menuRemap[TYPE]].hasOwnProperty(VAR)) {
                     self.varData[this.menuRemap[TYPE]][VAR].isNew = false;
                 };
             };
