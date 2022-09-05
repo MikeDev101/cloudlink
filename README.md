@@ -42,7 +42,7 @@ You can check the releases tab in Github for older versions, or you can download
 
 > Will Cloudlink 4.0 work with my project made for Cloudlink TURBO?
 
-No, Cloudlink 4.0 serves as a replacement of Cloudlink TURBO. While Cloudlink 4.0 is built upon Cloudlink TURBO, it does not have the same blocks as Cloudlink 3.0. In favor or retaining compatibility with Cloudlink 3.0, Cloudlink TURBO should not be used and will be retired.
+No, Cloudlink 4.0 serves as a replacement of Cloudlink TURBO. While Cloudlink 4.0 is built upon Cloudlink TURBO, it does not have the same blocks as Cloudlink TURBO. In favor or retaining compatibility with Cloudlink 3.0, Cloudlink TURBO should not be used and will be retired.
 
 > Will my older projects (prior to Cloudlink 3.0) work with Cloudlink 4.0?
 
