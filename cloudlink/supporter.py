@@ -5,10 +5,10 @@ import json
 
 class supporter:
     """
-    This module provides extended functionality for Cloudlink.
+    This module provides extended functionality for Cloudlink. This class is shared between the server and client modes.
     """
 
-    def __init__(self, cloudlink, enable_logs):
+    def __init__(self, cloudlink, enable_logs, mode:int):
         self.cloudlink = cloudlink
         self.json = json
         self.datetime = datetime
@@ -28,6 +28,16 @@ class supporter:
             "Disabled": "E:110 | Command disabled",
             "IDRequired": "E:111 | ID required",
         }
+        
+        if mode == None:
+            raise TypeError("Mode cannot be None, or any value other than 1 or 0!")
+        else:
+            if mode == 1:
+                setattr(self, "sendPacket", self._sendPacket_server)
+            elif mode == 2:
+                setattr(self, "sendPacket", self._sendPacket_client)
+            else:
+                raise NotImplementedError("Invalid supporter mode")
     
     def sendCode(self, client:dict, code:str, listener_detected:bool = False, listener_id:str = "", extra_data = None):
         message = {
@@ -42,8 +52,17 @@ class supporter:
             message["listener"] = listener_id
 
         self.cloudlink.wss.send_message(client, self.json.dumps(message))
-
-    def sendPacket(self, clients, message:dict, listener_detected:bool = False, listener_id:str = "", rooms:list = None, ignore_rooms:bool = False):
+    
+    def _sendPacket_client(self, message):
+        try:
+            self.log(f"Sending packet: {message}")
+            self.cloudlink.wss.send(self.json.dumps(message))
+        except BrokenPipeError:
+            self.log(f"Broken Pipe Error: Attempted to send packet {message}!")
+        except Exception as e:
+            self.log(f"Exception: {e}, Attempted to send packet {message}!")
+    
+    def _sendPacket_server(self, clients, message:dict, listener_detected:bool = False, listener_id:str = "", rooms:list = None, ignore_rooms:bool = False):
         if type(message) == dict:
             if self.isPacketSane(message, ["cmd"]):
                 # Attach listener (if applied to origin message)
@@ -220,6 +239,17 @@ class supporter:
             client.send_close(1000, bytes(reason, encoding='utf-8'))
             self.cloudlink.wss._terminate_client_handler(client)
 
+    def callback(self, callback_id, function):
+        # Support older servers which use the old callback system.
+        if type(callback_id) == str:
+            callback_id = getattr(self.cloudlink, callback_id)
+        
+        # New callback system.
+        if callable(callback_id):
+            if hasattr(self.cloudlink, callback_id.__name__):
+                self.log(f"Creating callback for {callback_id.__name__} to function {function.__name__}...")
+                self.cloudlink.usercallbacks[callback_id] = function
+
     def full_stack(self):
         exc = sys.exc_info()[0]
         if exc is not None:
@@ -286,23 +316,23 @@ class supporter:
                 else:
                     raise TypeError(f"Attempted to load \"{str(classEntry)}\", which is not a class!")
     
-    def loadBuiltinCommands(self):
+    def loadBuiltinCommands(self, handlerObject):
         # Get an array of attributes from self.serverInternalHandlers
-        classFunctions = dir(self.cloudlink.serverInternalHandlers)
+        classFunctions = dir(handlerObject)
         for functionEntry in classFunctions:
             # Check if a function within self.serverInternalHandlers is a private function
             if (not("__" in functionEntry) and (not(hasattr(self.cloudlink, functionEntry)))): 
                 try:
                     # Check if a function is marked as ignore
                     shouldAdd = True
-                    if hasattr(self.cloudlink.serverInternalHandlers, "importer_ignore_functions"):
-                        if type(self.cloudlink.serverInternalHandlers.importer_ignore_functions) == list:
-                            if str(functionEntry) in self.cloudlink.serverInternalHandlers.importer_ignore_functions:
+                    if hasattr(handlerObject, "importer_ignore_functions"):
+                        if type(handlerObject.importer_ignore_functions) == list:
+                            if str(functionEntry) in handlerObject.importer_ignore_functions:
                                 shouldAdd = False
                 
                     if shouldAdd:
                         self.cloudlink.builtInCommands.append(str(functionEntry))
-                        setattr(self.cloudlink, str(functionEntry), getattr(self.cloudlink.serverInternalHandlers, str(functionEntry)))
+                        setattr(self.cloudlink, str(functionEntry), getattr(handlerObject, str(functionEntry)))
                 except:
                     self.log(f"An exception has occurred whilst loading a built-in command: {self.full_stack()}")
 
@@ -319,7 +349,8 @@ class supporter:
             for client in self.getAllUsersInRoom(room):
                 result = self.getUserObjectFromClientObj(client)
                 if result != None:
-                    userlist.append(result)
+                    if not result in userlist:
+                        userlist.append(result)
         return userlist
 
     def getUserObjectFromClientObj(self, client):
@@ -330,14 +361,18 @@ class supporter:
                     "id": client.id
                 }
 
-    def selectMultiUserObjects(self, identifiers:list):
+    def selectMultiUserObjects(self, identifiers:list, rooms:list = ["default"]):
         # Implement multicast support
         objList = []
         if type(identifiers) == list:
             for client in identifiers:
                 obj = self.getUserObject(client)
-                if not(obj in [TypeError, LookupError, None]):
-                    objList.append(obj)
+                # TODO: optimize this fugly mess
+                if not obj in [TypeError, LookupError, None]:
+                    for room in rooms:
+                        if room in obj.rooms:
+                            if not obj in objList:
+                                objList.append(obj)
             return objList
         else:
             return TypeError
@@ -421,6 +456,7 @@ class supporter:
         return is_valid_json
 
     def isPacketSane(self, message, keycheck=["cmd", "val"], datalimit=1000):
+        # TODO: Optimize this fugly mess
         tmp_msg = message
         is_valid_json = False
         is_sane = True
@@ -437,7 +473,8 @@ class supporter:
             if is_valid_json:
                 for key in keycheck:
                     if not key in tmp_msg:
-                        is_sane = False
+                        if (not "val" in tmp_msg) and (not "code" in tmp_msg):
+                            is_sane = False
                 if is_sane:
                     if type(tmp_msg["cmd"]) != str:
                         is_sane = False

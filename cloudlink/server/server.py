@@ -1,27 +1,23 @@
 from .websocket_server import WebsocketServer
-from .supporter import supporter
 from .serverRootHandlers import serverRootHandlers
 from .serverInternalHandlers import serverInternalHandlers
 
 class server:
-    def __init__(self, parentCl, enable_logs):
+    def __init__(self, parentCl, enable_logs=True):
         # Read the CloudLink version from the parent class
         self.version = parentCl.version
 
-        # Init stuff for the server
+        # Init the server
         self.userlist = []
-
-        # Rooms system
-        self.roomData = {
-            "default": set()
-        }
-
         self.motd_enable = False
         self.motd_msg = ""
         self.global_msg = ""
+        self.roomData = {
+            "default": set()
+        }
         
         # Init modules
-        self.supporter = supporter(self, enable_logs)
+        self.supporter = parentCl.supporter(self, enable_logs, 1)
         self.serverRootHandlers = serverRootHandlers(self)
         self.serverInternalHandlers = serverInternalHandlers(self)
         
@@ -30,7 +26,7 @@ class server:
         self.customCommands = []
         self.disabledCommands = []
         self.usercallbacks = {}
-        self.supporter.loadBuiltinCommands()
+        self.supporter.loadBuiltinCommands(self.serverInternalHandlers)
 
         # Extra configuration
         self.ipblocklist = [] # Use to block IP addresses
@@ -50,11 +46,14 @@ class server:
         self.getUsernames = self.supporter.getUsernames
         self.setClientUsername = self.supporter.setClientUsername
         self.log = self.supporter.log
+        self.callback = self.supporter.callback
         
-        # Create stuff for the callback system
+        # Create callbacks, command-specific callbacks are not needed in server mode
         self.on_packet = self.serverRootHandlers.on_packet
         self.on_connect = self.serverRootHandlers.on_connect
         self.on_close = self.serverRootHandlers.on_close
+
+        self.log("Cloudlink server initialized!")
 
     def run(self, port=3000, host="127.0.0.1"):
         # Initialize the Websocket Server
@@ -77,18 +76,4 @@ class server:
         self.motd_enable = enable
         self.motd_msg = msg
 
-    def callback(self, callback_id, function):
-        # Support older servers which use the old callback system.
-        if type(callback_id) == str:
-            callback_id = getattr(self, callback_id)
-        
-        # New callback system.
-        if callable(callback_id):
-            if callback_id == self.on_packet:
-                self.usercallbacks[self.on_packet] = function
-            elif callback_id == self.on_connect:
-                self.usercallbacks[self.on_connect] = function
-            elif callback_id == self.on_close:
-                self.usercallbacks[self.on_close] = function
-            elif callback_id == self.on_error:
-                self.usercallbacks[self.on_error] = function
+    

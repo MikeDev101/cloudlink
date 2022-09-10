@@ -133,6 +133,7 @@ class WebsocketServer(ThreadingMixIn, TCPServer, API):
         self.cert = cert
 
         self.clients = set()
+        self.idcounter = 0
         self.thread = None
 
         self._deny_clients = False
@@ -174,7 +175,9 @@ class WebsocketServer(ThreadingMixIn, TCPServer, API):
             self._terminate_client_handler(handler)
             return
         
-        handler.id = len(self.clients) + 1
+        handler.id = self.idcounter
+        self.idcounter += 1
+        
         if type(handler.client_address) == tuple:
             handler.full_ip = f"{handler.client_address[0]}:{handler.client_address[1]}"
             handler.friendly_ip = handler.client_address[0]
@@ -442,20 +445,9 @@ class WebSocketHandler(StreamRequestHandler):
             self.keep_alive = False
             return
         
-        # Guard cases
-        ipcheck = False
-
-        # Cloudflare support
+        # CloudFlared support
         if "cf-connecting-ip" in self.headers:
-            if not ipcheck:
-                ipcheck = True
-                self.client_address = self.headers["cf-connecting-ip"]
-        
-        # X-Forwarded-For support
-        if "x-forwarded-for" in self.headers:
-            if not ipcheck:
-                ipcheck = True
-                self.client_address = self.headers["x-forwarded-for"].split(",")[0]
+            self.client_address = self.headers["cf-connecting-ip"]
         
         response = self.make_handshake_response(key)
         with self._send_lock:

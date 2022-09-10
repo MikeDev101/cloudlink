@@ -47,6 +47,7 @@ class serverRootHandlers:
                 if self.cloudlink.motd_enable:
                     self.cloudlink.sendPacket(client, {"cmd": "motd", "val": self.cloudlink.motd_msg}, ignore_rooms = True)
 
+                # Fire callbacks
                 if self.on_connect in self.cloudlink.usercallbacks:
                     if self.cloudlink.usercallbacks[self.on_connect] != None:
                         self.cloudlink.usercallbacks[self.on_connect](client=client, server=server)
@@ -64,6 +65,7 @@ class serverRootHandlers:
                 ulist = self.supporter.getUsernames(room)
                 self.supporter.sendPacket(clist, {"cmd": "ulist", "val": ulist}, rooms = room)
 
+            # Fire callbacks
             if self.on_close in self.cloudlink.usercallbacks:
                 if self.cloudlink.usercallbacks[self.on_close] != None:
                     self.cloudlink.usercallbacks[self.on_close](client=client, server=server)
@@ -120,6 +122,10 @@ class serverRootHandlers:
                         # Check if the command is a built-in Cloudlink command
                         if ((message["cmd"] in self.cloudlink.builtInCommands) and not(message["cmd"] == "direct")):
                             getattr(self.cloudlink, str(message["cmd"]))(client, server, message, listener_detected, listener_id, room_id)
+                            # Fire callbacks
+                            if self.on_packet in self.cloudlink.usercallbacks:
+                                if self.cloudlink.usercallbacks[self.on_packet] != None:
+                                    self.cloudlink.usercallbacks[self.on_packet](client=client, server=server, message=message)
                         else:
                             # Attempt to read the command as a direct or custom command
                             isCustom = False
@@ -148,6 +154,11 @@ class serverRootHandlers:
                                         getattr(self.cloudlink, str(message["cmd"]))(client, server, message, listener_detected, listener_id, room_id)
                                     else:
                                         getattr(self.cloudlink, "direct")(client, server, message, listener_detected, listener_id, room_id)
+                                
+                                # Fire callbacks
+                                if self.on_packet in self.cloudlink.usercallbacks:
+                                    if self.cloudlink.usercallbacks[self.on_packet] != None:
+                                        self.cloudlink.usercallbacks[self.on_packet](client=client, server=server, message=message)
                             else:
                                 if message["cmd"] in self.cloudlink.disabledCommands:
                                     self.supporter.log(f"Client {client.id} ({client.full_ip}) sent custom command \"{message['cmd']}\", but the command is disabled.")
@@ -155,10 +166,7 @@ class serverRootHandlers:
                                 else:
                                     self.supporter.log(f"Client {client.id} ({client.full_ip}) sent custom command \"{message['cmd']}\", but the command is invalid or it was not loaded.")
                                     self.cloudlink.sendCode(client, "Invalid")
-
-                        if self.on_packet in self.cloudlink.usercallbacks:
-                            if self.cloudlink.usercallbacks[self.on_packet] != None:
-                                self.cloudlink.usercallbacks[self.on_packet](client=client, server=server, message=message)
+                                    
                     else:
                         self.supporter.log(f"Packet \"{message}\" is invalid, incomplete, or malformed!")
                         self.cloudlink.sendCode(client, "Syntax")

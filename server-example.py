@@ -4,14 +4,18 @@ class customCommands:
     """
     customCommands
 
-    This is an example of Cloudlink 4.0's new custom commands system. 
+    This is an example of Cloudlink 4.0's custom commands system. 
     """
 
-    def __init__(self, cloudlink):
+    def __init__(self, cloudlink, extra_data:any = None):
         # To use custom commands, you will need to initialize your custom commands class with Cloudlink. This is required.
         self.cloudlink = cloudlink
+
         # You can specify which functions to ignore when using Cloudlink.server.loadCustomCommands. This is optional.
         self.importer_ignore_functions = [] # ["test"] if you don't want to load the custom command "test".
+
+        # You can specify extra data to this class, see __main__ below.
+        self.extra_data = extra_data
 
         # Optionally, you can reference Cloudlink components for extended functionality.
         self.supporter = self.cloudlink.supporter
@@ -24,6 +28,7 @@ class customCommands:
         self - Should be a class reference to itself.
         client - Dictionary object that identifies clients. Contains headers, address, handler, and id. See /cloudlink/websocket_server/websocket_server.py for info.
         server - Required for the websocket server and for backward compatibility.
+        message - The command's payload.
         listener_detected - Boolean that is set when Cloudlink.server.serverRootHandlers checks a packet and identifies the JSON key "listener" in a packet.
         listener_id - Any value that is set when Cloudlink.server.serverRootHandlers checks a packet and reads the JSON key "listener" in a packet.
         room_id - Array of strings that is set when a client has been linked to rooms. Defaults to either None or ["default"].
@@ -32,38 +37,50 @@ class customCommands:
         """
         self.cloudlink.sendPacket(client, {"cmd": "direct", "val": "test"}, listener_detected, listener_id, room_id)
 
-class demoCallbacks:
+class demoCallbacksServer:
     """
-    demoCallbacks
+    demoCallbacksServer
 
-    This is an example of Cloudlink's callback compatibility system, which re-implements callbacks used in older versions of Cloudlink.
-    It is not recommended to use this feature in newer implementations as it has been replaced with Cloudlink.server.loadCustomCommands.
+    This is an example of Cloudlink's callback system.
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, cloudlink):
+        # To use callbacks, you will need to initialize your callbacks class with Cloudlink. This is required.
+        self.cloudlink = cloudlink
 
     def on_packet(self, client, server, message):
-        print("on_packet")
+        print("on_packet fired!")
     
     def on_connect(self, client, server):
-        print("on_connect")
+        print("on_connect fired!")
 
     def on_close(self, client, server):
-        print("on_close")
+        print("on_close fired!")
 
 if __name__ == "__main__":
+    # Initialize Cloudlink. You will only need to initialize one instance of the main cloudlink module.
     cl = Cloudlink()
-    dummy = demoCallbacks()
-
+    
+    # Create a new server object. This supports initializing many server at once.
     server = cl.server(logs=True)
+
+    # Set the server's Message-Of-The-Day.
     server.setMOTD(True, "CloudLink 4 Test")
 
-    #server.callback(server.on_packet, dummy.on_packet)
-    #server.callback(server.on_connect, dummy.on_connect)
-    #server.callback(server.on_close, dummy.on_close)
+    # Create demo callbacks. You can only initialize callbacks after you have initialized a cloudlink server object.
+    dummy = demoCallbacksServer(server)
 
-    #server.loadCustomCommands(customCommands)
+    # Bind demo callbacks
+    server.callback(server.on_packet, dummy.on_packet)
+    server.callback(server.on_connect, dummy.on_connect)
+    server.callback(server.on_close, dummy.on_close)
+
+    # To pass custom commands, simply pass a list containing uninitialized classes.
+    # To specify custom parameters, pass a dictionary object with an uninitialized class as a key and your custom parameters as it's value.
+    #client.loadCustomCommands(customCommands, {customCommands: dummy})
+    server.loadCustomCommands(customCommands)
+
+    # Command disabler. Simply pass a list of strings containing either CLPv4 commands to ignore, or custom commands to unload.
     #server.disableCommands(["gmsg"])
 
-    server.run(host="0.0.0.0", port=3002)
+    server.run(host="0.0.0.0", port=3000)
