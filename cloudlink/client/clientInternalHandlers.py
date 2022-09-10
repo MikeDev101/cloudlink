@@ -47,6 +47,11 @@ class clientInternalHandlers():
     def ulist(self, message):
         self.supporter.log(f"Userlist updated: {message['val']}")
 
+        # Reset the userlist
+        if "default" in self.cloudlink.userlist:
+            self.cloudlink.userlist = {}
+        
+        # Update individual values
         if "room" in message:
             self.cloudlink.userlist[message['room']] = message['val']
         else:
@@ -77,7 +82,7 @@ class clientInternalHandlers():
         # Fire callbacks
         if self.statuscode in self.cloudlink.usercallbacks:
             if self.cloudlink.usercallbacks[self.statuscode] != None:
-                self.cloudlink.usercallbacks[self.statuscode](message["code"])
+                self.cloudlink.usercallbacks[self.statuscode](message["code"], message)
     
     # Global messages
     def gmsg(self, message):

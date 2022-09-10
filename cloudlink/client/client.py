@@ -3,6 +3,12 @@ from .clientRootHandlers import clientRootHandlers
 from .clientInternalHandlers import clientInternalHandlers
 
 class client:
+    """
+    cloudlink.client
+
+    This is the client mode for Cloudlink. You can connect to a Cloudlink server and send/receive packets like a Scratch client would. This module simplifies the Cloudlink protocol for Python.
+    """
+
     def __init__(self, parentCl, enable_logs=True):
         # Read the CloudLink version from the parent class
         self.version = parentCl.version
@@ -36,7 +42,6 @@ class client:
         self.loadCustomCommands = self.supporter.loadCustomCommands
         self.disableCommands = self.supporter.disableCommands
         self.sendPacket = self.supporter.sendPacket
-        self.sendCode = self.supporter.sendCode
         self.log = self.supporter.log
         self.callback = self.supporter.callback
         
@@ -83,6 +88,12 @@ class client:
             self.linkStatus = 3
             self.log("Cloudlink client disconnecting...")
             self.wss.close()
+            self.cloudlink.connected = False
+
+            # Fire callbacks
+            if self.on_close in self.cloudlink.usercallbacks:
+                if self.cloudlink.usercallbacks[self.on_close] != None:
+                    self.cloudlink.usercallbacks[self.on_close](close_status_code=None, close_msg=None)
 
     # Client API
 
@@ -112,7 +123,7 @@ class client:
                 msg["listener"] = listener
             self.cloudlink.sendPacket(msg)
 
-    def sendDirect(self, message:str, username:str = None, listener:str = None):
+    def sendDirect(self, message:any, username:str = None, listener:str = None):
         if self.connected:
             msg = {"cmd": "direct", "val": message}
             if listener:
@@ -121,7 +132,7 @@ class client:
                 msg["id"] = username
             self.cloudlink.sendPacket(msg)
     
-    def sendCustom(self, cmd:str, message:str, username:str = None, listener:str = None):
+    def sendCustom(self, cmd:str, message:any, username:str = None, listener:str = None):
         if self.connected:
             msg = {"cmd": cmd, "val": message}
             if listener:
@@ -130,7 +141,7 @@ class client:
                 msg["id"] = username
             self.cloudlink.sendPacket(msg)
     
-    def sendPing(self, dummy_payload:str = "", username:str = None, listener:str = None):
+    def sendPing(self, dummy_payload:any = "", username:str = None, listener:str = None):
         if self.connected:
             msg = {"cmd": "ping", "val": dummy_payload}
             if listener:
@@ -139,28 +150,28 @@ class client:
                 msg["id"] = username
             self.cloudlink.sendPacket(msg)
     
-    def sendGlobalMessage(self, message:str, listener:str = None):
+    def sendGlobalMessage(self, message:any, listener:str = None):
         if self.connected:
             msg = {"cmd": "gmsg", "val": message}
             if listener:
                 msg["listener"] = listener
             self.cloudlink.sendPacket(msg)
     
-    def sendPrivateMessage(self, message:str, username:str = "", listener:str = None):
+    def sendPrivateMessage(self, message:any, username:str = "", listener:str = None):
         if self.connected:
             msg = {"cmd": "pmsg", "val": message, "id": username}
             if listener:
                 msg["listener"] = listener
             self.cloudlink.sendPacket(msg)
 
-    def sendGlobalVariable(self, var_name:str, var_value:str, listener:str = None):
+    def sendGlobalVariable(self, var_name:str, var_value:any, listener:str = None):
         if self.connected:
             msg = {"cmd": "gvar", "val": var_value, "name": var_name}
             if listener:
                 msg["listener"] = listener
             self.cloudlink.sendPacket(msg)
     
-    def sendPrivateVariable(self, var_name:str, var_value:str, username:str = "", listener:str = None):
+    def sendPrivateVariable(self, var_name:str, var_value:any, username:str = "", listener:str = None):
         if self.connected:
             msg = {"cmd": "pvar", "val": var_value, "name": var_name, "id": username}
             if listener:

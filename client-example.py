@@ -27,7 +27,7 @@ class demoCallbacksClient:
     def on_error(self, error): # Called when the client encounters an exception.
         print("on_error fired!")
 
-     # Below are templates for binding command-specific callbacks.
+    # Below are templates for binding command-specific callbacks.
 
     def on_direct(self, message:any): # Called when a packet is received with the direct command.
         print("on_direct fired!")
@@ -49,11 +49,11 @@ class demoCallbacksClient:
         print("on_ulist fired!")
         # pass
 
-    def on_statuscode(self, code:str): # Called when a packet is received with the statuscode command.
+    def on_statuscode(self, code:str, message:any): # Called when a packet is received with the statuscode command.
         print("on_statuscode fired!")
         # pass
     
-    def on_gmsg(self, message:str): # Called when a packet is received with the gmsg command.
+    def on_gmsg(self, message:any): # Called when a packet is received with the gmsg command.
         print("on_gmsg fired!")
         # pass
 

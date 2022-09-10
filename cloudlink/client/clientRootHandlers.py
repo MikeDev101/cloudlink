@@ -1,8 +1,7 @@
 class clientRootHandlers:
     """
     The clientRootHandlers inter class is an interface for the WebsocketClient to communicate with Cloudlink.
-    Cloudlink.clientRootHandlers.onPacket talks to the Cloudlink.packetHandler function to handle packets,
-    which will call upon Cloudlink.internalHandlers or some other external, custom code (if used).
+    cloudlink.clientRootHandlers.on_packet talks to cloudlink.clientInternalHandlers or some other external, custom code (if used).
     """
     
     def __init__(self, cloudlink):
@@ -38,9 +37,6 @@ class clientRootHandlers:
             self.cloudlink.linkStatus = 4
             self.cloudlink.connectionLost = True
             self.supporter.log(f"Client lost connection! Disconnected with status code {close_status_code} and message \"{close_msg}\"")
-        else:
-            self.cloudlink.linkStatus = 3
-            self.supporter.log(f"Client gracefully disconnected! Disconnected with status code {close_status_code} and message \"{close_msg}\"")
         self.cloudlink.connected = False
 
         # Fire callbacks
@@ -88,11 +84,11 @@ class clientRootHandlers:
                             isValid = False
                         if isValid:
                             if isLegacy:
-                                self.supporter.log(f"Client recieved legacy custom command \"{message['val']['cmd']}\"")
+                                self.supporter.log(f"Client received legacy custom command \"{message['val']['cmd']}\"")
                                 getattr(self.cloudlink, str(message["val"]["cmd"]))(message=message)
                             else:
                                 if isCustom:
-                                    self.supporter.log(f"Client recieved custom command \"{message['cmd']}\"")
+                                    self.supporter.log(f"Client received custom command \"{message['cmd']}\"")
                                     getattr(self.cloudlink, str(message["cmd"]))(message=message)
                                 else:
                                     getattr(self.cloudlink, "direct")(message=message)
@@ -103,9 +99,9 @@ class clientRootHandlers:
                                     self.cloudlink.usercallbacks[self.on_packet](message=message)
                         else:
                             if message["cmd"] in self.cloudlink.disabledCommands:
-                                self.supporter.log(f"Client recieved command \"{message['cmd']}\", but the command is disabled.")
+                                self.supporter.log(f"Client received command \"{message['cmd']}\", but the command is disabled.")
                             else:
-                                self.supporter.log(f"Client recieved command \"{message['cmd']}\", but the command is invalid or it was not loaded.")
+                                self.supporter.log(f"Client received command \"{message['cmd']}\", but the command is invalid or it was not loaded.")
                 else:
                     self.supporter.log(f"Packet \"{message}\" is invalid, incomplete, or malformed!")
             except:

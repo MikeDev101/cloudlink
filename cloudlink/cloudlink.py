@@ -18,7 +18,7 @@ Please see https://github.com/MikeDev101/cloudlink for more details.
 
 class Cloudlink:
     def __init__(self):
-        self.version = "0.1.8.3"
+        self.version = "0.1.8.4"
         self.supporter = supporter
         print(f"Cloudlink v{self.version}")
 

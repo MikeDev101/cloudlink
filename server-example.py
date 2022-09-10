@@ -4,14 +4,14 @@ class customCommands:
     """
     customCommands
 
-    This is an example of Cloudlink 4.0's custom commands system. 
+    This is an example of Cloudlink's custom commands system. 
     """
 
     def __init__(self, cloudlink, extra_data:any = None):
         # To use custom commands, you will need to initialize your custom commands class with Cloudlink. This is required.
         self.cloudlink = cloudlink
 
-        # You can specify which functions to ignore when using Cloudlink.server.loadCustomCommands. This is optional.
+        # You can specify which functions to ignore when using cloudlink.server.loadCustomCommands. This is optional.
         self.importer_ignore_functions = [] # ["test"] if you don't want to load the custom command "test".
 
         # You can specify extra data to this class, see __main__ below.
@@ -20,20 +20,19 @@ class customCommands:
         # Optionally, you can reference Cloudlink components for extended functionality.
         self.supporter = self.cloudlink.supporter
 
-    def test(self, client, server, message, listener_detected, listener_id, room_id):
+    def test(self, client, message, listener_detected, listener_id, room_id):
         """
         To define a custom command, a command must contain the following parameters:
         self, client, server, message, listener_detected, listener_id, room_id
 
         self - Should be a class reference to itself.
         client - Dictionary object that identifies clients. Contains headers, address, handler, and id. See /cloudlink/websocket_server/websocket_server.py for info.
-        server - Required for the websocket server and for backward compatibility.
         message - The command's payload.
-        listener_detected - Boolean that is set when Cloudlink.server.serverRootHandlers checks a packet and identifies the JSON key "listener" in a packet.
-        listener_id - Any value that is set when Cloudlink.server.serverRootHandlers checks a packet and reads the JSON key "listener" in a packet.
+        listener_detected - Boolean that is set when cloudlink.server.serverRootHandlers checks a packet and identifies the JSON key "listener" in a packet.
+        listener_id - Any value that is set when cloudlink.server.serverRootHandlers checks a packet and reads the JSON key "listener" in a packet.
         room_id - Array of strings that is set when a client has been linked to rooms. Defaults to either None or ["default"].
 
-        Most of the time, you will be passing listener_detected, listener_id, and room_id to various cloudlink functions. You will likely never use server.
+        You will pass listener_detected, listener_id, and room_id to various cloudlink functions. See cloudlink.server for more info.
         """
         self.cloudlink.sendPacket(client, {"cmd": "direct", "val": "test"}, listener_detected, listener_id, room_id)
 
@@ -48,13 +47,13 @@ class demoCallbacksServer:
         # To use callbacks, you will need to initialize your callbacks class with Cloudlink. This is required.
         self.cloudlink = cloudlink
 
-    def on_packet(self, client, server, message):
+    def on_packet(self, client, message):
         print("on_packet fired!")
     
-    def on_connect(self, client, server):
+    def on_connect(self, client):
         print("on_connect fired!")
 
-    def on_close(self, client, server):
+    def on_close(self, client):
         print("on_close fired!")
 
 if __name__ == "__main__":

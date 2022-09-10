@@ -1,8 +1,7 @@
 class serverRootHandlers:
     """
     The serverRootHandlers inter class is an interface for the WebsocketServer to communicate with Cloudlink.
-    Cloudlink.serverRootHandlers.onPacket talks to the Cloudlink.packetHandler function to handle packets,
-    which will call upon Cloudlink.internalHandlers or some other external, custom code (if used).
+    cloudlink.serverRootHandlers.on_packet talks to cloudlink.serverInternalHandlers or some other external, custom code (if used).
     """
     
     def __init__(self, cloudlink):
@@ -15,21 +14,21 @@ class serverRootHandlers:
                 self.supporter.log(f"Client {client.id} ({client.full_ip}) was rejected.")
 
                 # Reject the client
-                self.supporter.rejectClient(client, "Connection rejected")
+                self.cloudlink.rejectClient(client, "Connection rejected")
 
             elif client.friendly_ip in self.cloudlink.ipblocklist:
                 self.supporter.log(f"Client {client.id} ({client.full_ip}) was blocked from connecting.")
 
                 # Block the client
-                self.supporter.rejectClient(client, "IP blocked")
+                self.cloudlink.rejectClient(client, "IP blocked")
             else:
                 self.supporter.log(f"Client {client.id} ({client.full_ip}) connected.")
 
                 # Create attributes for the client
-                self.supporter.createAttrForClient(client)
+                self.cloudlink.createAttrForClient(client)
 
                 # Join default room
-                self.supporter.linkClientToRooms(client, "default")
+                self.cloudlink.linkClientToRooms(client, "default")
 
                 # Report to the client it's IP address
                 self.cloudlink.sendPacket(client, {"cmd": "client_ip", "val": str(client.full_ip)}, ignore_rooms = True)
@@ -41,7 +40,7 @@ class serverRootHandlers:
                 self.cloudlink.sendPacket(client, {"cmd": "gmsg", "val": self.cloudlink.global_msg}, ignore_rooms = True)
 
                 # Update the client's userlist
-                self.cloudlink.sendPacket(client, {"cmd": "ulist", "val": self.supporter.getUsernames()}, ignore_rooms = True)
+                self.cloudlink.sendPacket(client, {"cmd": "ulist", "val": self.cloudlink.getUsernames()}, ignore_rooms = True)
 
                 # Tell the client the server's Message-Of-The-Day (MOTD)
                 if self.cloudlink.motd_enable:
@@ -50,25 +49,25 @@ class serverRootHandlers:
                 # Fire callbacks
                 if self.on_connect in self.cloudlink.usercallbacks:
                     if self.cloudlink.usercallbacks[self.on_connect] != None:
-                        self.cloudlink.usercallbacks[self.on_connect](client=client, server=server)
+                        self.cloudlink.usercallbacks[self.on_connect](client=client)
     
     def on_close(self, client, server):
         if not(client == None):
             self.supporter.log(f"Client {client.id} ({client.full_ip}) disconnected.")
             
             # Remove client from all rooms (Required to prevent BrokenPipeErrors)
-            self.supporter.removeClientFromAllRooms(client)
+            self.cloudlink.removeClientFromAllRooms(client)
 
             # Update ulists in all rooms
             for room in self.cloudlink.roomData:
                 clist = self.cloudlink.getAllUsersInRoom(room)
-                ulist = self.supporter.getUsernames(room)
+                ulist = self.cloudlink.getUsernames(room)
                 self.supporter.sendPacket(clist, {"cmd": "ulist", "val": ulist}, rooms = room)
 
             # Fire callbacks
             if self.on_close in self.cloudlink.usercallbacks:
                 if self.cloudlink.usercallbacks[self.on_close] != None:
-                    self.cloudlink.usercallbacks[self.on_close](client=client, server=server)
+                    self.cloudlink.usercallbacks[self.on_close](client=client)
     
     def on_packet(self, client, server, message):
         if not(client == None):
@@ -121,11 +120,11 @@ class serverRootHandlers:
 
                         # Check if the command is a built-in Cloudlink command
                         if ((message["cmd"] in self.cloudlink.builtInCommands) and not(message["cmd"] == "direct")):
-                            getattr(self.cloudlink, str(message["cmd"]))(client, server, message, listener_detected, listener_id, room_id)
+                            getattr(self.cloudlink, str(message["cmd"]))(client, message, listener_detected, listener_id, room_id)
                             # Fire callbacks
                             if self.on_packet in self.cloudlink.usercallbacks:
                                 if self.cloudlink.usercallbacks[self.on_packet] != None:
-                                    self.cloudlink.usercallbacks[self.on_packet](client=client, server=server, message=message)
+                                    self.cloudlink.usercallbacks[self.on_packet](client=client, message=message)
                         else:
                             # Attempt to read the command as a direct or custom command
                             isCustom = False
@@ -147,25 +146,25 @@ class serverRootHandlers:
                             if isValid:
                                 if isLegacy:
                                     self.supporter.log(f"Client {client.id} ({client.full_ip}) sent legacy custom command \"{message['val']['cmd']}\"")
-                                    getattr(self.cloudlink, str(message["val"]["cmd"]))(client, server, message, listener_detected, listener_id, room_id)
+                                    getattr(self.cloudlink, str(message["val"]["cmd"]))(client, message, listener_detected, listener_id, room_id)
                                 else:
                                     if isCustom:
                                         self.supporter.log(f"Client {client.id} ({client.full_ip}) sent custom command \"{message['cmd']}\"")
-                                        getattr(self.cloudlink, str(message["cmd"]))(client, server, message, listener_detected, listener_id, room_id)
+                                        getattr(self.cloudlink, str(message["cmd"]))(client, message, listener_detected, listener_id, room_id)
                                     else:
-                                        getattr(self.cloudlink, "direct")(client, server, message, listener_detected, listener_id, room_id)
+                                        getattr(self.cloudlink, "direct")(client, message, listener_detected, listener_id, room_id)
                                 
                                 # Fire callbacks
                                 if self.on_packet in self.cloudlink.usercallbacks:
                                     if self.cloudlink.usercallbacks[self.on_packet] != None:
-                                        self.cloudlink.usercallbacks[self.on_packet](client=client, server=server, message=message)
+                                        self.cloudlink.usercallbacks[self.on_packet](client=client, message=message)
                             else:
                                 if message["cmd"] in self.cloudlink.disabledCommands:
                                     self.supporter.log(f"Client {client.id} ({client.full_ip}) sent custom command \"{message['cmd']}\", but the command is disabled.")
-                                    self.cloudlink.sendCode(client, "Disabled")
+                                    self.cloudlink.sendCode(client, "Disabled", listener_detected, listener_id)
                                 else:
                                     self.supporter.log(f"Client {client.id} ({client.full_ip}) sent custom command \"{message['cmd']}\", but the command is invalid or it was not loaded.")
-                                    self.cloudlink.sendCode(client, "Invalid")
+                                    self.cloudlink.sendCode(client, "Invalid", listener_detected, listener_id)
                                     
                     else:
                         self.supporter.log(f"Packet \"{message}\" is invalid, incomplete, or malformed!")
