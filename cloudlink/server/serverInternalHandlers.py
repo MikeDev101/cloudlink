@@ -203,6 +203,10 @@ class serverInternalHandlers():
             # Remove the client from all rooms and set their room to the default room
             self.cloudlink.unlinkClientFromRooms(client)
 
+            # Add client to rooms
+            self.cloudlink.linkClientToRooms(client, "default")
+            client.is_linked = False
+
             # Tell the client that they were unlinked
             await self.cloudlink.sendCode(client, "OK", listener_detected, listener_id)
 
@@ -297,21 +301,22 @@ class serverInternalHandlers():
         }
         
         # Send the message to all clients except the origin
-        if not type(room_id) == None:
+        if room_id in [None, "default"]:
+            ulist = self.cloudlink.getAllUsersInRoom("default")
+            if client in ulist:
+                ulist.remove(client)
+            await self.cloudlink.sendPacket(ulist, msg)
+
+            # Cache the last message for new clients
+            self.cloudlink.global_msg = message["val"]
+        else:
             for room in room_id:
                 ulist = []
                 for user in self.cloudlink.getAllUsersInRoom(room):
                     ulist.append(user)
                 ulist.remove(client)
                 await self.cloudlink.sendPacket(ulist, msg, rooms = room)
-        else:
-            ulist = self.cloudlink.getAllUsersInRoom("default")
-            ulist.remove(client)
-            await self.cloudlink.sendPacket(ulist, msg)
-
-            # Cache the last message for new clients
-            self.cloudlink.global_msg = message["val"]
-            
+        
         # Send the message back to origin
         await self.cloudlink.sendPacket(client, msg, listener_detected, listener_id, room_id)
         
@@ -337,17 +342,21 @@ class serverInternalHandlers():
         }
         
         # Send the message to all clients except the origin
-        if not type(room_id) == None:
+        if room_id in [None, "default"]:
+            ulist = self.cloudlink.getAllUsersInRoom("default")
+            if client in ulist:
+                ulist.remove(client)
+            await self.cloudlink.sendPacket(ulist, msg)
+
+            # Cache the last message for new clients
+            self.cloudlink.global_msg = message["val"]
+        else:
             for room in room_id:
                 ulist = []
                 for user in self.cloudlink.getAllUsersInRoom(room):
                     ulist.append(user)
                 ulist.remove(client)
                 await self.cloudlink.sendPacket(ulist, msg, rooms = room)
-        else:
-            ulist = self.cloudlink.getAllUsersInRoom("default")
-            ulist.remove(client)
-            await self.cloudlink.sendPacket(ulist, msg)
             
         # Send the message back to origin
         await self.cloudlink.sendPacket(client, msg, listener_detected, listener_id, room_id)
