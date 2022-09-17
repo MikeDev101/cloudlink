@@ -1,4 +1,3 @@
-from .websocket_server import WebsocketServer
 from .serverRootHandlers import serverRootHandlers
 from .serverInternalHandlers import serverInternalHandlers
 
@@ -12,6 +11,8 @@ class server:
     def __init__(self, parentCl, enable_logs=True):
         # Read the CloudLink version from the parent class
         self.version = parentCl.version
+        self.asyncio = parentCl.asyncio
+        self.wss = parentCl.ws
 
         # Init the server
         self.userlist = []
@@ -21,6 +22,8 @@ class server:
         self.roomData = {
             "default": set()
         }
+        self.all_clients = set()
+        self.ws_server = None
         
         # Init modules
         self.supporter = parentCl.supporter(self, enable_logs, 1)
@@ -46,31 +49,44 @@ class server:
         self.log = self.supporter.log
         self.callback = self.supporter.callback
         
-        # Create callbacks, command-specific callbacks are not needed in server mode
+        # Create default callbacks
         self.on_packet = self.serverRootHandlers.on_packet
         self.on_connect = self.serverRootHandlers.on_connect
         self.on_close = self.serverRootHandlers.on_close
+        self.on_direct = self.serverInternalHandlers.direct
+        
+        # Callbacks for command-specific events
+        self.on_direct = self.serverInternalHandlers.direct
+        self.on_ulist = self.serverInternalHandlers.ulist
+        self.on_statuscode = self.serverInternalHandlers.statuscode
+        self.on_setid = self.serverInternalHandlers.setid
+        self.on_gmsg = self.serverInternalHandlers.gmsg
+        self.on_gvar = self.serverInternalHandlers.gvar
+        self.on_pvar = self.serverInternalHandlers.pvar
+        self.on_pmsg = self.serverInternalHandlers.pmsg
+        self.on_ping = self.serverInternalHandlers.ping
 
         self.log("Cloudlink server initialized!")
-
+    
+    # Server API
+    
     def run(self, port=3000, host="127.0.0.1"):
         # Initialize the Websocket Server
-        self.log("Cloudlink server starting up now...")
-        self.wss = WebsocketServer(host, port)
-
-        # Bind built-in callbacks
-        self.wss.set_fn_new_client(self.serverRootHandlers.on_connect)
-        self.wss.set_fn_message_received(self.serverRootHandlers.on_packet)
-        self.wss.set_fn_client_left(self.serverRootHandlers.on_close)
-
-        # Create attributes
-        self.all_clients = self.wss.clients
-
-        # Run the CloudLink server
-        self.wss.run_forever()
-        self.log("Cloudlink server exiting...")
-
-    # Server API
+        self.log("Cloudlink server is starting up now...")
+        try:
+            self.ws_server = self.wss.serve(self.__handler__, host, port)
+            loop = self.asyncio.get_event_loop()
+            loop.run_until_complete(self.__run__())
+            loop.close()
+        except KeyboardInterrupt:
+            # Make keyboard interrupts silent
+            pass
+        self.log("Cloudlink server shutting down...")
+    
+    async def stop(self):
+        if self.ws_server.is_serving():
+            self.ws_server.close()
+            await self.ws_server.wait_close()
 
     def setMOTD(self, enable:bool, msg:str):
         self.motd_enable = enable
@@ -78,31 +94,28 @@ class server:
 
     def setClientUsername(self, client, username):
         if type(username) == str:
-            if client in self.all_clients:
+            all_clients = self.all_clients.copy()
+            if client in all_clients:
                 if not client.username_set:
                     self.log(f"Setting client {client.id} ({client.full_ip}) username to \"{username}\"...")
                     client.friendly_username = username
                     client.username_set = True
         else:
             raise TypeError
-
-    def createAttrForClient(self, client):
-        client.friendly_username = ""
-        client.username_set = False
-        client.rooms = ["default"]
-        client.is_linked = False
-
-    def rejectClient(self, client, reason):
-        if client in self.all_clients:
-            client.send_close(1000, bytes(reason, encoding='utf-8'))
-            self.wss._terminate_client_handler(client)
+    
+    async def rejectClient(self, client, reason):
+        all_clients = self.all_clients.copy()
+        if client in all_clients:
+            client.rejected = True
+            await client.close(1000, reason)
 
     def getUserObject(self, identifier):
+        all_clients = self.all_clients.copy()
         # NOT RECOMMENDED - Try to find the client object with a username
         if type(identifier) == str:
             clientIDs = []
             clientObjs = []
-            for client in self.all_clients:
+            for client in all_clients:
                 clientIDs.append(client.friendly_username)
                 clientObjs.append(client)
             
@@ -122,25 +135,15 @@ class server:
 
         # BEST PRACTICE - Identify client object using it's websocket object number
         elif type(identifier) == int:
-            clientIDs = []
-            clientObjs = []
-            for client in self.all_clients:
-                clientIDs.append(client.id)
-                clientObjs.append(client)
-            
-            if identifier in clientIDs:
-                return clientObjs[clientIDs.index(identifier)]
+            for client in all_clients:
+                if identifier == client.id:
+                    return client
     
         # UGLY BUT WORKS - Identify client object using the output of supporter.getUserlist / serverInternalHandlers.setid ({"username": "", "id": ""} pairing for clients)
         elif type(identifier) == dict:
-            clientIDs = []
-            clientObjs = []
-            for client in self.all_clients:
-                clientIDs.append(client.id)
-                clientObjs.append(client)
-            
-            if identifier["id"] in clientIDs:
-                return clientObjs[clientIDs.index(identifier["id"])]
+            for client in all_clients:
+                if identifier["id"] == client.id:
+                    return client
         
         # Unsupported type
         else:
@@ -163,12 +166,15 @@ class server:
             return TypeError
     
     def getUserObjectFromClientObj(self, client):
-        if client in self.all_clients:
+        all_clients = self.all_clients.copy()
+        if client in all_clients:
             if client.username_set:
                 return {
                     "username": client.friendly_username, 
                     "id": client.id
                 }
+            else:
+                return None
     
     def getUsernames(self, rooms:list = ["default"]):
         userlist = []
@@ -228,7 +234,8 @@ class server:
     
     def linkClientToRooms(self, client, rooms):
         if type(rooms) in [str, list, set]:
-            if client in self.all_clients:
+            all_clients = self.all_clients.copy()
+            if client in all_clients:
                 # Convert to set
                 if type(rooms) in [list, str]:
                     if type(rooms) == str:
@@ -250,7 +257,8 @@ class server:
             raise TypeError
     
     def unlinkClientFromRooms(self, client):
-        if client in self.all_clients: 
+        all_clients = self.all_clients.copy()
+        if client in all_clients: 
             self.log(f"Unlinking client {client.id} ({client.full_ip}) from rooms...")
             # Remove client from all rooms
             self.removeClientFromAllRooms(client)
@@ -263,7 +271,8 @@ class server:
             client.is_linked = False
     
     def removeClientFromAllRooms(self, client):
-        if client in self.all_clients: 
+        all_clients = self.all_clients.copy()
+        if client in all_clients: 
             self.roomHandler(2, client, client.rooms)
 
     def roomHandler(self, mode, client, room_ids):
@@ -303,3 +312,51 @@ class server:
             # Automatically remove empty rooms, and prevent accidental deletion of the default room
             if (len(self.roomData[room_id]) == 0) and (room_id != "default"): 
                 del self.roomData[room_id]
+    
+    # Async components that are required to make the server work
+    
+    async def __run__(self):
+        # Init the async server
+        self.future = self.asyncio.Future()
+        async with self.ws_server:
+            self.log("Cloudlink server is ready to accept connections!")
+            await self.future # Run the server
+    
+    async def __handler__(self, websocket):
+        # Add client to the server
+        self.all_clients.add(websocket)
+        
+        # Create attributes for the client
+        websocket.friendly_username = ""
+        websocket.username_set = False
+        websocket.rooms = ["default"]
+        websocket.is_linked = False
+        websocket.id = len(self.all_clients)
+        websocket.rejected = False
+        
+        # Get the IP address of client
+        if "x-forwarded-for" in websocket.request_headers:
+            websocket.full_ip = websocket.request_headers.get("x-forwarded-for")
+        elif "cf-connecting-ip" in websocket.request_headers:
+            websocket.full_ip = websocket.request_headers.get("cf-connecting-ip")
+        else:
+            if type(websocket.remote_address) == tuple:
+                websocket.full_ip = f"{websocket.remote_address[0]}:{websocket.remote_address[1]}"
+            else:
+                websocket.full_ip = websocket.remote_address
+        
+        # Handle the connection
+        await self.serverRootHandlers.on_connect(websocket)
+        try:
+            async for message in websocket:
+                await self.serverRootHandlers.on_packet(websocket, message)
+        except self.wss.exceptions.ConnectionClosedError:
+            pass
+        except Exception as e:
+            self.supporter.log(f"Async client exception: {e}")
+        
+        # Shutdown the connection
+        finally:
+            if not websocket.rejected:
+                await self.serverRootHandlers.on_close(websocket, websocket.close_code, websocket.close_reason)
+            self.all_clients.remove(websocket)

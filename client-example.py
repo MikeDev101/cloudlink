@@ -13,72 +13,61 @@ class demoCallbacksClient:
 
     # Below are templates for binding generic callbacks.
     
-    def on_packet(self, message): # Called when any packet is received, regardless of packet command.
-        print("on_packet fired!")
+    async def on_packet(self, message): # Called when any packet is received, regardless of packet command.
+        pass
     
-    def on_connect(self): # Called when the client is connected to the server.
-        print("on_connect fired!")
-        self.cloudlink.sendGlobalMessage("this is a test")
-        self.cloudlink.setUsername("test")
+    async def on_connect(self): # Called when the client is connected to the server.
+        print(f"Client connected!")
+        await self.cloudlink.sendGlobalMessage("this is a test")
+        await self.cloudlink.setUsername("test")
 
-    def on_close(self, close_status_code, close_msg): # Called when the client is disconnected from the server.
-        print("on_close fired!")
+    async def on_close(self, close_status_code, close_msg): # Called when the client is disconnected from the server.
+        print(f"Client disconnected! {close_status_code} {close_msg}")
 
-    def on_error(self, error): # Called when the client encounters an exception.
-        print("on_error fired!")
+    async def on_error(self, error): # Called when the client encounters an exception.
+        print(f"Client had an error: {error}!")
 
     # Below are templates for binding command-specific callbacks.
 
-    def on_direct(self, message:any): # Called when a packet is received with the direct command.
+    async def on_direct(self, message:any, origin:any, listener_detected:bool, listener_id:str): # Called when a packet is received with the direct command.
         print("on_direct fired!")
-        #pass
 
-    def on_version(self, version:str): # Called when a packet is received with the server_version command.
+    async def on_version(self, version:str): # Called when a packet is received with the server_version command.
         print("on_version fired!")
-        # pass
 
-    def on_motd(self, motd:str): # Called when a packet is received with the motd command.
+    async def on_motd(self, motd:str): # Called when a packet is received with the motd command.
         print("on_motd fired!")
-        # pass
     
-    def on_ip(self, ip:str): # Called when a packet is received with the client_ip command.
+    async def on_ip(self, ip:str): # Called when a packet is received with the client_ip command.
         print("on_ip fired!")
-        # pass
 
-    def on_ulist(self, ulist:list): # Called when a packet is received with the ulist command.
+    async def on_ulist(self, ulist:list): # Called when a packet is received with the ulist command.
         print("on_ulist fired!")
-        # pass
 
-    def on_statuscode(self, code:str, message:any): # Called when a packet is received with the statuscode command.
+    async def on_statuscode(self, code:str, message:any): # Called when a packet is received with the statuscode command.
         print("on_statuscode fired!")
-        # pass
     
-    def on_gmsg(self, message:any): # Called when a packet is received with the gmsg command.
+    async def on_gmsg(self, message:any): # Called when a packet is received with the gmsg command.
         print("on_gmsg fired!")
-        # pass
 
-    def on_gvar(self, var_name:str, var_value:any): # Called when a packet is received with the gvar command.
+    async def on_gvar(self, var_name:str, var_value:any): # Called when a packet is received with the gvar command.
         print("on_gvar fired!")
-        # pass
 
-    def on_pvar(self, var_name:str, var_value:any, origin:any): # Called when a packet is received with the pvar command.
+    async def on_pvar(self, var_name:str, var_value:any, origin:any): # Called when a packet is received with the pvar command.
         print("on_pvar fired!")
-        # pass
 
-    def on_pmsg(self, value:str, origin:any): # Called when a packet is received with the pmsg command.
+    async def on_pmsg(self, value:str, origin:any): # Called when a packet is received with the pmsg command.
         print("on_pmsg fired!")
-        # pass
 
-    def on_ping(self, value:str, origin:any): # Called when the client is being pinged by another client (It will automatically respond to the ping, this is just used for diagnostics).
+    async def on_ping(self, value:str, origin:any): # Called when the client is being pinged by another client (It will automatically respond to the ping, this is just used for diagnostics).
         print("on_ping fired!")
-        # pass
 
 if __name__ == "__main__":
     # Initialize Cloudlink. You will only need to initialize one instance of the main cloudlink module.
     cl = Cloudlink()
 
     # Create a new client object. This supports initializing many clients at once.
-    client = cl.client(logs=True)
+    client = cl.client(logs = True)
 
     # Create demo callbacks. You can only initialize callbacks after you have initialized a cloudlink client object.
     dummy = demoCallbacksClient(client)
@@ -106,4 +95,5 @@ if __name__ == "__main__":
     #client.disableCommands(["gmsg"])
 
     # Connect to the server and run the client.
-    client.run(ip="ws://127.0.0.1:3000/")
+    client.run(ip = "ws://127.0.0.1:3000/")
+    input("Press enter to exit.")

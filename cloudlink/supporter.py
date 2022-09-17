@@ -2,6 +2,7 @@ from datetime import datetime
 import traceback
 import sys
 import json
+from copy import copy
 
 class supporter:
     """
@@ -31,18 +32,38 @@ class supporter:
             "IDRequired": "E:111 | ID required",
         }
         
-        if mode == None:
-            raise TypeError("Mode cannot be None, or any value other than 1 or 0!")
-        else:
-            if mode == 1:
+        # Death to unnecessary if/else trees, long live Python 3.10 switch cases
+        match mode:
+            case 1:
                 setattr(self, "sendPacket", self._sendPacket_server)
                 setattr(self, "sendCode", self._sendCode)
-            elif mode == 2:
+            case 2:
                 setattr(self, "sendPacket", self._sendPacket_client)
-            else:
+            case _:
                 raise NotImplementedError("Invalid supporter mode")
     
-    def _sendCode(self, client:dict, code:str, listener_detected:bool = False, listener_id:str = "", extra_data = None):
+    def paginate_ulist(self, ulist, page_select = 1, pagesize = 30):
+        # Mitigate size changed during iteration errors
+        tmp_ulist = copy(ulist)
+        
+        if not(type(tmp_ulist)) in [list, set]:
+            raise TypeError
+        
+        if len(tmp_ulist) == 0:
+            return 0, 0, []
+        
+        if len(tmp_ulist) < pagesize:
+            return 1, len(tmp_ulist), tmp_ulist
+        
+        pages = (len(tmp_ulist) // pagesize)
+        tmp_ulist_paginated = []
+        for entry in range(pagesize):
+            select = entry + (((1 - abs(page_select)) // pagesize) * pagesize)
+            tmp_ulist_paginated.append(tmp_ulist[select])
+        
+        return pages, len(tmp_ulist), tmp_ulist_paginated
+    
+    async def _sendCode(self, client:dict, code:str, listener_detected:bool = False, listener_id:str = "", extra_data = None):
         message = {
             "cmd": "statuscode",
             "code": self.codes[code]
@@ -54,61 +75,58 @@ class supporter:
         if listener_detected:
             message["listener"] = listener_id
 
-        self.cloudlink.wss.send_message(client, self.json.dumps(message))
+        await client.send(self.json.dumps(message))
     
-    def _sendPacket_client(self, message):
+    async def _sendPacket_client(self, message):
         try:
-            self.log(f"Sending packet: {message}")
-            self.cloudlink.wss.send(self.json.dumps(message))
-        except BrokenPipeError:
-            self.log(f"Broken Pipe Error: Attempted to send packet {message}!")
-        except Exception as e:
-            self.log(f"Exception: {e}, Attempted to send packet {message}!")
+            await self.cloudlink.ws_client.send(self.json.dumps(message))
+        except:
+            pass
     
-    def _sendPacket_server(self, clients, message:dict, listener_detected:bool = False, listener_id:str = "", rooms:list = None, ignore_rooms:bool = False):
-        if type(message) == dict:
-            if self.isPacketSane(message, ["cmd"]):
-                # Attach listener (if applied to origin message)
-                if listener_detected:
-                    message["listener"] = listener_id
+    async def _sendPacket_server(self, clients, message:dict, listener_detected:bool = False, listener_id:str = "", rooms:list = None, ignore_rooms:bool = False):
+        # Mitigate size changed during iteration errors
+        clients = copy(clients)
+        
+        if not type(message) == dict:
+            raise TypeError
+        
+        if not self.isPacketSane(message, ["cmd"]):
+            raise Exception
+        
+        # Attach listener (if applied to origin message)
+        if listener_detected:
+            message["listener"] = listener_id
 
-                # Convert clients to set
-                if type(clients) == list:
-                    clients = set(clients)
-                if type(clients) != set:
-                    clients = set([clients])
-                
-                # Convert rooms to set
-                if type(rooms) == list:
-                    rooms = set(rooms)
-                if type(rooms) != set:
-                    rooms = set([rooms])
-                
-                # Send to all specified clients
-                for client in clients:
-                    if not ignore_rooms:
-                        for room in rooms:
-                            if room in ["default", None]:
-                                room = "default"
-                            else:
-                                message["room"] = room
-                            if room in list(client.rooms):
-                                self.log(f"Sending packet to client {client.id} ({client.full_ip}): {message}")
-                                try:
-                                    self.cloudlink.wss.send_message(client, self.json.dumps(message))
-                                except BrokenPipeError:
-                                    self.log(f"Broken Pipe Error: Attempted to send packet {message} to {client.id} ({client.full_ip})!")
-                                except Exception as e:
-                                    self.log(f"Exception: {e}, Attempted to send packet {message} to {client.id} ({client.full_ip})!")
-                    else:
-                        self.log(f"Sending packet to client (while ignoring rooms) {client.id} ({client.full_ip}): {message}")
+        # Convert clients to set
+        if type(clients) == list:
+            clients = set(clients)
+        elif type(clients) != set:
+            clients = set([clients])
+        
+        # Convert rooms to set
+        if type(rooms) == list:
+            rooms = set(rooms)
+        elif type(rooms) != set:
+            rooms = set([rooms])
+        
+        # Send to all specified clients
+        for client in clients:
+            if not ignore_rooms:
+                for room in rooms:
+                    if room == None:
+                        room = "default"
+                    message["room"] = room
+                    if room in list(client.rooms):
                         try:
-                            self.cloudlink.wss.send_message(client, self.json.dumps(message))
-                        except BrokenPipeError:
-                            self.log(f"Broken Pipe Error: Attempted to send packet {message} to {client.id} ({client.full_ip}) (while ignoring rooms)!")
-                        except Exception as e:
-                            self.log(f"Exception: {e}, Attempted to send packet {message} to {client.id} ({client.full_ip}) (while ignoring rooms)!")
-
+                            await client.send(self.json.dumps(message))
+                        except:
+                            pass
+            else:
+                try:
+                    await client.send(self.json.dumps(message))
+                except:
+                    pass
+    
     def callback(self, callback_id, function):
         # Support older servers which use the old callback system.
         if type(callback_id) == str:
@@ -119,7 +137,7 @@ class supporter:
             if hasattr(self.cloudlink, callback_id.__name__):
                 self.log(f"Creating callback for {callback_id.__name__} to function {function.__name__}...")
                 self.cloudlink.usercallbacks[callback_id] = function
-
+    
     def full_stack(self):
         exc = sys.exc_info()[0]
         if exc is not None:
@@ -132,18 +150,27 @@ class supporter:
         if exc is not None:
             stackstr += '  ' + traceback.format_exc().lstrip(trc)
         return stackstr
-
+    
     def disableCommands(self, functions):
         for functionEntry in functions:
+            # Check if the function is not already disabled
             if not functionEntry in self.cloudlink.disabledCommands:
                 self.cloudlink.disabledCommands.append(functionEntry)
+            
+            # Prevent modifying private methods, they are not imported anyway
             if (not("__" in functionEntry) and (hasattr(self.cloudlink, functionEntry))): 
+                
+                # Check if the command is a built-in command
                 if functionEntry in self.cloudlink.builtInCommands:
                     self.cloudlink.builtInCommands.remove(functionEntry)
                     delattr(self.cloudlink, str(functionEntry))
+                
+                # Check if the command is a custom command
                 elif functionEntry in self.cloudlink.customCommands:
                     self.cloudlink.customCommands.remove(functionEntry)
                     delattr(self.cloudlink, str(functionEntry))
+                
+                # Something else
                 else:
                     self.log(f"Attempted to disable command {functionEntry} but either the command was already unloaded, it was not valid, or was not loaded beforehand.");
 
@@ -161,7 +188,6 @@ class supporter:
                     
                     # Create a new inter class within self and initialize it
                     if not hasattr(self.cloudlink, str(classEntry)):
-
                         if (custom != None) and (classEntry in custom):
                             setattr(self.cloudlink, str(classEntry), classEntry(self.cloudlink, custom[classEntry]))
                         else:
@@ -205,15 +231,7 @@ class supporter:
                         setattr(self.cloudlink, str(functionEntry), getattr(handlerObject, str(functionEntry)))
                 except:
                     self.log(f"An exception has occurred whilst loading a built-in command: {self.full_stack()}")
-
     
-
-    
-
-    
-
-    
-
     def log(self, event, force:bool = False):
         if self.enable_logs or force:
             print(f"{self.timestamp()}: {event}")
@@ -221,7 +239,7 @@ class supporter:
     def timestamp(self):
         today = self.datetime.now()
         return today.strftime("%m/%d/%Y %H:%M.%S")
-
+    
     def isJSON(self, jsonStr):
         is_valid_json = False
         try:
@@ -233,30 +251,42 @@ class supporter:
         except:
             is_valid_json = False
         return is_valid_json
-
+    
     def isPacketSane(self, message, keycheck=["cmd", "val"], datalimit=1000):
         # TODO: Optimize this fugly mess
         tmp_msg = message
         is_valid_json = False
         is_sane = True
+        
+        # Ignore conversion if the message is already a dictionary, otherwise attempt to convert to JSON
         try:
             if type(tmp_msg) == dict:
                 is_valid_json = True
+            
             elif type(tmp_msg) == str:
                 tmp_msg = self.json.loads(message)
                 is_valid_json = True
+            
         except:
             is_valid_json = True
             is_sane = False
+            
+        # Scan the message for syntax, formatting, and datatypes
         finally:
             if is_valid_json:
+                
+                # Check if the message contains required JSON keys
                 for key in keycheck:
                     if not key in tmp_msg:
                         if (not "val" in tmp_msg) and (not "code" in tmp_msg):
                             is_sane = False
+                
+                # Verify that the packet has the correct datatypes
                 if is_sane:
                     if type(tmp_msg["cmd"]) != str:
                         is_sane = False
+                    
+                    # Check if id is valid
                     if "id" in tmp_msg:
                         if not (type(tmp_msg["id"]) in [str, dict, int, list]):
                             is_sane = False
@@ -266,7 +296,8 @@ class supporter:
                             for entry in tmp_msg["id"]:
                                 if not (type(entry) in [str, dict, int]):
                                     is_sane = False
-
+                    
+                    # Check if payload is valid
                     if "val" in tmp_msg:
                         origin_type = type(tmp_msg["val"])
                         if not(type(tmp_msg["val"]) in [str, dict, list]):
@@ -274,14 +305,21 @@ class supporter:
                         if len(tmp_msg["val"]) > datalimit:
                             is_sane = False
                         tmp_msg["val"] = origin_type(tmp_msg["val"])
-
+                    
+                    # Check if variable names are valid
                     if "name" in tmp_msg:
                         if type(tmp_msg["name"]) != str:
                             is_sane = False
                         if len(tmp_msg["name"]) > datalimit:
                             is_sane = False
-
+                    
+                    # Check if client origins are valid
                     if "origin" in tmp_msg:
                         if type(tmp_msg["origin"]) != dict:
+                            is_sane = False
+                    
+                    # Check if relays are valid
+                    if "relay" in tmp_msg:
+                        if type(tmp_msg["relay"]) != dict:
                             is_sane = False
             return is_sane

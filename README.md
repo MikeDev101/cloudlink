@@ -10,6 +10,8 @@ Cloudlink is a free and open-source, websocket-powered API optimized for Scratch
 * Proven reliability - Extensively tested and utilized in [The Meower Project](https://github.com/meower-media-co/)
 * Unique project identifiers to allow frictionless communication between projects and app servers over a single Cloudlink Server
 
+Cloudlink is now powered by [aaugustin/websockets!](https://github.com/aaugustin/websockets) Cloudlink will perform better and more reliably than before.
+
 ## Get started with Cloudlink
 For full documentation of Cloudlink, please visit Cloudlink's [Documentation](https://hackmd.io/g6BogABhT6ux1GA2oqaOXA) page.
 

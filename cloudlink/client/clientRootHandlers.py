@@ -8,27 +8,27 @@ class clientRootHandlers:
         self.cloudlink = cloudlink
         self.supporter = self.cloudlink.supporter
     
-    def on_error(self, ws, error):
+    async def on_error(self, error):
         if not error == None:
             return
+        
         self.supporter.log(f"Client error: {error}")
 
         # Fire callbacks
         if self.on_error in self.cloudlink.usercallbacks:
             if self.cloudlink.usercallbacks[self.on_error] != None:
-                self.cloudlink.usercallbacks[self.on_error](error=error)
+                await self.cloudlink.usercallbacks[self.on_error](error=error)
     
-    def on_connect(self, ws):
+    async def on_connect(self):
         self.supporter.log(f"Client connected.")
         self.cloudlink.linkStatus = 2
-        self.cloudlink.connected = True
 
         # Fire callbacks
         if self.on_connect in self.cloudlink.usercallbacks:
             if self.cloudlink.usercallbacks[self.on_connect] != None:
-                self.cloudlink.usercallbacks[self.on_connect]()
+                await self.cloudlink.usercallbacks[self.on_connect]()
     
-    def on_close(self, ws, close_status_code, close_msg):
+    async def on_close(self, close_status_code, close_msg):
         if self.cloudlink.linkStatus == 1:
             self.cloudlink.linkStatus = 4
             self.cloudlink.failedToConnect = True
@@ -37,14 +37,13 @@ class clientRootHandlers:
             self.cloudlink.linkStatus = 4
             self.cloudlink.connectionLost = True
             self.supporter.log(f"Client lost connection! Disconnected with status code {close_status_code} and message \"{close_msg}\"")
-        self.cloudlink.connected = False
 
         # Fire callbacks
         if self.on_close in self.cloudlink.usercallbacks:
             if self.cloudlink.usercallbacks[self.on_close] != None:
-                self.cloudlink.usercallbacks[self.on_close](close_status_code=close_status_code, close_msg=close_msg)
+                await self.cloudlink.usercallbacks[self.on_close](close_status_code=close_status_code, close_msg=close_msg)
     
-    def on_packet(self, ws, message):
+    async def on_packet(self, message):
         if len(message) != 0:
             try:
                 isPacketSane = self.supporter.isPacketSane(message)
@@ -59,11 +58,11 @@ class clientRootHandlers:
 
                     # Check if the command is a built-in Cloudlink command
                     if ((message["cmd"] in self.cloudlink.builtInCommands) and not(message["cmd"] == "direct")):
-                        getattr(self.cloudlink, str(message["cmd"]))(message)
+                        await getattr(self.cloudlink, str(message["cmd"]))(message)
                         # Fire callbacks
                         if self.on_packet in self.cloudlink.usercallbacks:
                             if self.cloudlink.usercallbacks[self.on_packet] != None:
-                                self.cloudlink.usercallbacks[self.on_packet](message=message)
+                                await self.cloudlink.usercallbacks[self.on_packet](message=message)
                     else:
                         # Attempt to read the command as a direct or custom command
                         isCustom = False
@@ -85,18 +84,18 @@ class clientRootHandlers:
                         if isValid:
                             if isLegacy:
                                 self.supporter.log(f"Client received legacy custom command \"{message['val']['cmd']}\"")
-                                getattr(self.cloudlink, str(message["val"]["cmd"]))(message=message)
+                                await getattr(self.cloudlink, str(message["val"]["cmd"]))(message=message)
                             else:
                                 if isCustom:
                                     self.supporter.log(f"Client received custom command \"{message['cmd']}\"")
-                                    getattr(self.cloudlink, str(message["cmd"]))(message=message)
+                                    await getattr(self.cloudlink, str(message["cmd"]))(message=message)
                                 else:
-                                    getattr(self.cloudlink, "direct")(message=message)
+                                    await getattr(self.cloudlink, "direct")(message=message)
                             
                             # Fire callbacks
                             if self.on_packet in self.cloudlink.usercallbacks:
                                 if self.cloudlink.usercallbacks[self.on_packet] != None:
-                                    self.cloudlink.usercallbacks[self.on_packet](message=message)
+                                    await self.cloudlink.usercallbacks[self.on_packet](message=message)
                         else:
                             if message["cmd"] in self.cloudlink.disabledCommands:
                                 self.supporter.log(f"Client received command \"{message['cmd']}\", but the command is disabled.")

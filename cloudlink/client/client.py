@@ -1,4 +1,3 @@
-import websocket as WebsocketClient
 from .clientRootHandlers import clientRootHandlers
 from .clientInternalHandlers import clientInternalHandlers
 
@@ -12,6 +11,8 @@ class client:
     def __init__(self, parentCl, enable_logs=True):
         # Read the CloudLink version from the parent class
         self.version = parentCl.version
+        self.asyncio = parentCl.asyncio
+        self.wss = parentCl.ws
 
         # Init the client
         self.motd_msg = ""
@@ -20,11 +21,11 @@ class client:
         self.motd_msg = ""
         self.userlist = {}
         self.myClientObject = {}
+        self.ws_client = None
 
         self.linkStatus = 0
         self.failedToConnect = False
         self.connectionLost = False
-        self.connected = False
         
         # Init modules
         self.supporter = parentCl.supporter(self, enable_logs, 2)
@@ -67,113 +68,124 @@ class client:
 
         self.log("Cloudlink client initialized!")
     
-    def run(self, ip="ws://127.0.0.1:3000/"):
-        # Initialize the Websocket client
-        self.log("Cloudlink client starting up now...")
-        self.wss = WebsocketClient.WebSocketApp(
-            ip,
-            on_message = self.clientRootHandlers.on_packet,
-            on_error = self.clientRootHandlers.on_error,
-            on_open = self.clientRootHandlers.on_connect,
-            on_close = self.clientRootHandlers.on_close
-        )
-
-        # Run the CloudLink client
-        self.linkStatus = 1
-        self.wss.run_forever()
-        self.log("Cloudlink client exiting...")
-
-    def stop(self):
-        if self.connected:
-            self.linkStatus = 3
-            self.log("Cloudlink client disconnecting...")
-            self.wss.close()
-            self.cloudlink.connected = False
-
-            # Fire callbacks
-            if self.on_close in self.cloudlink.usercallbacks:
-                if self.cloudlink.usercallbacks[self.on_close] != None:
-                    self.cloudlink.usercallbacks[self.on_close](close_status_code=None, close_msg=None)
-
     # Client API
-
-    def setUsername(self, username:str):
-        if self.connected:
+    
+    def run(self, ip="ws://127.0.0.1:3000/"):
+        # Initialize the Websocket Server
+        self.log("Cloudlink client is starting up now...")
+        try:
+            self.asyncio.run(self.__run__(ip))
+        except KeyboardInterrupt:
+            # Make keyboard interrupts silent
+            pass
+        self.log("Cloudlink client shutting down...")
+    
+    async def stop(self):
+        if self.ws_client.open:
+            self.log("Client disconnecting...")
+            self.ws_client.close()
+            await self.ws_client.wait_closed()
+    
+    async def setUsername(self, username:str):
+        if self.ws_client.open:
             msg = {"cmd": "setid", "val": username, "listener": "username_set"}
-            self.cloudlink.sendPacket(msg)
+            await self.cloudlink.sendPacket(msg)
 
-    def getUserlist(self, listener:str = None):
-        if self.connected:
+    async def getUserlist(self, listener:str = None):
+        if self.ws_client.open:
             msg = {"cmd": "ulist", "val": ""}
             if listener:
                 msg["listener"] = listener
-            self.cloudlink.sendPacket(msg)
+            await self.cloudlink.sendPacket(msg)
     
-    def linkToRooms(self, rooms:list = ["default"], listener:str = None):
-        if self.connected:
+    async def linkToRooms(self, rooms:list = ["default"], listener:str = None):
+        if self.ws_client.open:
             msg = {"cmd": "link", "val": rooms}
             if listener:
                 msg["listener"] = listener
-            self.cloudlink.sendPacket(msg)
+            await self.cloudlink.sendPacket(msg)
     
-    def unlinkFromRooms(self, listener:str = None):
-        if self.connected:
+    async def unlinkFromRooms(self, listener:str = None):
+        if self.ws_client.open:
             msg = {"cmd": "unlink", "val": ""}
             if listener:
                 msg["listener"] = listener
-            self.cloudlink.sendPacket(msg)
+            await self.cloudlink.sendPacket(msg)
 
-    def sendDirect(self, message:any, username:str = None, listener:str = None):
-        if self.connected:
+    async def sendDirect(self, message:any, username:str = None, listener:str = None):
+        if self.ws_client.open:
             msg = {"cmd": "direct", "val": message}
             if listener:
                 msg["listener"] = listener
             if username:
                 msg["id"] = username
-            self.cloudlink.sendPacket(msg)
+            await self.cloudlink.sendPacket(msg)
     
-    def sendCustom(self, cmd:str, message:any, username:str = None, listener:str = None):
-        if self.connected:
+    async def sendCustom(self, cmd:str, message:any, username:str = None, listener:str = None):
+        if self.ws_client.open:
             msg = {"cmd": cmd, "val": message}
             if listener:
                 msg["listener"] = listener
             if username:
                 msg["id"] = username
-            self.cloudlink.sendPacket(msg)
+            await self.cloudlink.sendPacket(msg)
     
-    def sendPing(self, dummy_payload:any = "", username:str = None, listener:str = None):
-        if self.connected:
+    async def sendPing(self, dummy_payload:any = "", username:str = None, listener:str = None):
+        if self.ws_client.open:
             msg = {"cmd": "ping", "val": dummy_payload}
             if listener:
                 msg["listener"] = listener
             if username:
                 msg["id"] = username
-            self.cloudlink.sendPacket(msg)
+            await self.cloudlink.sendPacket(msg)
     
-    def sendGlobalMessage(self, message:any, listener:str = None):
-        if self.connected:
+    async def sendGlobalMessage(self, message:any, listener:str = None):
+        if self.ws_client.open:
             msg = {"cmd": "gmsg", "val": message}
             if listener:
                 msg["listener"] = listener
-            self.cloudlink.sendPacket(msg)
+            await self.cloudlink.sendPacket(msg)
     
-    def sendPrivateMessage(self, message:any, username:str = "", listener:str = None):
-        if self.connected:
+    async def sendPrivateMessage(self, message:any, username:str = "", listener:str = None):
+        if self.ws_client.open:
             msg = {"cmd": "pmsg", "val": message, "id": username}
             if listener:
                 msg["listener"] = listener
-            self.cloudlink.sendPacket(msg)
+            await self.cloudlink.sendPacket(msg)
 
-    def sendGlobalVariable(self, var_name:str, var_value:any, listener:str = None):
-        if self.connected:
+    async def sendGlobalVariable(self, var_name:str, var_value:any, listener:str = None):
+        if self.ws_client.open:
             msg = {"cmd": "gvar", "val": var_value, "name": var_name}
             if listener:
                 msg["listener"] = listener
-            self.cloudlink.sendPacket(msg)
+            await self.cloudlink.sendPacket(msg)
     
-    def sendPrivateVariable(self, var_name:str, var_value:any, username:str = "", listener:str = None):
-        if self.connected:
+    async def sendPrivateVariable(self, var_name:str, var_value:any, username:str = "", listener:str = None):
+        if self.ws_client.open:
             msg = {"cmd": "pvar", "val": var_value, "name": var_name, "id": username}
             if listener:
                 msg["listener"] = listener
-            self.cloudlink.sendPacket(msg)
+            await self.cloudlink.sendPacket(msg)
+    
+    # Async component that is required to make the client work
+    
+    async def __run__(self, ip):
+        # Init the async client
+        self.log("Client is connecting...")
+        self.linkStatus = 1
+        async with self.wss.connect(ip) as websocket:
+            self.ws_client = websocket
+            try:
+                await self.clientRootHandlers.on_connect()
+                while websocket.open:
+                    try:
+                        message = await websocket.recv()
+                        await self.clientRootHandlers.on_packet(message)
+                    except Exception as e:
+                        await self.clientRootHandlers.on_error(e)
+            except self.wss.ConnectionClosed:
+                pass
+            except Exception as e:
+                self.log(f"Exception: {e}")
+            finally:
+                await self.clientRootHandlers.on_close(websocket.close_code, websocket.close_reason)
