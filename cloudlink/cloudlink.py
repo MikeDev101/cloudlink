@@ -27,7 +27,7 @@ These dependencies are built-in to Python.
 
 class Cloudlink:
     def __init__(self):
-        self.version = "0.1.8.5"
+        self.version = "0.1.8.6"
         self.asyncio = asyncio
         self.supporter = supporter
         self.ws = websockets
