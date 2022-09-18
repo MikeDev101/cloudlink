@@ -14,18 +14,18 @@ class demoCallbacksClient:
     # Below are templates for binding generic callbacks.
     
     async def on_packet(self, message): # Called when any packet is received, regardless of packet command.
-        pass
+        print("on_packet fired!")
     
     async def on_connect(self): # Called when the client is connected to the server.
-        print(f"Client connected!")
+        print("on_connect fired!")
         await self.cloudlink.sendGlobalMessage("this is a test")
         await self.cloudlink.setUsername("test")
 
     async def on_close(self, close_status_code, close_msg): # Called when the client is disconnected from the server.
-        print(f"Client disconnected! {close_status_code} {close_msg}")
+        print("on_close fired!")
 
     async def on_error(self, error): # Called when the client encounters an exception.
-        print(f"Client had an error: {error}!")
+        print("on_error fired!")
 
     # Below are templates for binding command-specific callbacks.
 
@@ -67,7 +67,7 @@ if __name__ == "__main__":
     cl = Cloudlink()
 
     # Create a new client object. This supports initializing many clients at once.
-    client = cl.client(logs = True)
+    client = cl.client(logs = True, async_client = True)
 
     # Create demo callbacks. You can only initialize callbacks after you have initialized a cloudlink client object.
     dummy = demoCallbacksClient(client)
@@ -96,4 +96,3 @@ if __name__ == "__main__":
 
     # Connect to the server and run the client.
     client.run(ip = "ws://127.0.0.1:3000/")
-    input("Press enter to exit.")

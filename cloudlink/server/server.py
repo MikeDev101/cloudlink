@@ -1,5 +1,6 @@
 from .serverRootHandlers import serverRootHandlers
 from .serverInternalHandlers import serverInternalHandlers
+import copy
 
 class server:
     """
@@ -218,13 +219,15 @@ class server:
     def getAllUsersInRoom(self, room_id):
         if type(room_id) != str:
             raise TypeError
-        if room_id in self.roomData:
-            return self.roomData[room_id]
+        tmp_roomData = copy.copy(self.roomData)
+        if room_id in tmp_roomData:
+            return tmp_roomData[room_id]
         else:
             return []
     
     def getAllRooms(self):
-        return list(self.roomData.keys())
+        tmp_roomData = copy.copy(self.roomData)
+        return list(tmp_roomData.keys())
     
     def getAllClientRooms(self, client):
         roomlist = set()
@@ -295,22 +298,28 @@ class server:
 
     def joinRoom(self, room_id, client):
         # Automatically create rooms
-        if not room_id in self.roomData:
+        tmp_roomData = copy.copy(self.roomData)
+        
+        if not room_id in tmp_roomData:
             self.roomData[room_id] = set()
+            tmp_roomData[room_id] = set()
         
         # Add the client object to the room
-        if not client in self.roomData[room_id]:
+        if not client in tmp_roomData[room_id]:
             self.roomData[room_id].add(client)
 
     def leaveRoom(self, room_id, client):
         # Check if room exists
-        if room_id in self.roomData:
+        tmp_roomData = copy.copy(self.roomData)
+        
+        if room_id in tmp_roomData:
             # Check if client object is in the room
-            if client in self.roomData[room_id]:
+            if client in tmp_roomData[room_id]:
                 self.roomData[room_id].discard(client)
+                tmp_roomData[room_id].discard(client)
             
             # Automatically remove empty rooms, and prevent accidental deletion of the default room
-            if (len(self.roomData[room_id]) == 0) and (room_id != "default"): 
+            if (len(tmp_roomData[room_id]) == 0) and (room_id != "default"): 
                 del self.roomData[room_id]
     
     # Async components that are required to make the server work

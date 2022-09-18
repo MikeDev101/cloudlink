@@ -38,7 +38,9 @@ class supporter:
                 setattr(self, "sendPacket", self._sendPacket_server)
                 setattr(self, "sendCode", self._sendCode)
             case 2:
-                setattr(self, "sendPacket", self._sendPacket_client)
+                setattr(self, "sendPacket", self._sendPacket_client_async)
+            case 3:
+                setattr(self, "sendPacket", self._sendPacket_client_noasync)
             case _:
                 raise NotImplementedError("Invalid supporter mode")
     
@@ -77,7 +79,13 @@ class supporter:
 
         await client.send(self.json.dumps(message))
     
-    async def _sendPacket_client(self, message):
+    def _sendPacket_client_noasync(self, message):
+        try:
+            self.cloudlink.wss.send(self.json.dumps(message))
+        except:
+            pass
+    
+    async def _sendPacket_client_async(self, message):
         try:
             await self.cloudlink.ws_client.send(self.json.dumps(message))
         except:

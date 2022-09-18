@@ -1,3 +1,5 @@
+import copy
+
 class serverRootHandlers:
     """
     The serverRootHandlers inter class is an interface for the WebsocketServer to communicate with Cloudlink.
@@ -61,10 +63,11 @@ class serverRootHandlers:
         self.cloudlink.removeClientFromAllRooms(client)
 
         # Update ulists in all rooms
-        for room in self.cloudlink.roomData:
+        tmp_roomData = copy.copy(self.cloudlink.roomData)
+        for room in tmp_roomData:
             clist = self.cloudlink.getAllUsersInRoom(room)
-            ulist = self.cloudlink.getUsernames(room)
-            await self.supporter.sendPacket(clist, {"cmd": "ulist", "val": ulist}, rooms = room)
+            pages, size, ulist = self.supporter.paginate_ulist(self.cloudlink.getUsernames(room))
+            await self.cloudlink.sendPacket(clist, {"cmd": "ulist", "pages": pages, "size": size, "val": ulist}, rooms = room)
 
         # Fire callbacks
         if self.on_close in self.cloudlink.usercallbacks:
