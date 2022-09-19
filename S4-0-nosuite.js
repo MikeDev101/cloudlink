@@ -597,6 +597,22 @@ class CloudLink {
                         }
                     }
                 },
+				{
+                    "opcode": 'runCMDnoID',
+                    "blockType": "command",
+                    "text": 'Send command without ID [CMD] [DATA]',
+                    "blockAllThreads": "true",
+                    "arguments": {
+                        "CMD": {
+                            "type": "string",
+                            "defaultValue": 'direct'
+                        },
+                        "DATA": {
+                            "type": "string",
+                            "defaultValue": 'val'
+                        }
+                    }
+                },
                 {
                     "opcode": 'resetNewData',
                     "blockType": "command",
@@ -1482,6 +1498,51 @@ class CloudLink {
                 let tmp_msg = {
                     cmd: String(CMD),
                     id: String(ID),
+                    val: tmp_DATA
+                }
+
+                if (this.enableListener) {
+                    tmp_msg["listener"] = String(this.setListener);
+                };
+                if (this.enableRoom) {
+                    tmp_msg["rooms"] = String(this.selectRoom);
+                };
+
+                console.log("TX:", tmp_msg);
+                mWS.send(JSON.stringify(tmp_msg));
+                
+                if (this.enableListener) {
+                    if (!self.socketListeners.hasOwnProperty(this.setListener)) {
+                        self.socketListeners[this.setListener] = false;
+                    };
+                    self.enableListener = false;
+                };
+                if (this.enableRoom) {
+                    self.enableRoom = false;
+                    self.selectRoom = "";
+                };
+
+            } else {
+                console.warn("Blocking attempt to send packet with questionably long arguments");
+            };
+        } else {
+            console.warn("Socket is not open.");
+        };
+    };
+	
+	runCMDnoID({CMD, DATA}) {
+        const self = this;
+        
+        let tmp_DATA = DATA;
+        if (this.isValidJSON({"JSON_STRING": DATA})) {
+            tmp_DATA = JSON.parse(DATA);
+        };
+        console.log(tmp_DATA);
+        
+        if (this.isRunning) {
+            if (!(String(CMD).length > 100) || !(String(DATA).length > 1000)) {
+                let tmp_msg = {
+                    cmd: String(CMD),
                     val: tmp_DATA
                 }
 
