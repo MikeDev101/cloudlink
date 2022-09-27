@@ -55,6 +55,7 @@ class CloudLink {
     
         // Listeners
         this.socketListeners = {};
+		this.socketListenersData = {};
         this.newSocketData = {
             "gmsg": false,
             "pmsg": false,
@@ -169,6 +170,18 @@ class CloudLink {
                     "opcode": "returnClientIP",
                     "blockType": "reporter",
                     "text": "My IP address"
+                },
+				{
+                    "opcode": 'returnListenerData',
+                    "blockType": "reporter",
+                    "text": "Response for listener [ID]",
+					"blockAllThreads": "true",
+                    "arguments": {
+                        "ID": {
+                            "type": "string",
+                            "defaultValue": "example-listener",
+                        },
+                    },
                 },
                 {
                     "opcode": "readQueueSize",
@@ -785,6 +798,15 @@ class CloudLink {
         return String(this.socketData.client_ip);
     };
     
+	returnListenerData({ID}) {
+		const self = this;
+        if ((this.isRunning) && (this.socketListeners.hasOwnProperty(String(ID)))) {
+            return JSON.stringify(this.socketListenersData[ID]);
+        } else {
+            return "{}";
+        };
+    };
+	
     readQueueSize({TYPE}) {
         if (this.menuRemap[String(TYPE)] == "all") {
             let tmp_size = 0;
@@ -1093,6 +1115,9 @@ class CloudLink {
                             console.warn("Username was rejected by the server. Error code:", String(tmp_socketData.code));
                             self.isUsernameSyncing = false;
                         };
+						self.socketListeners["setusername"] = true;
+						self.socketListenersData["setusername"] = tmp_socketData;
+					
                     } else if (tmp_socketData.listener == "roomLink") {
                         self.isRoomSetting = false;
                         if (tmp_socketData.code == "I:100 | OK") {
@@ -1107,6 +1132,7 @@ class CloudLink {
                     } else {
                         if (self.socketListeners.hasOwnProperty(tmp_socketData.listener)) {
                             self.socketListeners[tmp_socketData.listener] = true;
+							self.socketListenersData[tmp_socketData.listener] = tmp_socketData;
                         };
                     };
                 };
@@ -1350,6 +1376,7 @@ class CloudLink {
                 if (this.enableListener) {
                     if (!self.socketListeners.hasOwnProperty(this.setListener)) {
                         self.socketListeners[this.setListener] = false;
+						self.socketListenersData[this.setListener] = {};
                     };
                     self.enableListener = false;
                 };
@@ -1389,6 +1416,7 @@ class CloudLink {
                 if (this.enableListener) {
                     if (!self.socketListeners.hasOwnProperty(this.setListener)) {
                         self.socketListeners[this.setListener] = false;
+						self.socketListenersData[this.setListener] = {};
                     };
                     self.enableListener = false;
                 };
@@ -1428,6 +1456,7 @@ class CloudLink {
                 if (this.enableListener) {
                     if (!self.socketListeners.hasOwnProperty(this.setListener)) {
                         self.socketListeners[this.setListener] = false;
+						self.socketListenersData[this.setListener] = {};
                     };
                     self.enableListener = false;
                 };
@@ -1468,6 +1497,7 @@ class CloudLink {
                 if (this.enableListener) {
                     if (!self.socketListeners.hasOwnProperty(this.setListener)) {
                         self.socketListeners[this.setListener] = false;
+						self.socketListenersData[this.setListener] = {};
                     };
                     self.enableListener = false;
                 };
@@ -1514,6 +1544,7 @@ class CloudLink {
                 if (this.enableListener) {
                     if (!self.socketListeners.hasOwnProperty(this.setListener)) {
                         self.socketListeners[this.setListener] = false;
+						self.socketListenersData[this.setListener] = {};
                     };
                     self.enableListener = false;
                 };
@@ -1559,6 +1590,7 @@ class CloudLink {
                 if (this.enableListener) {
                     if (!self.socketListeners.hasOwnProperty(this.setListener)) {
                         self.socketListeners[this.setListener] = false;
+						self.socketListenersData[this.setListener] = {};
                     };
                     self.enableListener = false;
                 };
