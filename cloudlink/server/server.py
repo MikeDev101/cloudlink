@@ -110,7 +110,7 @@ class server:
             client.rejected = True
             await client.close(1000, reason)
 
-    def getUserObject(self, identifier):
+    def getUserObject(self, identifier, force = False):
         all_clients = self.all_clients.copy()
         # NOT RECOMMENDED - Try to find the client object with a username
         if type(identifier) == str:
@@ -127,7 +127,7 @@ class server:
                     if read == identifier:
                         selectionTmp.append(read)
                 # Return result
-                if len(selectionTmp) > 1:
+                if (len(selectionTmp) > 1) and not force:
                     return LookupError # There are more than one clients with that username
                 elif len(selectionTmp) == 0:
                     return None # No client found
@@ -350,7 +350,7 @@ class server:
             websocket.full_ip = websocket.request_headers.get("cf-connecting-ip")
         else:
             if type(websocket.remote_address) == tuple:
-                websocket.full_ip = f"{websocket.remote_address[0]}:{websocket.remote_address[1]}"
+                websocket.full_ip = str(websocket.remote_address[0])
             else:
                 websocket.full_ip = websocket.remote_address
         

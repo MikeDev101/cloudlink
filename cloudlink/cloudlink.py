@@ -30,7 +30,7 @@ These dependencies are built-in to Python.
 
 class Cloudlink:
     def __init__(self):
-        self.version = "0.1.8.7"
+        self.version = "0.1.8.8"
         self.supporter = supporter
         print(f"Cloudlink v{self.version}")
 

@@ -231,11 +231,6 @@ class serverInternalHandlers():
     
     # Direct messages, this command is pretty obsolete, since custom commands are loaded directly into Cloudlink instead of using direct in CL3. Idfk what this should do.
     async def direct(self, client, message, listener_detected, listener_id, room_id):
-        # Prevent clients without usernames from using this command
-        if not client.username_set:
-            await self.cloudlink.sendCode(client, "IDRequired", listener_detected, listener_id)
-            return
-        
         # Sanity check the message, or override it
         if not "id" in message:
             if self.direct in self.cloudlink.usercallbacks:
@@ -247,6 +242,11 @@ class serverInternalHandlers():
             else:
                 # Default function of server is to echo the data
                 await self.cloudlink.sendPacket(client, {"cmd": "direct", "val": message["val"], "origin": self.cloudlink.getUserObjectFromClientObj(client)}, ignore_rooms = True)
+            return
+        
+        # Prevent clients without usernames from using this command
+        if not client.username_set:
+            await self.cloudlink.sendCode(client, "IDRequired", listener_detected, listener_id)
             return
         
         self.supporter.log(f"Client {client.id} ({client.full_ip}) sent direct data: \"{message}\"")

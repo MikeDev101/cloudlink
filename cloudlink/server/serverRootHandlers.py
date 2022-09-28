@@ -143,16 +143,30 @@ class serverRootHandlers:
                         if message["cmd"] in self.cloudlink.customCommands:
                             # New custom command system.
                             isCustom = True
-                        elif message["cmd"] == "direct":
-                            if self.supporter.isPacketSane(message["val"]):
-                                if type(message["val"]) == dict:
+                            
+                            # Handle command overrides, check if it's a legacy command
+                            if type(message["val"]) == dict:
+                                if "cmd" in message["val"]:
                                     if message["val"]["cmd"] in self.cloudlink.customCommands:
                                         # Legacy custom command system (using direct)
                                         isLegacy = True
+                                    else:
+                                        isCustom = True
+                            
+                        elif message["cmd"] == "direct":
+                            if self.supporter.isPacketSane(message["val"]):
+                                if type(message["val"]) == dict:
+                                    if "cmd" in message["val"]:
+                                        if message["val"]["cmd"] in self.cloudlink.customCommands:
+                                            # Legacy custom command system (using direct)
+                                            isLegacy = True
+                                    else:
+                                        isCustom = True
                                 else:
                                     isCustom = True
                         else:
                             isValid = False
+                        
                         if isValid:
                             if isLegacy:
                                 self.supporter.log(f"Client {client.id} ({client.full_ip}) sent legacy custom command \"{message['val']['cmd']}\"")

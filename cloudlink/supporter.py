@@ -98,9 +98,6 @@ class supporter:
         if not type(message) == dict:
             raise TypeError
         
-        if not self.isPacketSane(message, ["cmd"]):
-            raise Exception
-        
         # Attach listener (if applied to origin message)
         if listener_detected:
             message["listener"] = listener_id
