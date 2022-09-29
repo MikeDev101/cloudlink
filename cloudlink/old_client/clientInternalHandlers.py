@@ -15,10 +15,15 @@ class clientInternalHandlers():
         # Fire callbacks
         if self.direct in self.cloudlink.usercallbacks:
             if self.cloudlink.usercallbacks[self.direct] != None:
+                
+                origin = None
+                if "origin" in message:
+                    origin = message["origin"]
+                
                 if "listener" in message:
-                    self.cloudlink.usercallbacks[self.direct](value = message["val"], origin = message["origin"], listener_detected = True, listener_id = message["listener"])
+                    self.cloudlink.usercallbacks[self.direct](value = message["val"], origin = origin, listener_detected = True, listener_id = message["listener"])
                 else:
-                    self.cloudlink.usercallbacks[self.direct](value = message["val"], origin = message["origin"], listener_detected = False, listener_id = None)
+                    self.cloudlink.usercallbacks[self.direct](value = message["val"], origin = origin, listener_detected = False, listener_id = None)
     
     def server_version(self, message):
         self.supporter.log(f"Server reports version: {message['val']}")

@@ -25,6 +25,7 @@ class server:
         }
         self.all_clients = set()
         self.ws_server = None
+        self.id_counter = 0
         
         # Init modules
         self.supporter = parentCl.supporter(self, enable_logs, 1)
@@ -149,13 +150,13 @@ class server:
         # Unsupported type
         else:
             return TypeError
-
-    def selectMultiUserObjects(self, identifiers:list, rooms:list = ["default"]):
+    
+    def selectMultiUserObjects(self, identifiers:list, rooms:list = ["default"], force:bool = False):
         # Implement multicast support
         objList = []
         if type(identifiers) == list:
             for client in identifiers:
-                obj = self.getUserObject(client)
+                obj = self.getUserObject(client, force)
                 # TODO: optimize this fugly mess
                 if not obj in [TypeError, LookupError, None]:
                     for room in rooms:
@@ -340,8 +341,10 @@ class server:
         websocket.username_set = False
         websocket.rooms = ["default"]
         websocket.is_linked = False
-        websocket.id = len(self.all_clients)
+        websocket.id = self.id_counter
         websocket.rejected = False
+        
+        self.id_counter += 1
         
         # Get the IP address of client
         if "x-forwarded-for" in websocket.request_headers:
