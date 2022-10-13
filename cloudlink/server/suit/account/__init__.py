@@ -15,9 +15,9 @@ class CloudAccount:
 
         self.supporter.codes.extend(
             {
-                "AccountExists": "E: 112 | Account already exists",
-                "AccountNotFound": "E: 113 | Account not found",
-                "NotLoggedIn": "E: 115 | I: Account Not logged in",
+                "AccountExists": ("E", 112, "Account already exists"),
+                "AccountNotFound": ("E", 113, "Account not found"),
+                "NotLoggedIn": ("I", 115, "Account Not logged in"),
             }
         )
         self.cl.disableCommands("setid")
@@ -54,7 +54,7 @@ class CloudAccount:
     async def sign_up(self, client, message, listener_detected, listener_id, room_id):
 
         if "password" not in message:
-            await self.supporter.sendCode(
+            await self.cl.send_code(
                 client,
                 "Syntax",
                 listener_detected=listener_detected,
@@ -63,7 +63,7 @@ class CloudAccount:
             return
 
         if "username" not in message:
-            await self.supporter.sendCode(
+            await self.cl.send_code(
                 client,
                 "Syntax",
                 listener_detected=listener_detected,
@@ -87,7 +87,7 @@ class CloudAccount:
                 "session": {"token": None, "timeout": 0, "refresh_token": None},
             },
         )
-        await self.supporter.sendCode(
+        await self.cl.send_code(
             client,
             "OK",
             listener_detected=listener_detected,
@@ -99,7 +99,7 @@ class CloudAccount:
     ):
 
         if "refresh_token" not in message:
-            await self.supporter.sendCode(
+            await self.cl.send_code(
                 client,
                 "Syntax",
                 listener_detected=listener_detected,
@@ -108,7 +108,7 @@ class CloudAccount:
             return
 
         if not self.IsAuthed(client):
-            await self.supporter.sendCode(
+            await self.cl.send_code(
                 client,
                 "NotLoggedIn",
                 listener_detected=listener_detected,
@@ -133,8 +133,8 @@ class CloudAccount:
             },
         )
 
-        await self.supporter.SendPacket(
-            client,
+        await self.cl.send_packet(
+            self.cl.clients.get_all_with_username(client.username),
             {
                 "type": "auth",
                 "username": client.username,
@@ -146,7 +146,7 @@ class CloudAccount:
     async def sign_in(self, client, message, listener_detected, listener_id, room_id):
         usr = self.db.find_one("users", {"username": username})
         if not usr:
-            await self.supporter.sendCode(
+            await self.cl.send_code(
                 client,
                 "AccountNotFound",
                 listener_detected=listener_detected,
@@ -155,7 +155,7 @@ class CloudAccount:
             return
 
         if not bcrypt.hashpw(message["password"], usr.password):
-            await self.supporter.sendCode(
+            await self.cl.send_code(
                 client,
                 "AccountNotFound",
                 listener_detected=listener_detected,
@@ -184,8 +184,8 @@ class CloudAccount:
             },
         )
 
-        await self.supporter.SendPacket(
-            client,
+        await self.cl.send_packet(
+            self.cl.clients.get_all_with_username(message["username"]),
             {
                 "type": "auth",
                 "username": message["username"],

@@ -320,6 +320,20 @@ class server:
                 print(f"Client {client.id} disconnected.")
     
     # Multicasting variables - Automatically translates Scratch and Cloudlink.
+
+    #sends a RAW packet to all clients speficied in the list, or to one if clients is a client obj
+    async def send_packet(self, clients, packet, room_id:str = None, lissener:str = None):
+      packet['lissener'] = lissener
+      
+      if type(clients) in [list, set]:
+        for client in clients:
+          await asyncio.create_task(client.send(json.dumps(packet)))
+      elif type(clients) is object:
+        await client.send(json.dumps(packet))
+      else:
+        raise TypeError(f"clients is type {type(clients)}, was expecting a list, set, or client object")
+        
+        
     async def send_packet_multicast_variable(self, cmd:str, name:str, val:any = None, clients:type = None, exclude_client:any = None, room_id:str = None, new_name:str = None):
         # Get all clients present
         tmp_clients = None
@@ -547,7 +561,20 @@ class clients:
         del tmp["__parent__"]
 
         return tmp
+    def get_all_with_username(self, username):
+      tmp = self.__parent__.copy(self.__dict__)
+      # Remove attributes that aren't client objects
+      del tmp["__all_cl__"]
+      del tmp["__all_scratch__"]
+      del tmp["__proto_unset__"]
+      del tmp["__proto_cloudlink__"]
+      del tmp["__proto_scratch_cloud__"]
+      del tmp["__usernames__"]
+      del tmp["__parent__"]
+      
+      return tmp['__usernames__'][username]
 
+      
     def set_protocol(self, client:dict, protocol:str):
         match protocol:
             case self.__proto_cloudlink__:
@@ -710,6 +737,8 @@ class rooms:
 
         return tmp
 
+      
+      
     def exists(self, room_id:str):
         return hasattr(self, str(room_id))
     

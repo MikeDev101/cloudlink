@@ -11,13 +11,17 @@ class CloudCoin:
 
         self.supporter.codes.extend(
             {
-                "NotEnoughCoins": "I: 115 | Your dont have enough coins",
+                "NotEnoughCoins": (
+                    "I",
+                    115,
+                    "Your dont have enough coins",
+                )
             }
         )
 
     async def add_coins(self, client, message, listener_detected, listener_id, room_id):
         if not self.CA.IsAuthed(client):
-            await self.supporter.sendCode(
+            await self.supporter.send_code(
                 client,
                 "NotLoggedIn",
                 listener_detected=listener_detected,
@@ -34,7 +38,7 @@ class CloudCoin:
                 + int(message["ammount"])
             },
         )
-        self.supporter.sendCode(
+        self.supporter.send_code(
             client,
             "OK",
             listener_detected=listener_detected,
@@ -42,14 +46,14 @@ class CloudCoin:
         )
 
         # tell all clients of user to update coins
-        rx_client = self.cl.selectMultiUserObjects(client.username)
+        rx_client = self.cl.users.get_all_with_username(client.username)
         if not (len(rx_client) == 0):
-            await self.cl.sendPacket(
+            await self.cl.send_packet(
                 rx_client,
                 {
                     "cmd": "set_coins",
                     "val": db.get_one({"username": client.username}).get("coins", 0),
-                    "origin": self.cl.getUserObjectFromClientObj(client),
+                    "origin": client.id,
                 },
             )
 
@@ -57,7 +61,7 @@ class CloudCoin:
         self, client, message, listener_detected, listener_id, room_id
     ):
         if not self.CA.IsAuthed(client):
-            await self.supporter.sendCode(
+            await self.cl.send_code(
                 client,
                 "NotLoggedIn",
                 listener_detected=listener_detected,
@@ -69,7 +73,7 @@ class CloudCoin:
         if self.db.get_one({"username": client.username}).get("coins", 0) < int(
             message["ammount"]
         ):
-            await self.supporter.sendCode(
+            await self.cl.send_code(
                 client,
                 "NotEnoughCoins",
                 listener_detected=listener_detected,
@@ -87,7 +91,7 @@ class CloudCoin:
             },
         )
 
-        await self.supporter.sendCode(
+        await self.cl.send_code(
             client,
             "OK",
             listener_detected=listener_detected,
@@ -95,21 +99,21 @@ class CloudCoin:
         )
 
         # tell all clients of user to update coins
-        rx_client = self.cl.selectMultiUserObjects(client.username)
+        rx_client = self.cl.users.get_all_with_username(client.username)
         if not (len(rx_client) == 0):
-            await self.cl.sendPacket(
+            await self.cl.send_packet(
                 rx_client,
                 {
                     "cmd": "set_coins",
                     "val": db.get_one({"username": client.username}).get("coins", 0),
-                    "origin": self.cl.getUserObjectFromClientObj(client),
+                    "origin": client.id,
                 },
             )
 
 
 async def send_coins(self, client, message, listener_detected, listener_id, room_id):
     if not self.CA.IsAuthed(client):
-        await self.supporter.sendCode(
+        await self.cl.send_code(
             client,
             "NotLoggedIn",
             listener_detected=listener_detected,
@@ -119,7 +123,7 @@ async def send_coins(self, client, message, listener_detected, listener_id, room
 
     other_usr = message["id"]
     if other_usr == client.username:
-        await self.supporter.sendCode(
+        await self.cl.send_code(
             client,
             "OK",
             listener_detected=listener_detected,
@@ -131,7 +135,7 @@ async def send_coins(self, client, message, listener_detected, listener_id, room
     if self.db.get_one({"username": client.username}).get("coins", 0) < int(
         message["ammount"]
     ):
-        await self.supporter.sendCode(
+        await self.cl.send_code(
             client,
             "NotEnoughCoins",
             listener_detected=listener_detected,
@@ -160,32 +164,30 @@ async def send_coins(self, client, message, listener_detected, listener_id, room
         },
     )
 
-    await self.supporter.sendCode(
+    await self.cl.send_code(
         client,
         "OK",
         listener_detected=listener_detected,
         listener_id=listener_id,
     )
     # send to the sender that the coins were transferred
-    rx_client = self.cl.selectMultiUserObjects(message["id"])
+    rx_client = self.cl.users.get_all_with_username(other_usr)
     if not (len(rx_client) == 0):
-        await self.cl.sendPacket(
+        await self.cl.send_packet(
             rx_client,
             {
                 "cmd": "set_coins",
-                "val": db.get_one({"username": client.username}).get("coins", 0),
-                "origin": self.cl.getUserObjectFromClientObj(client),
+                "val": db.get_one({"username": other_usr}).get("coins", 0),
+                "origin": client.id,
             },
         )
-
-        # tell all clients of user to update coins
-        rx_client = self.cl.selectMultiUserObjects(client.username)
+        rx_client = self.cl.users.get_all_with_username(client.username)
         if not (len(rx_client) == 0):
-            await self.cl.sendPacket(
+            await self.cl.send_packet(
                 rx_client,
                 {
                     "cmd": "set_coins",
                     "val": db.get_one({"username": client.username}).get("coins", 0),
-                    "origin": self.cl.getUserObjectFromClientObj(client),
+                    "origin": client.id,
                 },
             )

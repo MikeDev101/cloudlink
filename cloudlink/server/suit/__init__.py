@@ -34,46 +34,32 @@ class SuitDB:
 
 
 class Suit:
-    def _bind_cbs(self):
-        self.cl.callback(self.cl.on_ulist, self._internal_cbs.on_ulist)
-        self.cl.callback(self.cl.on_statuscode, self._internal_cbs.on_statuscode)
-        self.cl.callback(self.cl.on_setid, self._internal_cbs.on_setid)
-        self.cl.callback(self.cl.on_gmsg, self._internal_cbs.on_gmsg)
-        self.cl.callback(self.cl.on_gvar, self._internal_cbs.on_gvar)
-        self.cl.callback(self.cl.on_pvar, self._internal_cbs.on_pvar)
-        self.cl.callback(self.cl.on_pmsg, self._internal_cbs.on_pmsg)
-        self.cl.callback(self.cl.on_ping, self._internal_cbs.on_ping)
-
     def __init__(self, cloudlink, suit_db):
         self.db = suit_db
         self.cl = cloudlink
         self.cl.suit = self
         self.cl.db = self.db
-
-        self._internal_cbs = suit_cbs(self.cl)
-        self._bind_cbs()
         self.callbacks = {}
 
     # suit imports
     def account(self):
         from .account import CloudAccount
-
-        self.cl.loadCustomCommands(CloudAccount)
-        self.CA = self.cl.CloudAccount
+        self.CA = CloudAccount(self.cl)
+        self.cl.loadCustomCommands(self.CA)
+        
         return self
 
     def disk(self):
         from .disk import CloudDisk
-
-        self.cl.loadCustomCommands(CloudDisk)
-        self.CD = self.cl.CloudDisk
+        self.CD = CloudDisk
+        self.cl.loadCustomCommands(self.CD)
         return self
 
     def coin(self):
         from .coin import CloudCoin
-
-        self.cl.loadCustomCommands(CloudCoin)
-        self.CC = self.cl.CloudCoin
+        self.CC = CloudCoin(self.cl)
+        self.cl.loadCustomCommands(self.CC)
+        
         return self
 
     # allow multi cbs on the same cb
