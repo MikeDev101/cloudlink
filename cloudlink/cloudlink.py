@@ -1,12 +1,5 @@
 from .supporter import supporter
 
-# Hippity hoppity, better peformance is now on your property
-import websockets as async_websockets
-import asyncio
-
-# If you need it, you can use the non-Async client.
-import websocket as old_websockets
-
 """
 CloudLink 4.0 Server and Client
 
@@ -21,37 +14,42 @@ Cloudlinks's dependencies are:
 * websockets
 
 These dependencies are built-in to Python.
-* threading
+* copy
 * asyncio
 * traceback
 * datetime
 * json
 """
 
-class Cloudlink:
+class cloudlink:
     def __init__(self):
-        self.version = "0.1.8.8"
+        self.version = "0.1.9.0"
         self.supporter = supporter
         print(f"Cloudlink v{self.version}")
 
     def server(self, logs:bool = False):
         # Initialize Cloudlink server
-        self.ws = async_websockets
-        self.asyncio = asyncio
         from .server import server
         return server(self, logs)
 
     def client(self, logs:bool = False, async_client:bool = True):
         # Initialize Cloudlink client
         if async_client:
-            self.ws = async_websockets
-            self.asyncio = asyncio
-            from .async_client import client
+            from .async_client import async_client
+            return async_client.client(self, logs)
         else:
-            self.ws = old_websockets
-            from .old_client import client
-        return client(self, logs)
-
+            from .old_client import old_client
+            return old_client.client(self, logs)
+    
+    def multi_client(self, logs:bool = False, async_client:bool = True):
+        # Initialize Cloudlink client
+        if async_client:
+            from .async_client import async_client
+            return async_client.multi_client(self, logs)
+        else:
+            from .old_client import old_client
+            return old_client.multi_client(self, logs)
+    
     def relay(self, logs:bool = False):
         # TODO: Client and server modes now exist together, still need to finish spec and functionality for Relay mode
         pass
