@@ -163,13 +163,8 @@ class CloudAccount:
             )
             return
 
-        await self.cl.serverInternalHandlers.setid(
-            client,
-            {"val": message["username"]},
-            listener_detected,
-            listener_id,
-            room_id,
-        )
+        await self.cl.setClientUsername(client, usr.username)
+
         token = secrets.token_urlsafe()
         refresh_token = secrets.token_urlsafe()
         self.db.update_one(
