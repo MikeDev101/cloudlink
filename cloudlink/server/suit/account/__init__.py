@@ -13,14 +13,14 @@ class CloudAccount:
         self.db = self.cl.db
         self.supporter = self.cl.supporter
 
-        self.supporter.codes.extend(
+        self.supporter.codes.update(
             {
                 "AccountExists": ("E", 112, "Account already exists"),
                 "AccountNotFound": ("E", 113, "Account not found"),
                 "NotLoggedIn": ("I", 115, "Account Not logged in"),
             }
         )
-        self.cl.disableCommands("setid")
+        self.cl.disabled_methods.add("setid")
         self.importer_ignore_functions = ["IsAuthed"]
 
     # public API
@@ -28,7 +28,7 @@ class CloudAccount:
         if not client.username_set:
             return False
 
-        usr = self.db.find_one({"username": client.username})
+        usr = self.db.users.find_one({"username": client.friendly_username})
         if not usr:
             return False
 
@@ -37,8 +37,8 @@ class CloudAccount:
             return False
 
         if time.time() - usr["session"]["timeout"] > 2700:
-            self.db.update_one(
-                {"username": client.username},
+            self.db.users.update_one(
+                {"username": client.friendly_username},
                 {
                     "$set": {
                         "session": {"timeout": 0, "token": None, "refresh_token": None}
@@ -51,7 +51,7 @@ class CloudAccount:
         return True
 
     # commands
-    async def sign_up(self, client, message, listener_detected, listener_id, room_id):
+    async def sign_up(self, client, message, listener_detected, listener_id):
 
         if "password" not in message:
             await self.cl.send_code(
@@ -71,18 +71,17 @@ class CloudAccount:
             )
             return
 
-        if not self.db.find_one({"username": message["username"]}):
-            await self.cl.sendCode(
+        if self.db.users.find_one({"username": message["username"]}):
+            await self.cl.send_code(
                 client, "AccountExists", listener_detected, listener_id
             )
             return
 
-        self.db.insert(
-            "users",
+        self.db.users.insert_one(
             {
-                "_id": uuid.uuid4(),
+                "_id": uuid.uuid4().hex,
                 "username": message["username"],
-                "password": bcrypt.hashpw(message["password"], bcrypt.gensalt()),
+                "password": bcrypt.hashpw(message["password"].encode(), bcrypt.gensalt()),
                 "created": datetime.datetime.now(),
                 "session": {"token": None, "timeout": 0, "refresh_token": None},
             },
@@ -95,7 +94,7 @@ class CloudAccount:
         )
 
     async def refresh_auth(
-        self, client, message, listener_detected, listener_id, room_id
+        self, client, message, listener_detected, listener_id,
     ):
 
         if "refresh_token" not in message:
@@ -116,10 +115,10 @@ class CloudAccount:
             )
             return
 
-        self.db.update_one(
-            "users",
+        self.db.users.update_one(
+            
             {
-                "username": client.username,
+                "username": client.friendly_username,
                 "session": {"refresh_token": message["refresh_token"]},
             },
             {
@@ -133,18 +132,19 @@ class CloudAccount:
             },
         )
 
+        usr = self.db.users.find_one( {"username": client.friendly_username})
         await self.cl.send_packet(
-            self.cl.clients.get_all_with_username(client.username),
+            self.cl.clients.get_all_with_username(client.friendly_username),
             {
                 "type": "auth",
-                "username": client.username,
-                "token": usr.session.token,
-                "refresh_token": usr.session.refresh_token,
+                "username": client.friendly_username,
+                "token": usr['session']['token'],
+                "refresh_token": usr['session']['refresh_token'],
             },
         )
 
-    async def sign_in(self, client, message, listener_detected, listener_id, room_id):
-        usr = self.db.find_one("users", {"username": username})
+    async def sign_in(self, client, message, listener_detected, listener_id):
+        usr = self.db.users.find_one({"username": message["username"]})
         if not usr:
             await self.cl.send_code(
                 client,
@@ -154,7 +154,7 @@ class CloudAccount:
             )
             return
 
-        if not bcrypt.hashpw(message["password"], usr.password):
+        if not bcrypt.hashpw(message["password"].encode(), usr['password']):
             await self.cl.send_code(
                 client,
                 "AccountNotFound",
@@ -163,15 +163,14 @@ class CloudAccount:
             )
             return
 
-        await self.cl.setClientUsername(client, usr.username)
+        self.cl.clients.set_username(client, usr['username'])
 
         token = secrets.token_urlsafe()
         refresh_token = secrets.token_urlsafe()
-        self.db.update_one(
-            "users",
+        self.db.users.update_one(
+            
             {
-                "username": client.username,
-                "session": {"refresh_token": message["refresh_token"]},
+                "username": usr["username"],
             },
             {
                 "$set": {

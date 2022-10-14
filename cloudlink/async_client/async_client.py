@@ -133,8 +133,15 @@ class client:
             return
         
         await self.client.close()
-    
-    async def send_packet(self, cmd:str, val:any = None, listener_detected:bool = False, listener_id:str = None, room_id:str = None, quirk:str = "quirk_embed_val"):
+
+    async def send_raw_packet(self, packet:dict):
+        if not self.client:
+          return
+        if not self.client.open:
+            return
+        await self.client.send(json.dumps(packet))
+  
+    async def send_packet (self, cmd:str, val:any = None, listener_detected:bool = False, listener_id:str = None, room_id:str = None, quirk:str = "quirk_embed_val"):
         if not self.client:
             return
         

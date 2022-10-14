@@ -564,14 +564,7 @@ class clients:
     def get_all_with_username(self, username):
       tmp = self.__parent__.copy(self.__dict__)
       # Remove attributes that aren't client objects
-      del tmp["__all_cl__"]
-      del tmp["__all_scratch__"]
-      del tmp["__proto_unset__"]
-      del tmp["__proto_cloudlink__"]
-      del tmp["__proto_scratch_cloud__"]
-      del tmp["__usernames__"]
-      del tmp["__parent__"]
-      
+
       return tmp['__usernames__'][username]
 
       
