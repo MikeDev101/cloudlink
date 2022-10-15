@@ -10,7 +10,7 @@ class callback_examples:
         #print(f"Client {client.obj_id} connected")
         #logging in
         await client.send_raw_packet({
-            "cmd": "create_account",
+            "cmd": "signup",
             "username": "a",
             "password": "b"
         })
