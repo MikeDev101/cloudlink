@@ -51,7 +51,7 @@ class CloudAccount:
         return True
 
     # commands
-    async def sign_up(self, client, message, listener_detected, listener_id):
+    async def create_account(self, client, message, listener_detected, listener_id):
 
         if "password" not in message:
             await self.cl.send_code(
@@ -143,7 +143,7 @@ class CloudAccount:
             },
         )
 
-    async def sign_in(self, client, message, listener_detected, listener_id):
+    async def login(self, client, message, listener_detected, listener_id):
         usr = self.db.users.find_one({"username": message["username"]})
         if not usr:
             await self.cl.send_code(

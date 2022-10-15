@@ -19,7 +19,7 @@ class CloudCoin:
             }
         )
 
-    async def add_coins(self, client, message, listener_detected, listener_id):
+    async def add_coin(self, client, message, listener_detected, listener_id):
         if not self.CA.IsAuthed(client):
             await self.supporter.send_code(
                 client,
