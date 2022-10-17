@@ -1,5 +1,5 @@
 from cloudlink import cloudlink
-from cloudlink.server.suit import SuitDB, Suit
+from cloudlink.server.suite import SuiteDB, Suite
 from montydb import MontyClient, set_storage
 
 class example_callbacks:
@@ -54,7 +54,7 @@ if __name__ == "__main__":
     # Create a new server object. This supports initializing many servers at once.
     set_storage("./db/repo", cache_modified=0)  # optional step
     server = cl.server(logs = True)
-    suit = Suit(server, SuitDB(server, "Monty", "./db/repo", "test", )) \
+    suite = Suite(server, SuiteDB(server, "Monty", "./db/repo", "test", )) \
       .account() \
          .disk() \
          .coin()

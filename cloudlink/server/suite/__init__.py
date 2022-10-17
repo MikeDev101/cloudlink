@@ -1,7 +1,7 @@
 import asyncio
 
 
-class SuitDB:
+class SuiteDB:
     def __init__(self, cl, type, path, db):
         self.cl = cl
         self.type = type
@@ -25,7 +25,7 @@ class SuitDB:
         return getattr(self.db, name)
 
 
-class Suit:
+class Suite:
     def __init__(self, cloudlink, suit_db):
         self.db = suit_db
         self.cl = cloudlink
