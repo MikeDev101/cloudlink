@@ -50,7 +50,9 @@ class CloudCoin:
         )
 
         # tell all clients of user to update coins
-        rx_client = self.cl.clients.get_all_with_username(client.friendly_username)
+        rx_client = client = self.cl.clients.get_all_with_username(
+            client.friendly_username
+        )
         if not (len(rx_client) == 0):
             await self.cl.send_packet_multicast(
                 rx_client,
@@ -110,7 +112,9 @@ class CloudCoin:
         )
 
         # tell all clients of user to update coins
-        rx_client = self.cl.clients.get_all_with_username(client.friendly_username)
+        rx_client = client = self.cl.clients.get_all_with_username(
+            client.friendly_username
+        )
         if not (len(rx_client) == 0):
             await self.cl.send_packet_multicast(
                 rx_client,
@@ -194,7 +198,7 @@ class CloudCoin:
             listener_id=listener_id,
         )
         # send to the sender that the coins were transferred
-        rx_client = self.cl.clients.get_all_with_username(other_usr)
+        rx_client = client = self.cl.clients.get_all_with_username(other_usr)
         if not (len(rx_client) == 0):
             await self.cl.send_packet_multicast(
                 rx_client,
@@ -209,7 +213,9 @@ class CloudCoin:
                 listener_detected=listener_detected,
                 listener_id=listener_id,
             )
-        rx_client = self.cl.clients.get_all_with_username(client.friendly_username)
+        rx_client = client = self.cl.clients.get_all_with_username(
+            client.friendly_username
+        )
         if not (len(rx_client) == 0):
             await self.cl.send_packet_multicast(
                 rx_client,

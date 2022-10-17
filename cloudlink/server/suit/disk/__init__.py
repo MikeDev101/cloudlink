@@ -48,7 +48,9 @@ class CloudDisk:
             client, "OK", listener_detected=listener_detected, listener_id=listener_id
         )
 
-        rx_client = self.cl.clients.get_all_with_username(client.friendly_username)
+        rx_client = client = self.cl.clients.get_all_with_username(
+            client.friendly_username
+        )
         if not (len(rx_client) == 0):
             await self.cl.send_packet(
                 rx_client,
@@ -102,7 +104,9 @@ class CloudDisk:
             client, "OK", listener_detected=listener_detected, listener_id=listener_id
         )
 
-        rx_client = self.cl.clients.get_all_with_username(client.friendly_username)
+        rx_client = client = self.cl.clients.get_all_with_username(
+            client.friendly_username
+        )
         if not (len(rx_client) == 0):
             await self.cl.send_packet_multicast(
                 rx_client,

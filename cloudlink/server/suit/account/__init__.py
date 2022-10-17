@@ -139,7 +139,7 @@ class CloudAccount:
 
         usr = self.db.users.find_one({"username": client.friendly_username})
         await self.cl.send_packet_multicast(
-            self.cl.clients.get_all_with_username(client.friendly_username),
+            client=self.cl.clients.get_all_with_username(client.friendly_username),
             cmd="auth",
             val={
                 "username": client.friendly_username,
@@ -189,7 +189,7 @@ class CloudAccount:
         )
 
         await self.cl.send_packet_multicast(
-            self.cl.clients.get_all_with_username(message["username"]),
+            client=self.cl.clients.get_all_with_username(message["username"]),
             cmd="auth",
             val={
                 "username": message["username"],
