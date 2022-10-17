@@ -9,27 +9,36 @@ class callback_examples:
     async def on_connect(self, client):
         #print(f"Client {client.obj_id} connected")
         #logging in
-        await client.send_raw_packet({
-            "cmd": "signup",
-            "username": "a",
-            "password": "b"
+        await client.send_packet(
+            cmd= "signup",
+            val={
+              "username": "a",
+              "password": "b"
+            }
         })
 
         await sleep(1)
-        await client.send_raw_packet({
-            "cmd": "login",
-            "username": "a",
-            "password": "b"
-        })
+        await client.send_packet(
+            cmd = "login",
+            val= {
+              "username": "a",
+              "password": "b"
+            }
+        )
 
         #coins
-        await client.send_raw_packet({"cmd": "add_coins", "ammount": 3})
+        await client.send_raw_packet(
+          cmd = "add_coins", 
+          val={
+            "ammount": 3
+          }
+        )
 
         await sleep(1)
-        await client.send_raw_packet({"cmd": "spend_coins", "ammount": 2})
+        await client.send_raw_packet(cmd= "spend_coins", val={"ammount": 2})
 
         #disk
-        await client.send_raw_packet({"cmd": "create_disk", "val": 'e'})
+        await client.send_raw_packet(cmd ="create_disk", val='e')
         await sleep(1)
         await client.send_raw_packet({"cmd": "get_disk", "disk_id": 0})
         await sleep(1)

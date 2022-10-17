@@ -81,7 +81,9 @@ class CloudAccount:
             {
                 "_id": uuid.uuid4().hex,
                 "username": message["username"],
-                "password": bcrypt.hashpw(message["password"].encode(), bcrypt.gensalt()),
+                "password": bcrypt.hashpw(
+                    message["password"].encode(), bcrypt.gensalt()
+                ),
                 "created": datetime.datetime.now(),
                 "session": {"token": None, "timeout": 0, "refresh_token": None},
             },
@@ -94,7 +96,11 @@ class CloudAccount:
         )
 
     async def refresh_auth(
-        self, client, message, listener_detected, listener_id,
+        self,
+        client,
+        message,
+        listener_detected,
+        listener_id,
     ):
 
         if "refresh_token" not in message:
@@ -116,7 +122,6 @@ class CloudAccount:
             return
 
         self.db.users.update_one(
-            
             {
                 "username": client.friendly_username,
                 "session": {"refresh_token": message["refresh_token"]},
@@ -132,15 +137,16 @@ class CloudAccount:
             },
         )
 
-        usr = self.db.users.find_one( {"username": client.friendly_username})
-        await self.cl.send_packet(
+        usr = self.db.users.find_one({"username": client.friendly_username})
+        await self.cl.send_packet_multicast(
             self.cl.clients.get_all_with_username(client.friendly_username),
-            {
-                "type": "auth",
+            cmd="auth",
+            val={
                 "username": client.friendly_username,
-                "token": usr['session']['token'],
-                "refresh_token": usr['session']['refresh_token'],
+                "token": usr["session"]["token"],
+                "refresh_token": usr["session"]["refresh_token"],
             },
+            quirk=self.cl.supporter.quirk_update_msg,
         )
 
     async def login(self, client, message, listener_detected, listener_id):
@@ -154,7 +160,7 @@ class CloudAccount:
             )
             return
 
-        if not bcrypt.hashpw(message["password"].encode(), usr['password']):
+        if not bcrypt.hashpw(message["password"].encode(), usr["password"]):
             await self.cl.send_code(
                 client,
                 "AccountNotFound",
@@ -163,12 +169,11 @@ class CloudAccount:
             )
             return
 
-        self.cl.clients.set_username(client, usr['username'])
+        self.cl.clients.set_username(client, usr["username"])
 
         token = secrets.token_urlsafe()
         refresh_token = secrets.token_urlsafe()
         self.db.users.update_one(
-            
             {
                 "username": usr["username"],
             },
@@ -183,12 +188,13 @@ class CloudAccount:
             },
         )
 
-        await self.cl.send_packet(
+        await self.cl.send_packet_multicast(
             self.cl.clients.get_all_with_username(message["username"]),
-            {
-                "type": "auth",
+            cmd="auth",
+            val={
                 "username": message["username"],
                 "token": token,
                 "refresh_token": refresh_token,
             },
+            quirk=self.cl.supporter.quirk_update_msg,
         )
