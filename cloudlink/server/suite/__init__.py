@@ -34,20 +34,6 @@ class Suite:
         self.callbacks = {}
 
     # suit imports
-    def account(self):
-        from .account import CloudAccount
-
-        self.CA = CloudAccount(self.cl)
-        self.cl.supporter.load_custom_methods(self.CA)
-        return self
-
-    def disk(self):
-        from .disk import CloudDisk
-
-        self.CD = CloudDisk(self.cl)
-        self.cl.supporter.load_custom_methods(self.CD)
-        return self
-
     def coin(self):
         from .coin import CloudCoin
 

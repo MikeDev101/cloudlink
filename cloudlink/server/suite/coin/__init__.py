@@ -1,232 +1,103 @@
 class CloudCoin:
-    def __init__(self, cl):
+    def __init__(self, cl, account_username, account_password):
+        self.suit = cl.suit
         self.cl = cl
-        self.db = self.cl.db
-        self.suit = self.cl.suit
-        self.log = self.cl.log
-        if not hasattr(self.suit, "CA"):
-            raise RuntimeError("CA Not enabled. CC requires CA to be enabled")
-        self.CA = self.suit.CA
-        self.supporter = self.cl.supporter
-
-        self.supporter.codes.update(
-            {
-                "NotEnoughCoins": (
-                    "I",
-                    115,
-                    "Your dont have enough coins",
-                )
-            }
+        self.home_server_con = self.cl.parrent.client(
+            async_client=True, logs=self.cl.enable_logs
+        )
+        self.home_server_con.bind_event(
+            self.home_server_con.statuscode, self._handle_statuscode
+        )
+        self.home_server_con.bind_event(
+            self.home_server_con.events.on_connect, self._on_home_connect
         )
 
-    async def add_coin(self, client, message, listener_detected, listener_id):
-        if not self.CA.IsAuthed(client):
-            await self.supporter.send_code(
-                client,
-                "NotLoggedIn",
-                listener_detected=listener_detected,
-                listener_id=listener_id,
-            )
-            return
+        self.secret = None
+        self.refresh_token = None
+        self.token = None
+        self.waiting_for_status = {}
+        self.auth_done = False
+        self.account_username = account_username
+        self.account_password = account_password
 
-        self.db.users.update_one(
-            {
-                "username": client.friendly_username,
-            },
-            {
-                "$set": {
-                    "coins": self.db.users.find_one(
-                        {"username": client.friendly_username}
-                    ).get("coins", 0)
-                    + int(message["ammount"])
-                },
-            },
-        )
-        await self.cl.send_code(
-            client,
-            "OK",
-            listener_detected=listener_detected,
-            listener_id=listener_id,
-        )
+    async def _handle_statuscode(self, statuscode, message):
+        if "listener" in message:
+            # internal cbs lmao
+            cb = message["listener"]
+            if cb == "LoginPart1":
+                if not message["status_id"] == 100:
+                    self.cl.error("account login failed:" + message["status"])
+                    return
 
-        # tell all clients of user to update coins
-        rx_client = client = self.cl.clients.get_all_with_username(
-            client.friendly_username
-        )
-        if not (len(rx_client) == 0):
-            await self.cl.send_packet_multicast(
-                rx_client,
-                cmd="set_coins",
-                val={
-                    "val": self.db.users.find_one(
-                        {"username": client.friendly_username}
-                    ).get("coins", 0),
-                    "origin": client.id,
-                },
-                quirk=self.cl.supporter.quirk_update_msg,
-                listener_detected=listener_detected,
-                listener_id=listener_id,
-            )
+                self.refresh_token = message["refresh_token"]
+                self.token = message["token"]
 
-    async def spend_coins(self, client, message, listener_detected, listener_id):
-        if not self.CA.IsAuthed(client):
-            await self.cl.send_code(
-                client,
-                "NotLoggedIn",
-                listener_detected=listener_detected,
-                listener_id=listener_id,
-            )
+                if not self.auth_done:
+                    self.cl.log("Logged in")
+                    lp = asyncio.get_event_loop()
+                    self._refresh_task = asyncio.call_soon(self.refresh_task, lp)
 
-            return
-
-        if self.db.users.find_one({"username": client.friendly_username}).get(
-            "coins", 0
-        ) < int(message["ammount"]):
-            await self.cl.send_code(
-                client,
-                "NotEnoughCoins",
-                listener_detected=listener_detected,
-                listener_id=listener_id,
-            )
-            return
-
-        self.db.users.update_one(
-            {
-                "username": client.friendly_username,
-            },
-            {
-                "$set": {
-                    "coins": self.db.users.find_one(
-                        {"username": client.friendly_username}
-                    ).get("coins", 0)
-                    - int(message["ammount"])
-                }
-            },
-        )
-
-        await self.cl.send_code(
-            client,
-            "OK",
-            listener_detected=listener_detected,
-            listener_id=listener_id,
-        )
-
-        # tell all clients of user to update coins
-        rx_client = client = self.cl.clients.get_all_with_username(
-            client.friendly_username
-        )
-        if not (len(rx_client) == 0):
-            await self.cl.send_packet_multicast(
-                rx_client,
-                cmd="set_coins",
-                val={
-                    "val": self.db.users.find_one(
-                        {"username": client.friendly_username}
-                    ).get("coins", 0),
-                    "origin": client.id,
-                },
-                quirk=self.cl.supporter.quirk_update_msg,
-                listener_detected=listener_detected,
-                listener_id=listener_id,
-            )
-
-    async def send_coins(self, client, message, listener_detected, listener_id):
-        if not self.CA.IsAuthed(client):
-            await self.cl.send_code(
-                client,
-                "NotLoggedIn",
-                listener_detected=listener_detected,
-                listener_id=listener_id,
-            )
-            return
-
-        other_usr = message["id"]
-        if other_usr == client.friendly_username:
-            await self.cl.send_code(
-                client,
-                "OK",
-                listener_detected=listener_detected,
-                listener_id=listener_id,
-            )
-            return  # do nothing but send OK to the client
-
-        # check if the user who is sending has enough coins
-        if self.db.users.find_one({"username": client.friendly_username}).get(
-            "coins", 0
-        ) < int(message["ammount"]):
-            await self.cl.send_code(
-                client,
-                "NotEnoughCoins",
-                listener_detected=listener_detected,
-                listener_id=listener_id,
-            )
-            return
-
-        # do the coin transfer
-        self.db.users.update_one(
-            {
-                "username": other_usr,
-            },
-            {
-                "$set": {
-                    "coins": self.db.users.find_one({"username": other_usr}).get(
-                        "coins", 0
+                    self.auth_done = True
+                    await self.home_server_con.send_packet(
+                        quirk=self.cl.supporter.quirk_update_msg,
+                        cmd="login_project",
+                        listener="LoginPart2",
                     )
-                    + int(message["ammount"])
-                }
-            },
-        )
-
-        self.db.users.update_one(
-            {
-                "username": client.friendly_username,
-            },
-            {
-                "$set": {
-                    "coins": self.db.users.find_one(
-                        {"username": client.friendly_username}
-                    ).get("coins", 0)
-                    - int(message["ammount"])
-                }
-            },
-        )
+                else:
+                    self.cl.log("Refreshed auth")
+            elif cb == "LoginPart2":
+                if not message["status_id"] == 200:
+                    self.cl.error("account login failed:" + message["status"])
+                    return
+                self.secret = message["secret"]
 
         await self.cl.send_code(
-            client,
-            "OK",
+            self.waiting_for_status[message["user"]]["client"],
+            message["code"],
+            **self.waiting_for_status[message["user"]]["listener"],
+        )
+        del self.waiting_for_status[message["user"]]
+
+    async def _login_loop(self):
+        while True:
+            await asyncio.sleep(2400 - 60)
+            await self.home_server_con.send_packet(
+                quirk=self.cl.supporter.quirk_update_msg,
+                cmd="refresh_auth",
+                listener="LoginPart1",
+                val={"refresh_token": self.refresh_token},
+            )
+
+    async def _on_home_connect(self):
+        self.home_server_con.send_packet(
+            cmd="login",
+            listener="LoginPart1",
+            val={"username": self.account_username, "password": self.account_password},
+            quirk=self.cl.supporter.quirk_update_msg,
+        )
+
+    async def transfer(
+        self,
+        client,
+        message,
+        listener_detected,
+        listener_id,
+    ):
+        del message["cmd"]
+        message["user"] = client.frendly_username
+
+        self.waiting_for_status[client.frendly_username] = {
+            "client": client,
+            "listener": {
+                "listener_detected": listener_detected,
+                "listener_id": listener_id,
+            },
+        }
+
+        self.home_server_con.send_packet(
+            quirk=self.cl.supporter.quirk_update_msg,
+            cmd="transfer_to_project",
+            val=message,
             listener_detected=listener_detected,
             listener_id=listener_id,
         )
-        # send to the sender that the coins were transferred
-        rx_client = client = self.cl.clients.get_all_with_username(other_usr)
-        if not (len(rx_client) == 0):
-            await self.cl.send_packet_multicast(
-                rx_client,
-                cmd="set_coins",
-                val={
-                    "val": self.db.users.find_one({"username": other_usr}).get(
-                        "coins", 0
-                    ),
-                    "origin": client.id,
-                },
-                quirk=self.cl.supporter.quirk_update_msg,
-                listener_detected=listener_detected,
-                listener_id=listener_id,
-            )
-        rx_client = client = self.cl.clients.get_all_with_username(
-            client.friendly_username
-        )
-        if not (len(rx_client) == 0):
-            await self.cl.send_packet_multicast(
-                rx_client,
-                cmd="set_coins",
-                val={
-                    "val": self.db.users.find_one(
-                        {"username": client.friendly_username}
-                    ).get("coins", 0),
-                    "origin": client.id,
-                },
-                quirk=self.cl.supporter.quirk_update_msg,
-                listener_detected=listener_detected,
-                listener_id=listener_id,
-            )
