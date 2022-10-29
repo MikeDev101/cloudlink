@@ -2,6 +2,7 @@ import sys
 import traceback
 from datetime import datetime
 
+
 class supporter:
     def __init__(self, parent):
         self.parent = parent
@@ -68,43 +69,45 @@ class supporter:
             "cmd": str,
             "value": [str, int, float]
         }
-    
+
     # New and improved version of the message sanity checker.
-    def validate(self, keys:dict, payload:dict, optional:list = [], sizes:dict = None):
+    def validate(self, keys: dict, payload: dict, optional=None, sizes: dict = None):
         # Check if input datatypes are valid
+        if optional is None:
+            optional = []
         if (type(keys) != dict) or (type(payload) != dict):
             return self.not_a_dict
-        
+
         for key in keys.keys():
             # Check if a key is present
             if (key in payload) or (key in optional):
                 # Bypass checks if a key is optional and not present
-                if (not key in payload) and (key in optional):
+                if (key not in payload) and (key in optional):
                     continue
-                
+
                 # Check if there are multiple supported datatypes for a key
                 if type(keys[key]) == list:
                     # Validate key datatype
                     if not type(payload[key]) in keys[key]:
                         return self.invalid
-                    
+
                     # Check if the size of the payload is too large 
                     if sizes:
                         if (key in sizes.keys()) and (len(str(payload[key])) > sizes[key]):
                             return self.too_large
-                
+
                 else:
                     # Validate key datatype
                     if type(payload[key]) != keys[key]:
                         return self.invalid
-                    
+
                     # Check if the size of the payload is too large 
                     if sizes:
                         if (key in sizes.keys()) and (len(str(payload[key])) > sizes[key]):
                             return self.too_large
             else:
                 return self.missing_key
-        
+
         # Hooray, the message is sane
         return self.valid
 
@@ -120,20 +123,20 @@ class supporter:
         if exc is not None:
             stackstr += '  ' + traceback.format_exc().lstrip(trc)
         return stackstr
-    
-    def is_json(self, jsonStr):
+
+    def is_json(self, json_str):
         is_valid_json = False
         try:
-            if type(jsonStr) == dict:
+            if type(json_str) == dict:
                 is_valid_json = True
-            elif type(jsonStr) == str:
-                jsonStr = self.json.loads(jsonStr)
+            elif type(json_str) == str:
+                json_str = self.json.loads(json_str)
                 is_valid_json = True
         except:
             is_valid_json = False
         return is_valid_json
 
-    def get_client_ip(self, client:dict):
+    def get_client_ip(self, client: dict):
         if "x-forwarded-for" in client.request_headers:
             return client.request_headers.get("x-forwarded-for")
         elif "cf-connecting-ip" in client.request_headers:
@@ -144,54 +147,91 @@ class supporter:
             else:
                 return client.remote_address
 
-    def generate_statuscode(self, code:str):
+    def generate_statuscode(self, code: str):
         if code in self.codes:
             c_type, c_code, c_msg = self.codes[code]
-            return (f"{c_type}:{c_code} | {c_msg}"), c_code
+            return f"{c_type}:{c_code} | {c_msg}", c_code
         else:
             raise ValueError
 
+    # Determines if a method 
     def detect_listener(self, message):
         validation = self.validate(
             {
                 "listener": self.keydefaults["listener"]
-            }, 
+            },
             message
         )
 
         match validation:
             case self.invalid:
-                return False, None
+                return None
             case self.missing_key:
-                return False, None
-        
-        return True, message["listener"]
+                return None
 
-    def disable_methods(self, functions:list):
-        if type(function) != list:
+        return message["listener"]
+
+    # Internal usage only, not for use in Public API
+    def get_rooms(self, client, message):
+        rooms = set()
+        if "rooms" not in message:
+            rooms.update(client.rooms)
+        else:
+            if type(message["rooms"]) == str:
+                message["rooms"] = [message["rooms"]]
+            rooms.update(set(message["rooms"]))
+
+            # Filter rooms client doesn't have access to
+            for room in self.copy(rooms):
+                if room not in client.rooms:
+                    rooms.remove(room)
+        return rooms
+
+    # Disables methods. Supports disabling built-in methods for monkey-patching or for custom reimplementation.
+    def disable_methods(self, functions: list):
+        if type(functions) != list:
             raise TypeError
 
         for function in functions:
             if type(function) != str:
                 continue
 
-            if not function in self.parent.disabled_methods:
+            if function not in self.parent.disabled_methods:
                 self.parent.disabled_methods.add(function)
 
+            self.parent.safe_methods.discard(function)
+
+    # Support for loading custom methods. Automatically selects safe methods.
     def load_custom_methods(self, _class):
-        for _function in dir(_class):
+        for function in dir(_class):
             # Ignore loading private methods
-            if "__" in _function:
+            if "__" in function:
                 continue
-            
+
             # Ignore loading commands marked as ignore
             if hasattr(_class, "importer_ignore_functions"):
-                if _function in _class.importer_ignore_functions:
+                if function in _class.importer_ignore_functions:
                     continue
-            
-            setattr(self.parent.custom_methods, _function, getattr(_class, _function))
-    
-    def log(self, event, force:bool = False):
+
+            setattr(self.parent.custom_methods, function, getattr(_class, function))
+            self.parent.safe_methods.add(function)
+
+    # This initializes methods that are guaranteed safe to use. This mitigates the possibility of clients accessing
+    # private or sensitive methods.
+    def init_builtin_cl_methods(self):
+        for function in dir(self.parent.cl_methods):
+            # Ignore loading private methods
+            if "__" in function:
+                continue
+
+            # Ignore loading commands marked as ignore
+            if hasattr(self.parent.cl_methods, "importer_ignore_functions"):
+                if function in self.parent.cl_methods.importer_ignore_functions:
+                    continue
+
+            self.parent.safe_methods.add(function)
+
+    def log(self, event, force: bool = False):
         if self.parent.enable_logs or force:
             print(f"{self.timestamp()}: {event}")
 

@@ -10,7 +10,7 @@ Cloudlink is built upon https://github.com/aaugustin/websockets.
 
 Please see https://github.com/MikeDev101/cloudlink for more details.
 
-Cloudlinks's dependencies are:
+Cloudlink's dependencies are:
 * websockets
 
 These dependencies are built-in to Python.
@@ -21,18 +21,19 @@ These dependencies are built-in to Python.
 * json
 """
 
+
 class cloudlink:
     def __init__(self):
-        self.version = "0.1.9.0"
+        self.version = "0.1.9.1"
         self.supporter = supporter
         print(f"Cloudlink v{self.version}")
 
-    def server(self, logs:bool = False):
+    def server(self, logs: bool = False):
         # Initialize Cloudlink server
         from .server import server
         return server(self, logs)
 
-    def client(self, logs:bool = False, async_client:bool = True):
+    def client(self, logs: bool = False, async_client: bool = True):
         # Initialize Cloudlink client
         if async_client:
             from .async_client import async_client
@@ -40,8 +41,8 @@ class cloudlink:
         else:
             from .old_client import old_client
             return old_client.client(self, logs)
-    
-    def multi_client(self, logs:bool = False, async_client:bool = True):
+
+    def multi_client(self, logs: bool = False, async_client: bool = True):
         # Initialize Cloudlink client
         if async_client:
             from .async_client import async_client
@@ -49,7 +50,7 @@ class cloudlink:
         else:
             from .old_client import old_client
             return old_client.multi_client(self, logs)
-    
-    def relay(self, logs:bool = False):
+
+    def relay(self, logs: bool = False):
         # TODO: Client and server modes now exist together, still need to finish spec and functionality for Relay mode
         pass
