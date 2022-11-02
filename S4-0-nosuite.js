@@ -1022,7 +1022,6 @@ class CloudLink {
 
 			console.log("Successfully opened socket.");
 		};
-		// I ain't unraveling this one
 		mWS.onmessage = function(event){
 			let tmp_socketData = JSON.parse(event.data);
 			console.log("RX:", tmp_socketData);
