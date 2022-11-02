@@ -18,11 +18,10 @@ try {
 
 function find_id(ID, ulist) {
 	// Thanks StackOverflow!
-	if (jsonCheck(ID) && (!intCheck(ID))) {
-		return ulist.some(o => ((o.username === JSON.parse(ID).username) && (o.id == JSON.parse(ID).id)));
-	} else {
+	if (!jsonCheck(ID) && intCheck(ID)) {
 		return ulist.some(o => ((o.username === String(ID)) || (o.id == ID)));
-	};
+	}
+	return ulist.some(o => ((o.username === JSON.parse(ID).username) && (o.id == JSON.parse(ID).id)));
 }
 
 function jsonCheck(JSON_STRING) {
@@ -141,7 +140,6 @@ class CloudLink {
 			"All data": "all"
 		};
 	}
-
 	getInfo () {
 		return {
 			"id": 'cloudlink',
@@ -713,8 +711,8 @@ class CloudLink {
 							"type": "string",
 							"menu": "allmenu",
 							"defaultValue": "All data"
-						},
-					},
+						}
+					}
 				}
 			],
 			"menus": {
@@ -732,163 +730,124 @@ class CloudLink {
 				},
 				"almostallmenu": {
 					"items": ['Global data', 'Private data', 'Direct data', 'Status code', "Global variables", "Private variables"]
-				},
-			},
+				}
+			}
 		};
-	};
-	
+	}
 	// Code for blocks go here
-	
 	returnGlobalData() {
-		if (this.socketData.gmsg.length != 0) {
-
-			let data = (this.socketData.gmsg[this.socketData.gmsg.length - 1].val);
-
-			if (typeof(data) == "object") {
-				data = JSON.stringify(data); // Make the JSON safe for Scratch
-			}
-
-			return data;
-		} else {
+		if (this.socketData.gmsg.length == 0) {
 			return "";
-		};
-	};
-	
+		}
+
+		let data = (this.socketData.gmsg[this.socketData.gmsg.length - 1].val);
+		if (typeof(data) == "object") {
+			data = JSON.stringify(data); // Make the JSON safe for Scratch
+		}
+		return data;
+	}
 	returnPrivateData() {
-		if (this.socketData.pmsg.length != 0) {
-			let data = (this.socketData.pmsg[this.socketData.pmsg.length - 1].val);
-
-			if (typeof (data) == "object") {
-				data = JSON.stringify(data); // Make the JSON safe for Scratch
-			}
-
-			return data;
-		} else {
+		if (this.socketData.pmsg.length == 0) {
 			return "";
-		};
-	};
-	
+		}
+		
+		let data = (this.socketData.pmsg[this.socketData.pmsg.length - 1].val);
+		if (typeof (data) == "object") {
+			data = JSON.stringify(data); // Make the JSON safe for Scratch
+		}
+		return data;
+	}
 	returnDirectData() {
-		if (this.socketData.direct.length != 0) {
-			let data = (this.socketData.direct[this.socketData.direct.length - 1].val);
-
-			if (typeof (data) == "object") {
-				data = JSON.stringify(data); // Make the JSON safe for Scratch
-			}
-
-			return data;
-		} else {
+		if (this.socketData.direct.length == 0) {
 			return "";
-		};
-	};
-	
+		}
+		
+		let data = (this.socketData.direct[this.socketData.direct.length - 1].val);
+		if (typeof (data) == "object") {
+			data = JSON.stringify(data); // Make the JSON safe for Scratch
+		}
+		return data;
+	}
 	returnLinkData() {
 		return String(this.link_status);
-	};
-	
+	}
 	returnStatusCode() {
-		if (this.socketData.statuscode.length != 0) {
-			let data = (this.socketData.statuscode[this.socketData.statuscode.length - 1].code);
-
-			if (typeof (data) == "object") {
-				data = JSON.stringify(data); // Make the JSON safe for Scratch
-			}
-
-			return data;
-		} else {
+		if (this.socketData.statuscode.length == 0) {
 			return "";
-		};
-	};
-	
+		}
+		
+		let data = (this.socketData.statuscode[this.socketData.statuscode.length - 1].code);
+		if (typeof (data) == "object") {
+			data = JSON.stringify(data); // Make the JSON safe for Scratch
+		}
+		return data;
+	}
 	returnUserListData() {
 		return JSON.stringify(this.socketData.ulist);
-	};
-	
+	}
 	returnUsernameData() {
 		let data = this.username;
 
 		if (typeof (data) == "object") {
 			data = JSON.stringify(data); // Make the JSON safe for Scratch
 		}
-
 		return data;
-	};
-	
+	}
 	returnVersionData() {
 		return String(this.version);
-	};
-	
+	}
 	returnServerVersion() {
 		return String(this.socketData.server_version);
-	};
-	
+	}
 	returnServerList() {
 		return JSON.stringify(servers);
-	};
-	
+	}
 	returnMOTD() {
 		return String(this.socketData.motd);
-	};
-	
+	}
 	returnClientIP() {
 		return String(this.socketData.client_ip);
-	};
-	
+	}
 	returnListenerData({ID}) {
 		const self = this;
-		if ((this.isRunning) && (this.socketListeners.hasOwnProperty(String(ID)))) {
-			return JSON.stringify(this.socketListenersData[ID]);
-		} else {
+		if (!(this.isRunning && this.socketListeners.hasOwnProperty(String(ID)))) {
 			return "{}";
-		};
-	};
-	
+		}
+		return JSON.stringify(this.socketListenersData[ID]);
+	}
 	readQueueSize({TYPE}) {
-		if (this.menuRemap[String(TYPE)] == "all") {
-			let tmp_size = 0;
-			tmp_size = tmp_size + this.socketData.gmsg.length;
-			tmp_size = tmp_size + this.socketData.pmsg.length;
-			tmp_size = tmp_size + this.socketData.direct.length;
-			tmp_size = tmp_size + this.socketData.statuscode.length;
-			tmp_size = tmp_size + this.socketData.gvar.length;
-			tmp_size = tmp_size + this.socketData.pvar.length;
-			return tmp_size;
-		} else {
+		if (this.menuRemap[String(TYPE)] != "all") {
 			return this.socketData[this.menuRemap[String(TYPE)]].length;
-		};
-	};
-	
+		}
+		
+		let tmp_size = 0;
+		tmp_size = tmp_size + this.socketData.gmsg.length;
+		tmp_size = tmp_size + this.socketData.pmsg.length;
+		tmp_size = tmp_size + this.socketData.direct.length;
+		tmp_size = tmp_size + this.socketData.statuscode.length;
+		tmp_size = tmp_size + this.socketData.gvar.length;
+		tmp_size = tmp_size + this.socketData.pvar.length;
+		return tmp_size;
+	}
 	readQueueData({TYPE}) {
-		if (this.menuRemap[String(TYPE)] == "all") {
-			let tmp_socketData = JSON.parse(JSON.stringify(this.socketData)); // Deep copy
-			
-			delete tmp_socketData.motd;
-			delete tmp_socketData.client_ip;
-			delete tmp_socketData.ulist;
-			delete tmp_socketData.server_version;
-			
-			return JSON.stringify(tmp_socketData);
-		} else {
+		if (this.menuRemap[String(TYPE)] != "all") {
 			return JSON.stringify(this.socketData[this.menuRemap[String(TYPE)]]);
-		};
-	};
-	
+		}
+		
+		let tmp_socketData = JSON.parse(JSON.stringify(this.socketData)); // Deep copy
+		delete tmp_socketData.motd;
+		delete tmp_socketData.client_ip;
+		delete tmp_socketData.ulist;
+		delete tmp_socketData.server_version;
+		return JSON.stringify(tmp_socketData);
+	}
 	returnVarData({ TYPE, VAR }) {
-		if (this.isRunning) {
-			if (this.varData.hasOwnProperty(this.menuRemap[TYPE])) {
-				if (this.varData[this.menuRemap[TYPE]].hasOwnProperty(VAR)) {
-					return this.varData[this.menuRemap[TYPE]][VAR].value;
-				} else {
-					return "";
-				};
-			} else {
-				return "";
-			};
-		} else {
-			return "";
-		};
-	};
-	
+		if (!this.isRunning) { return ""; }
+		if (!this.varData.hasOwnProperty(this.menuRemap[TYPE])) { return ""; }
+		if (!this.varData[this.menuRemap[TYPE]].hasOwnProperty(VAR)) { return ""; }
+		
+		return this.varData[this.menuRemap[TYPE]][VAR].value;
+	}
 	parseJSON({PATH, JSON_STRING}) {
 		try {
 			const path = PATH.toString().split('/').map(prop => decodeURIComponent(prop));
@@ -908,48 +867,39 @@ class CloudLink {
 		} catch (err) {
 			return '';
 		};
-	};
-	
+	}
 	getFromJSONArray({NUM, ARRAY}) {
 		var json_array = JSON.parse(ARRAY);
-		if (json_array[NUM] == "undefined") {
-			return "";
-		} else {
+		if (json_array[NUM] != "undefined") {
 			let data = json_array[NUM];
-
 			if (typeof (data) == "object") {
 				data = JSON.stringify(data); // Make the JSON safe for Scratch
 			}
-
 			return data;
 		}
-	};
-	
+		return "";
+	}
 	fetchURL(args) {
 		return fetch(args.url, {
 			method: "GET"
 		}).then(response => response.text());
-	};
-	
+	}
 	requestURL(args) {
-		if (args.method == "GET" || args.method == "HEAD") {
-			return fetch(args.url, {
-				method: args.method,
-				headers: JSON.parse(args.headers)
-			}).then(response => response.text());
-		} else {
+		if (!(args.method == "GET" || args.method == "HEAD")) {
 			return fetch(args.url, {
 				method: args.method,
 				headers: JSON.parse(args.headers),
 				body: JSON.parse(args.data)
 			}).then(response => response.text());
-		} 
-	};
-	
+		}
+		return fetch(args.url, {
+			method: args.method,
+			headers: JSON.parse(args.headers)
+		}).then(response => response.text()); 
+	}
 	isValidJSON({JSON_STRING}) {
 		return jsonCheck(JSON_STRING);
-	};
-	
+	}
 	makeJSON({toBeJSONified}) {
 		if (typeof(toBeJSONified) == "string") {
 			try {
@@ -958,731 +908,662 @@ class CloudLink {
 			} catch(err) {
 				return "Not JSON!";
 			}
-		} else if (typeof(toBeJSONified) == "object") {
-			return JSON.stringify(toBeJSONified);
-		} else {
+		}
+		if (!typeof(toBeJSONified) == "object") {
 			return "Not JSON!";
-		};
-	};
-	
+		}
+		return JSON.stringify(toBeJSONified);
+	}
 	onConnect() {
 		const self = this;
-		if (self.connect_hat == 0 && self.isRunning && self.protocolOk) {
-			self.connect_hat = 1;
-			return true;
-		} else {
-			return false;
-		};
-	};
-	
+		if (!(self.connect_hat == 0 && self.isRunning && self.protocolOk)) { return false; }
+		
+		self.connect_hat = 1;
+		return true;
+	}
 	onClose() {
 		const self = this;
-		if (self.close_hat == 0 && !self.isRunning) {
-			self.close_hat = 1;
-			return true;
-		} else {
-			return false;
-		};
-	};
-
+		if (!(self.close_hat == 0 && !self.isRunning)) { return false; }
+		self.close_hat = 1;
+		return true;
+	}
 	onListener({ ID }) {
 		const self = this;
-		if ((this.isRunning) && (this.socketListeners.hasOwnProperty(String(ID)))) {
-			if (self.socketListeners[String(ID)]) {
-				self.socketListeners[String(ID)] = false;
-				return true;
-			} else {
-				return false;
-			};
-		} else {
-			return false;
-		};
-	};
-
+		
+		if (!(this.isRunning && this.socketListeners.hasOwnProperty(String(ID)))) { return false; }
+		if (!self.socketListeners[String(ID)]) { return false; }
+		
+		self.socketListeners[String(ID)] = false;
+		return true;
+	}
 	onNewPacket({ TYPE }) {
 		const self = this;
-		if ((this.isRunning) && (this.newSocketData[this.menuRemap[String(TYPE)]])) {
-			self.newSocketData[this.menuRemap[String(TYPE)]] = false;
-			return true;
-		} else {
-			return false;
-		};
-	};
-
+		
+		if (!(this.isRunning && this.newSocketData[this.menuRemap[String(TYPE)]])) { return false; }
+		
+		self.newSocketData[this.menuRemap[String(TYPE)]] = false;
+		return true;
+	}
 	onNewVar({ TYPE, VAR }) {
 		const self = this;
-		if (this.isRunning) {
-			if (this.varData.hasOwnProperty(this.menuRemap[TYPE])) {
-				if (this.varData[this.menuRemap[TYPE]].hasOwnProperty(VAR)) {
-					if (this.varData[this.menuRemap[TYPE]][VAR].isNew) {
-						self.varData[this.menuRemap[TYPE]][VAR].isNew = false;
-						return true;
-					} else {
-						return false;
-					}
-				} else {
-					return false;
-				};
-			} else {
-				return false;
-			};
-		} else {
-			return false;
-		};
-	};
-
+		
+		if (!this.isRunning) { return false; }
+		if (!this.varData.hasOwnProperty(this.menuRemap[TYPE])) { return false; }
+		if (!this.varData[this.menuRemap[TYPE]].hasOwnProperty(VAR)) { return false; }
+		if (!this.varData[this.menuRemap[TYPE]][VAR].isNew) { return false; }
+		
+		self.varData[this.menuRemap[TYPE]][VAR].isNew = false;
+		return true;
+	}
 	getComState(){
 		return String((this.link_status == 2) || this.protocolOk);
-	};
-
+	}
 	getRoomState() {
 		return this.isLinked;
-	};
-
+	}
 	getComLostConnectionState() {
 		return this.wasConnectionDropped;
-	};
-	
+	}
 	getComFailedConnectionState() {
 		return this.didConnectionFail;
-	};
-	
+	}
 	getUsernameState(){
 		return this.isUsernameSet;
-	};
-	
+	}
 	returnIsNewData({TYPE}){
-		if (this.isRunning) {
-			return this.newSocketData[this.menuRemap[String(TYPE)]];
-		} else {
+		if (!this.isRunning) {
 			return false;
-		};
-	};
-
+		}
+		return this.newSocketData[this.menuRemap[String(TYPE)]];
+	}
 	returnIsNewVarData({ TYPE, VAR }) {
-		if (this.isRunning) {
-			if (this.varData.hasOwnProperty(this.menuRemap[TYPE])) {
-				if (this.varData[this.menuRemap[TYPE]].hasOwnProperty(VAR)) {
-					return this.varData[this.menuRemap[TYPE]][VAR].isNew;
-				} else {
-					return false;
-				};
-			} else {
-				return false;
-			};
-		} else {
-			return false;
-		};
-	};
-
+		if (!this.isRunning) { return false; }
+		if (!this.varData.hasOwnProperty(this.menuRemap[TYPE])) { return false; }
+		if (!this.varData[this.menuRemap[TYPE]].hasOwnProperty(VAR)) { return false; }
+		
+		return this.varData[this.menuRemap[TYPE]][VAR].isNew;
+	}
 	returnIsNewListener({ ID }) {
-		if (this.isRunning) {
-			if (this.socketListeners.hasOwnProperty(String(ID))) {
-				return this.socketListeners[ID];
-			} else {
-				return false;
-			};
-		} else {
-			return false;
-		};
-	};
-
+		if (!this.isRunning) { return false; }
+		if (!this.socketListeners.hasOwnProperty(String(ID))) { return false; }
+		
+		return this.socketListeners[ID];
+	}
 	checkForID({ ID }) {
 		return find_id(ID, this.socketData.ulist);
-	};
-	
+	}
 	openSocket({IP}) {
 		const self = this;
-		if (!self.isRunning) {
-			console.log("Starting socket.");
-			self.link_status = 1;
-			
-			self.disconnectWasClean = false;
+		
+		if (self.isRunning) {
+			console.warn("Socket is already open.");
+			return;
+		}
+		console.log("Starting socket.");
+		self.link_status = 1;
+
+		self.disconnectWasClean = false;
+		self.wasConnectionDropped = false;
+		self.didConnectionFail = false;
+
+		mWS = new WebSocket(String(IP));
+
+		mWS.onerror = function(){
+			self.isRunning = false;
+		};
+
+		mWS.onopen = function(){
+			self.isRunning = true;
+			self.packet_queue = {};
+			self.link_status = 2;
+
+			// Send the handshake request to get server to detect client protocol
+			mWS.send(JSON.stringify({"cmd": "handshake", "listener": "setprotocol"}))
+
+			console.log("Successfully opened socket.");
+		};
+		// I ain't unraveling this one
+		mWS.onmessage = function(event){
+			let tmp_socketData = JSON.parse(event.data);
+			console.log("RX:", tmp_socketData);
+
+			if (self.queueableCmds.includes(tmp_socketData.cmd)) {
+				self.socketData[tmp_socketData.cmd].push(tmp_socketData);
+			} else {
+				if (tmp_socketData.cmd == "ulist") {
+					// ulist functionality has been changed in server 0.1.9
+					if (tmp_socketData.hasOwnProperty("mode")) {
+						if (tmp_socketData.mode == "set") {
+							self.socketData["ulist"] = tmp_socketData.val;
+						} else if (tmp_socketData.mode == "add") {
+							if (!self.socketData.ulist.some(o => ((o.username === tmp_socketData.val.username) && (o.id == tmp_socketData.val.id)))) {
+								self.socketData["ulist"].push(tmp_socketData.val);
+							} else {
+								console.log("Could not perform ulist method add, client", tmp_socketData.val, "already exists");
+							}
+						} else if (tmp_socketData.mode == "remove") {
+							if (self.socketData.ulist.some(o => ((o.username === tmp_socketData.val.username) && (o.id == tmp_socketData.val.id)))) {
+								// This is by far the fugliest thing I have ever written in JS, or in any programming language... thanks I hate it
+								self.socketData["ulist"] = self.socketData["ulist"].filter(user => ((!(user.username === tmp_socketData.val.username)) && (!(user.id == tmp_socketData.val.id))));
+							} else {
+								console.log("Could not perform ulist method remove, client", tmp_socketData.val, "was not found");
+							}
+						} else {
+							console.log("Could not understand ulist method:", tmp_socketData.mode);
+						}
+					} else {
+						// Retain compatibility wtih existing servers
+						self.socketData["ulist"] = tmp_socketData.val;
+					}
+				} else {
+					self.socketData[tmp_socketData.cmd] = tmp_socketData.val;
+				}
+			};
+
+			if (self.newSocketData.hasOwnProperty(tmp_socketData.cmd)) {
+				self.newSocketData[tmp_socketData.cmd] = true;
+			}
+
+			if (self.varCmds.includes(tmp_socketData.cmd)) {
+				self.varData[tmp_socketData.cmd][tmp_socketData.name] = {
+					"value": tmp_socketData.val,
+					"isNew": true
+				}
+			}
+			if (tmp_socketData.hasOwnProperty("listener")) {
+				if (tmp_socketData.listener == "setusername") {
+					self.socketListeners["setusername"] = true;
+					if (tmp_socketData.code == "I:100 | OK") {
+						self.username = tmp_socketData.val;
+						self.isUsernameSyncing = false;
+						self.isUsernameSet = true;
+						console.log("Username was accepted by the server, and has been set to:", self.username);
+					} else {
+						console.warn("Username was rejected by the server. Error code:", String(tmp_socketData.code));
+						self.isUsernameSyncing = false;
+					};
+				} else if (tmp_socketData.listener == "roomLink") {
+					self.isRoomSetting = false;
+					self.socketListeners["roomLink"] = true;
+					if (tmp_socketData.code == "I:100 | OK") {
+						console.log("Linking to room(s) was accepted by the server!");
+						self.isLinked = true;
+					} else {
+						console.warn("Linking to room(s) was rejected by the server. Error code:", String(tmp_socketData.code));
+						self.enableRoom = false;
+						self.isLinked = false;
+						self.selectRoom = "";
+					};
+				} else if ((tmp_socketData.listener == "setprotocol") && (!this.protocolOk)) {
+					console.log("Server successfully set client protocol to cloudlink!");
+					self.socketData.statuscode = [];
+					self.protocolOk = true;
+					self.socketListeners["setprotocol"] = true;
+				} else {
+					if (self.socketListeners.hasOwnProperty(tmp_socketData.listener)) {
+						self.socketListeners[tmp_socketData.listener] = true;
+					}
+				}
+				self.socketListenersData[tmp_socketData.listener] = tmp_socketData;
+			}
+			self.packet_hat = 0;
+		}
+
+		mWS.onclose = function() {
+			self.isRunning = false;
+			self.connect_hat = 0;
+			self.packet_hat = 0;
+			self.protocolOk = false;
+			if (self.close_hat == 1) {
+				self.close_hat = 0;
+			}
+			self.socketData = {
+				"gmsg": [],
+				"pmsg": [],
+				"direct": [],
+				"statuscode": [],
+				"gvar": [],
+				"pvar": [],
+				"motd": "",
+				"client_ip": "",
+				"ulist": [],
+				"server_version": ""
+			};
+			self.newSocketData = {
+				"gmsg": false,
+				"pmsg": false,
+				"direct": false,
+				"statuscode": false,
+				"gvar": false,
+				"pvar": false
+			};
+			self.socketListeners = {};
+			self.username = "";
+			self.tmp_username = "";
+			self.isUsernameSyncing = false;
+			self.isUsernameSet = false;
+			self.enableListener = false;
+			self.setListener = "";
+			self.enableRoom = false;
+			self.selectRoom = "";
+			self.isLinked = false;
+			self.isRoomSetting = false;
+
+			if (self.link_status == 1) {
+				self.link_status = 4;
+				console.error("Failed to connect to server.");
+				self.wasConnectionDropped = false;
+				self.didConnectionFail = true;
+				return;
+			}
+			if (!self.disconnectWasClean) {
+				self.link_status = 4;
+				console.error("Lost connection to the server.");
+				self.wasConnectionDropped = true;
+				self.didConnectionFail = false;
+				return;
+			}
+			self.link_status = 3;
+			console.log("Socket closed.");
 			self.wasConnectionDropped = false;
 			self.didConnectionFail = false;
-			
-			mWS = new WebSocket(String(IP));
-			
-			mWS.onerror = function(){
-				self.isRunning = false;
-			};
-			
-			mWS.onopen = function(){
-				self.isRunning = true;
-				self.packet_queue = {};
-				self.link_status = 2;
-
-				// Send the handshake request to get server to detect client protocol
-				mWS.send(JSON.stringify({"cmd": "handshake", "listener": "setprotocol"}))
-
-				console.log("Successfully opened socket.");
-			};
-			
-			mWS.onmessage = function(event){
-				let tmp_socketData = JSON.parse(event.data);
-				console.log("RX:", tmp_socketData);
-
-				if (self.queueableCmds.includes(tmp_socketData.cmd)) {
-					self.socketData[tmp_socketData.cmd].push(tmp_socketData);
-				} else {
-					if (tmp_socketData.cmd == "ulist") {
-						// ulist functionality has been changed in server 0.1.9
-						if (tmp_socketData.hasOwnProperty("mode")) {
-							if (tmp_socketData.mode == "set") {
-								self.socketData["ulist"] = tmp_socketData.val;
-							} else if (tmp_socketData.mode == "add") {
-								if (!self.socketData.ulist.some(o => ((o.username === tmp_socketData.val.username) && (o.id == tmp_socketData.val.id)))) {
-									self.socketData["ulist"].push(tmp_socketData.val);
-								} else {
-									console.log("Could not perform ulist method add, client", tmp_socketData.val, "already exists");
-								};
-							} else if (tmp_socketData.mode == "remove") {
-								if (self.socketData.ulist.some(o => ((o.username === tmp_socketData.val.username) && (o.id == tmp_socketData.val.id)))) {
-									// This is by far the fugliest thing I have ever written in JS, or in any programming language... thanks I hate it
-									self.socketData["ulist"] = self.socketData["ulist"].filter(user => ((!(user.username === tmp_socketData.val.username)) && (!(user.id == tmp_socketData.val.id))));
-								} else {
-									console.log("Could not perform ulist method remove, client", tmp_socketData.val, "was not found");
-								};
-							} else {
-								console.log("Could not understand ulist method:", tmp_socketData.mode);
-							};
-						} else {
-							// Retain compatibility wtih existing servers
-							self.socketData["ulist"] = tmp_socketData.val;
-						};
-					} else {
-						self.socketData[tmp_socketData.cmd] = tmp_socketData.val;
-					};
-				};
-				
-				if (self.newSocketData.hasOwnProperty(tmp_socketData.cmd)) {
-					self.newSocketData[tmp_socketData.cmd] = true;
-				};
-				
-				if (self.varCmds.includes(tmp_socketData.cmd)) {
-					self.varData[tmp_socketData.cmd][tmp_socketData.name] = {
-						"value": tmp_socketData.val,
-						"isNew": true
-					};
-				};
-				if (tmp_socketData.hasOwnProperty("listener")) {
-					if (tmp_socketData.listener == "setusername") {
-						self.socketListeners["setusername"] = true;
-						if (tmp_socketData.code == "I:100 | OK") {
-							self.username = tmp_socketData.val;
-							self.isUsernameSyncing = false;
-							self.isUsernameSet = true;
-							console.log("Username was accepted by the server, and has been set to:", self.username);
-						} else {
-							console.warn("Username was rejected by the server. Error code:", String(tmp_socketData.code));
-							self.isUsernameSyncing = false;
-						};
-					} else if (tmp_socketData.listener == "roomLink") {
-						self.isRoomSetting = false;
-						self.socketListeners["roomLink"] = true;
-						if (tmp_socketData.code == "I:100 | OK") {
-							console.log("Linking to room(s) was accepted by the server!");
-							self.isLinked = true;
-						} else {
-							console.warn("Linking to room(s) was rejected by the server. Error code:", String(tmp_socketData.code));
-							self.enableRoom = false;
-							self.isLinked = false;
-							self.selectRoom = "";
-						};
-					} else if ((tmp_socketData.listener == "setprotocol") && (!this.protocolOk)) {
-						console.log("Server successfully set client protocol to cloudlink!");
-						self.socketData.statuscode = [];
-						self.protocolOk = true;
-						self.socketListeners["setprotocol"] = true;
-					} else {
-						if (self.socketListeners.hasOwnProperty(tmp_socketData.listener)) {
-							self.socketListeners[tmp_socketData.listener] = true;
-						};
-					};
-					self.socketListenersData[tmp_socketData.listener] = tmp_socketData;
-				};
-				self.packet_hat = 0;
-			};
-			
-			mWS.onclose = function() {
-				self.isRunning = false;
-				self.connect_hat = 0;
-				self.packet_hat = 0;
-				self.protocolOk = false;
-				if (self.close_hat == 1) {
-					self.close_hat = 0;
-				};
-				self.socketData = {
-					"gmsg": [],
-					"pmsg": [],
-					"direct": [],
-					"statuscode": [],
-					"gvar": [],
-					"pvar": [],
-					"motd": "",
-					"client_ip": "",
-					"ulist": [],
-					"server_version": ""
-				};
-				self.newSocketData = {
-					"gmsg": false,
-					"pmsg": false,
-					"direct": false,
-					"statuscode": false,
-					"gvar": false,
-					"pvar": false
-				};
-				self.socketListeners = {};
-				self.username = "";
-				self.tmp_username = "";
-				self.isUsernameSyncing = false;
-				self.isUsernameSet = false;
-				self.enableListener = false;
-				self.setListener = "";
-				self.enableRoom = false;
-				self.selectRoom = "";
-				self.isLinked = false;
-				self.isRoomSetting = false;
-
-				if (self.link_status != 1) {
-					if (self.disconnectWasClean) {
-						self.link_status = 3;
-						console.log("Socket closed.");
-						self.wasConnectionDropped = false;
-						self.didConnectionFail = false;
-					} else {
-						self.link_status = 4;
-						console.error("Lost connection to the server.");
-						self.wasConnectionDropped = true;
-						self.didConnectionFail = false;
-					};
-				} else {
-					self.link_status = 4;
-					console.error("Failed to connect to server.");
-					self.wasConnectionDropped = false;
-					self.didConnectionFail = true;
-				};
-			};
-		} else {
-			console.warn("Socket is already open.");
-		};
+		}
 	}
-	
 	openSocketPublicServers({ ID }){
 		if (servers.hasOwnProperty(ID)) {
 			console.log("Connecting to:", servers[ID].url)
 			this.openSocket({"IP": servers[ID].url});
-		};
-	};
-	
+		}
+	}
 	closeSocket(){
 		const self = this;
-		if (this.isRunning) {
-			console.log("Closing socket...");
-			mWS.close(1000,'script closure');
-			self.disconnectWasClean = true;
-		} else {
+		
+		if (!this.isRunning) {
 			console.warn("Socket is not open.");
-		};
+			return;
+		}
+		
+		console.log("Closing socket...");
+		mWS.close(1000,'script closure');
+		self.disconnectWasClean = true;
+
 	}
-	
 	setMyName({NAME}) {
 		const self = this;
-		if (this.isRunning) {
-			if (!this.isUsernameSyncing) {
-				if (!this.isUsernameSet){
-					if (String(NAME) != "") {
-						if ((!(String(NAME).length > 20))) {
-							if (!(String(NAME) == "%CA%" || String(NAME) == "%CC%" || String(NAME) == "%CD%" || String(NAME) == "%MS%")){
-								let tmp_msg = {
-									cmd: "setid",
-									val: String(NAME),
-									listener: "setusername"
-								};
-
-								console.log("TX:", tmp_msg);
-								mWS.send(JSON.stringify(tmp_msg));
-								
-								self.tmp_username = String(NAME);
-								self.isUsernameSyncing = true;
-									
-							} else {
-								console.log("Blocking attempt to use reserved usernames");
-							};
-						} else {
-							console.log("Blocking attempt to use username larger than 20 characters, username is " + String(NAME).length + " characters long");
-						};
-					} else {
-						console.log("Blocking attempt to use blank username");
-					};
-				} else {
-					console.warn("Username already has been set!");
-				};
-			} else {
-				console.warn("Username is still syncing!");
-			};
+		
+		if (!this.isRunning) {
+			console.warn("Username is still syncing!");
+			return;
+		}
+		if (this.isUsernameSyncing) {
+			console.warn("Username is still syncing!");
+			return;
+		}
+		if (this.isUsernameSet) {
+			console.warn("Username already has been set!");
+			return;
+		}
+		if (String(NAME) == "") {
+			console.log("Blocking attempt to use blank username");
+			return;
+		}
+		if (String(NAME).length > 20) {
+			console.log("Blocking attempt to use username larger than 20 characters, username is " + String(NAME).length + " characters long");
+			return;
+		}
+		if (String(NAME) == "%CA%" || String(NAME) == "%CC%" || String(NAME) == "%CD%" || String(NAME) == "%MS%") {
+			console.log("Blocking attempt to use reserved usernames");
+			return;
+		}
+		
+		let tmp_msg = {
+			cmd: "setid",
+			val: String(NAME),
+			listener: "setusername"
 		};
-	};
-
+		console.log("TX:", tmp_msg);
+		mWS.send(JSON.stringify(tmp_msg));
+		self.tmp_username = String(NAME);
+		self.isUsernameSyncing = true;
+		}
+	}
 	createListener({ ID }) {
-		self = this;
-		if (this.isRunning) {
-			if (!this.enableListener) {
-				self.enableListener = true;
-				self.setListener = String(ID);
-			} else {
-				console.warn("Listeners were already created!");
-			};
-		} else {
+		const self = this;
+		
+		if (!this.isRunning) {
 			console.log("Cannot assign a listener to a packet while disconnected");
-		};
-	};
-
+			return;
+		}
+		if (this.enableListener) {
+			console.warn("Listeners were already created!");
+			return;
+		}
+		
+		self.enableListener = true;
+		self.setListener = String(ID);
+	}
 	linkToRooms({ ROOMS }) {
 		const self = this;
 
-		if (this.isRunning) {
-			if (!this.isRoomSetting) {
-				if (!(String(ROOMS).length > 1000)) {
-					let tmp_msg = {
-						cmd: "link",
-						val: autoConvert(ROOMS),
-						listener: "roomLink"
-					};
-
-					console.log("TX:", tmp_msg);
-					mWS.send(JSON.stringify(tmp_msg));
-
-					self.isRoomSetting = true;
-
-				} else {
-					console.warn("Blocking attempt to send a room ID / room list larger than 1000 bytes (1 KB), room ID / room list is " + String(ROOMS).length + " bytes");
-				};
-			} else {
-				console.warn("Still linking to rooms!");
-			};
-		} else {
+		if (!this.isRunning) {
 			console.warn("Socket is not open.");
+			return;
+		}
+		if (this.isRoomSetting) {
+			console.warn("Still linking to rooms!");
+			return;
+		}
+		if (String(ROOMS).length > 1000) {
+			console.warn("Blocking attempt to send a room ID / room list larger than 1000 bytes (1 KB), room ID / room list is " + String(ROOMS).length + " bytes");
+			return;
+		}
+		
+		let tmp_msg = {
+			cmd: "link",
+			val: autoConvert(ROOMS),
+			listener: "roomLink"
 		};
-	};
-
+		console.log("TX:", tmp_msg);
+		mWS.send(JSON.stringify(tmp_msg));
+		self.isRoomSetting = true;
+	}
 	selectRoomsInNextPacket({ROOMS}) {
 		const self = this;
-		if (this.isRunning) {
-			if (this.isLinked) {
-				if (!this.enableRoom) {
-					if (!(String(ROOMS).length > 1000)) {
-						self.enableRoom = true;
-						self.selectRoom = ROOMS;
-					} else {
-						console.warn("Blocking attempt to select a room ID / room list larger than 1000 bytes (1 KB), room ID / room list is " + String(ROOMS).length + " bytes");
-					};
-				} else {
-					console.warn("Rooms were already selected!");
-				};
-			} else {
-				console.warn("Not linked to any room(s)!");
-			};
-		} else {
+		
+		if (!this.isRunning) {
 			console.warn("Socket is not open.");
-		};
-	};
-
+			return;
+		}
+		if (!this.isLinked) {
+			console.warn("Not linked to any room(s)!");
+			return;
+		}
+		if (this.enableRoom) {
+			console.warn("Rooms were already selected!");
+			return;
+		}
+		if (String(ROOMS).length > 1000) {
+			console.warn("Blocking attempt to select a room ID / room list larger than 1000 bytes (1 KB), room ID / room list is " + String(ROOMS).length + " bytes");
+			return;
+		}
+		
+		self.enableRoom = true;
+		self.selectRoom = ROOMS;
+	}
 	unlinkFromRooms() {
 		const self = this;
-		if (this.isRunning) {
-			if (this.isLinked) {
-				let tmp_msg = {
-					cmd: "unlink",
-					val: ""
-				};
-
-				if (this.enableListener) {
-					tmp_msg["listener"] = autoConvert(this.setListener);
-				};
-
-				console.log("TX:", tmp_msg);
-				mWS.send(JSON.stringify(tmp_msg));
-
-				if (this.enableListener) {
-					if (!self.socketListeners.hasOwnProperty(this.setListener)) {
-						self.socketListeners[this.setListener] = false;
-					};
-					self.enableListener = false;
-				};
-
-				self.isLinked = false;
-			} else {
-				console.warn("Not linked to any rooms!");
-			};
-		} else {
+		
+		if (!this.isRunning) {
 			console.warn("Socket is not open.");
+			return;
+		}
+		if (!this.isLinked) {
+			console.warn("Not linked to any rooms!");
+			return;
+		}
+		
+		let tmp_msg = {
+			cmd: "unlink",
+			val: ""
 		};
-	};
-
+		if (this.enableListener) {
+			tmp_msg["listener"] = autoConvert(this.setListener);
+		}
+		console.log("TX:", tmp_msg);
+		mWS.send(JSON.stringify(tmp_msg));
+		if (this.enableListener) {
+			if (!self.socketListeners.hasOwnProperty(this.setListener)) {
+				self.socketListeners[this.setListener] = false;
+			}
+			self.enableListener = false;
+		}
+		self.isLinked = false;
+	}
 	sendGData({DATA}){
 		const self = this;
-		if (this.isRunning) {
-			if (!(String(DATA).length > 1000)) {
-				let tmp_msg = {
-					cmd: "gmsg",
-					val: autoConvert(DATA)
-				};
-
-				if (this.enableListener) {
-					tmp_msg["listener"] = String(this.setListener);
-				};
-
-				if (this.enableRoom) {
-					tmp_msg["rooms"] = autoConvert(this.selectRoom);
-				};
-
-				console.log("TX:", tmp_msg);
-				mWS.send(JSON.stringify(tmp_msg));
-
-				if (this.enableListener) {
-					if (!self.socketListeners.hasOwnProperty(this.setListener)) {
-						self.socketListeners[this.setListener] = false;
-					};
-					self.enableListener = false;
-				};
-				if (this.enableRoom) {
-					self.enableRoom = false;
-					self.selectRoom = "";
-				};
-				
-			} else {
-				console.warn("Blocking attempt to send packet larger than 1000 bytes (1 KB), packet is " + String(DATA).length + " bytes");
-			};
-		} else {
+		
+		if (!this.isRunning) {
 			console.warn("Socket is not open.");
+			return;
+		}
+		if (String(DATA).length > 1000) {
+			console.warn("Blocking attempt to send packet larger than 1000 bytes (1 KB), packet is " + String(DATA).length + " bytes");
+			return;
+		}
+		
+		let tmp_msg = {
+			cmd: "gmsg",
+			val: autoConvert(DATA)
 		};
-	};
-	
+		if (this.enableListener) {
+			tmp_msg["listener"] = String(this.setListener);
+		}
+		if (this.enableRoom) {
+			tmp_msg["rooms"] = autoConvert(this.selectRoom);
+		}
+		console.log("TX:", tmp_msg);
+		mWS.send(JSON.stringify(tmp_msg));
+
+		if (this.enableListener) {
+			if (!self.socketListeners.hasOwnProperty(this.setListener)) {
+				self.socketListeners[this.setListener] = false;
+			}
+			self.enableListener = false;
+		}
+		if (this.enableRoom) {
+			self.enableRoom = false;
+			self.selectRoom = "";
+		}
+	}
 	sendPData({DATA, ID}) {
 		const self = this;
-		if (this.isRunning) {
-			if (!(String(DATA).length > 1000)) {
-				let tmp_msg = {
-					cmd: "pmsg",
-					val: autoConvert(DATA),
-					id: autoConvert(ID)
-				}
-
-				if (this.enableListener) {
-					tmp_msg["listener"] = String(this.setListener);
-				};
-				if (this.enableRoom) {
-					tmp_msg["rooms"] = autoConvert(this.selectRoom);
-				};
-
-				console.log("TX:", tmp_msg);
-				mWS.send(JSON.stringify(tmp_msg));
-
-				if (this.enableListener) {
-					if (!self.socketListeners.hasOwnProperty(this.setListener)) {
-						self.socketListeners[this.setListener] = false;
-					};
-					self.enableListener = false;
-				};
-				if (this.enableRoom) {
-					self.enableRoom = false;
-					self.selectRoom = "";
-				};
-
-			} else {
-				console.warn("Blocking attempt to send packet larger than 1000 bytes (1 KB), packet is " + String(DATA).length + " bytes");
-			};
-		} else {
+		
+		if (!this.isRunning) {
 			console.warn("Socket is not open.");
+			return;
+		}
+		if (String(DATA).length > 1000) {
+			console.warn("Blocking attempt to send packet larger than 1000 bytes (1 KB), packet is " + String(DATA).length + " bytes");
+			return;
+		}
+		
+		let tmp_msg = {
+			cmd: "pmsg",
+			val: autoConvert(DATA),
+			id: autoConvert(ID)
 		};
-	};
-	
+		if (this.enableListener) {
+			tmp_msg["listener"] = String(this.setListener);
+		}
+		if (this.enableRoom) {
+			tmp_msg["rooms"] = autoConvert(this.selectRoom);
+		}
+		console.log("TX:", tmp_msg);
+		mWS.send(JSON.stringify(tmp_msg));
+		if (this.enableListener) {
+			if (!self.socketListeners.hasOwnProperty(this.setListener)) {
+				self.socketListeners[this.setListener] = false;
+			}
+			self.enableListener = false;
+		}
+		if (this.enableRoom) {
+			self.enableRoom = false;
+			self.selectRoom = "";
+		}
+	}
 	sendGDataAsVar({VAR, DATA }) {
 		const self = this;
-		if (this.isRunning) {
-			if (!(String(DATA).length > 1000)) {
-				let tmp_msg = {
-					cmd: "gvar",
-					name: VAR,
-					val: autoConvert(DATA)
-				}
-
-				if (this.enableListener) {
-					tmp_msg["listener"] = String(this.setListener);
-				};
-				if (this.enableRoom) {
-					tmp_msg["rooms"] = autoConvert(this.selectRoom);
-				};
-
-				console.log("TX:", tmp_msg);
-				mWS.send(JSON.stringify(tmp_msg));
-
-				if (this.enableListener) {
-					if (!self.socketListeners.hasOwnProperty(this.setListener)) {
-						self.socketListeners[this.setListener] = false;
-					};
-					self.enableListener = false;
-				};
-				if (this.enableRoom) {
-					self.enableRoom = false;
-					self.selectRoom = "";
-				};
-
-			} else {
-				console.warn("Blocking attempt to send packet larger than 1000 bytes (1 KB), packet is " + String(DATA).length + " bytes");
-			};
-		} else {
+		
+		if (!this.isRunning) {
 			console.warn("Socket is not open.");
-		};
-	};
-	
+			return;
+		}
+		if (String(DATA).length > 1000) {
+			console.warn("Blocking attempt to send packet larger than 1000 bytes (1 KB), packet is " + String(DATA).length + " bytes");
+			return;
+		}
+		
+		let tmp_msg = {
+			cmd: "gvar",
+			name: VAR,
+			val: autoConvert(DATA)
+		}
+		if (this.enableListener) {
+			tmp_msg["listener"] = String(this.setListener);
+		}
+		if (this.enableRoom) {
+			tmp_msg["rooms"] = autoConvert(this.selectRoom);
+		}
+		console.log("TX:", tmp_msg);
+		mWS.send(JSON.stringify(tmp_msg));
+
+		if (this.enableListener) {
+			if (!self.socketListeners.hasOwnProperty(this.setListener)) {
+				self.socketListeners[this.setListener] = false;
+			}
+			self.enableListener = false;
+		}
+		if (this.enableRoom) {
+			self.enableRoom = false;
+			self.selectRoom = "";
+		}
+	}
 	sendPDataAsVar({VAR, ID, DATA}) {
 		const self = this;
-		if (this.isRunning) {
-			if (!(String(DATA).length > 1000)) {
-				let tmp_msg = {
-					cmd: "pvar",
-					name: VAR,
-					val: autoConvert(DATA),
-					id: autoConvert(ID)
-				}
-
-				if (this.enableListener) {
-					tmp_msg["listener"] = String(this.setListener);
-				};
-				if (this.enableRoom) {
-					tmp_msg["rooms"] = autoConvert(this.selectRoom);
-				};
-
-				console.log("TX:", tmp_msg);
-				mWS.send(JSON.stringify(tmp_msg));
-
-				if (this.enableListener) {
-					if (!self.socketListeners.hasOwnProperty(this.setListener)) {
-						self.socketListeners[this.setListener] = false;
-					};
-					self.enableListener = false;
-				};
-				if (this.enableRoom) {
-					self.enableRoom = false;
-					self.selectRoom = "";
-				};
-
-			} else {
-				console.warn("Blocking attempt to send packet larger than 1000 bytes (1 KB), packet is " + String(DATA).length + " bytes");
-			};
-		} else {
+		
+		if (!this.isRunning) {
 			console.warn("Socket is not open.");
-		};
-	};
-	
+			return;
+		}
+		if (String(DATA).length > 1000) {
+			console.warn("Blocking attempt to send packet larger than 1000 bytes (1 KB), packet is " + String(DATA).length + " bytes");
+			return;
+		}
+		
+		let tmp_msg = {
+			cmd: "pvar",
+			name: VAR,
+			val: autoConvert(DATA),
+			id: autoConvert(ID)
+		}
+		if (this.enableListener) {
+			tmp_msg["listener"] = String(this.setListener);
+		}
+		if (this.enableRoom) {
+			tmp_msg["rooms"] = autoConvert(this.selectRoom);
+		}
+		console.log("TX:", tmp_msg);
+		mWS.send(JSON.stringify(tmp_msg));
+		if (this.enableListener) {
+			if (!self.socketListeners.hasOwnProperty(this.setListener)) {
+				self.socketListeners[this.setListener] = false;
+			}
+			self.enableListener = false;
+		}
+		if (this.enableRoom) {
+			self.enableRoom = false;
+			self.selectRoom = "";
+		}
+	}
 	runCMDnoID({CMD, DATA}) {
 		const self = this;
-		if (this.isRunning) {
-			if (!(String(CMD).length > 100) || !(String(DATA).length > 1000)) {
-				let tmp_msg = {
-					cmd: String(CMD),
-					val: autoConvert(DATA)
-				}
-
-				if (this.enableListener) {
-					tmp_msg["listener"] = String(this.setListener);
-				};
-				if (this.enableRoom) {
-					tmp_msg["rooms"] = String(this.selectRoom);
-				};
-
-				console.log("TX:", tmp_msg);
-				mWS.send(JSON.stringify(tmp_msg));
-				
-				if (this.enableListener) {
-					if (!self.socketListeners.hasOwnProperty(this.setListener)) {
-						self.socketListeners[this.setListener] = false;
-					};
-					self.enableListener = false;
-				};
-				if (this.enableRoom) {
-					self.enableRoom = false;
-					self.selectRoom = "";
-				};
-
-			} else {
-				console.warn("Blocking attempt to send packet with questionably long arguments");
-			};
-		} else {
+		
+		if (!this.isRunning) {
 			console.warn("Socket is not open.");
-		};
-	};
-	
+			return;
+		}
+		if (String(CMD).length > 100 || String(DATA).length > 1000) {
+			console.warn("Blocking attempt to send packet with questionably long arguments");
+			return;
+		}
+		
+		let tmp_msg = {
+			cmd: String(CMD),
+			val: autoConvert(DATA)
+		}
+		if (this.enableListener) {
+			tmp_msg["listener"] = String(this.setListener);
+		}
+		if (this.enableRoom) {
+			tmp_msg["rooms"] = String(this.selectRoom);
+		}
+		console.log("TX:", tmp_msg);
+		mWS.send(JSON.stringify(tmp_msg));
+		if (this.enableListener) {
+			if (!self.socketListeners.hasOwnProperty(this.setListener)) {
+				self.socketListeners[this.setListener] = false;
+			}
+			self.enableListener = false;
+		}
+		if (this.enableRoom) {
+			self.enableRoom = false;
+			self.selectRoom = "";
+		}
+	}
 	runCMD({CMD, ID, DATA}) {
 		const self = this;
-		if (this.isRunning) {
-			if (!(String(CMD).length > 100) || !(String(ID).length > 20) || !(String(DATA).length > 1000)) {
-				let tmp_msg = {
-					cmd: String(CMD),
-					id: autoConvert(ID),
-					val: autoConvert(DATA)
-				}
-
-				if (this.enableListener) {
-					tmp_msg["listener"] = String(this.setListener);
-				};
-				if (this.enableRoom) {
-					tmp_msg["rooms"] = String(this.selectRoom);
-				};
-
-				console.log("TX:", tmp_msg);
-				mWS.send(JSON.stringify(tmp_msg));
-				
-				if (this.enableListener) {
-					if (!self.socketListeners.hasOwnProperty(this.setListener)) {
-						self.socketListeners[this.setListener] = false;
-					};
-					self.enableListener = false;
-				};
-				if (this.enableRoom) {
-					self.enableRoom = false;
-					self.selectRoom = "";
-				};
-
-			} else {
-				console.warn("Blocking attempt to send packet with questionably long arguments");
-			};
-		} else {
+		
+		if (!this.isRunning) {
 			console.warn("Socket is not open.");
-		};
-	};
-	
+			return;
+		}
+		if (String(CMD).length > 100 || String(ID).length > 20 || String(DATA).length > 1000) {
+			console.warn("Blocking attempt to send packet with questionably long arguments");
+			return;
+		}
+		
+		let tmp_msg = {
+			cmd: String(CMD),
+			id: autoConvert(ID),
+			val: autoConvert(DATA)
+		}
+		if (this.enableListener) {
+			tmp_msg["listener"] = String(this.setListener);
+		}
+		if (this.enableRoom) {
+			tmp_msg["rooms"] = String(this.selectRoom);
+		}
+		console.log("TX:", tmp_msg);
+		mWS.send(JSON.stringify(tmp_msg));
+
+		if (this.enableListener) {
+			if (!self.socketListeners.hasOwnProperty(this.setListener)) {
+				self.socketListeners[this.setListener] = false;
+			}
+			self.enableListener = false;
+		}
+		if (this.enableRoom) {
+			self.enableRoom = false;
+			self.selectRoom = "";
+		}
+	}
 	resetNewData({TYPE}){
 		const self = this;
-		if (this.isRunning) {
-			self.newSocketData[this.menuRemap[String(TYPE)]] = false;
-		};
-	};
-	
+		
+		if (!this.isRunning) { return; }
+		
+		self.newSocketData[this.menuRemap[String(TYPE)]] = false;
+	}
 	resetNewVarData({ TYPE, VAR }) {
 		const self = this;
-		if (this.isRunning) {
-			if (this.varData.hasOwnProperty(this.menuRemap[TYPE])) {
-				if (this.varData[this.menuRemap[TYPE]].hasOwnProperty(VAR)) {
-					self.varData[this.menuRemap[TYPE]][VAR].isNew = false;
-				};
-			};
-		};
-	};
-
+		
+		if (!this.isRunning) { return; }
+		if (!this.varData.hasOwnProperty(this.menuRemap[TYPE])) { return; }
+		if (!this.varData[this.menuRemap[TYPE]].hasOwnProperty(VAR)) { return; }
+		
+		self.varData[this.menuRemap[TYPE]][VAR].isNew = false;
+	}
 	resetNewListener({ ID }) {
 		const self = this;
-		if (this.isRunning) {
-			if (this.socketListeners.hasOwnProperty(String(ID))) {
-				self.socketListeners[String(ID)] = false;
-			};
-		};
-	};
-
+		
+		if (!this.isRunning) { return; }
+		if (!this.socketListeners.hasOwnProperty(String(ID))) { return; }
+		
+		self.socketListeners[String(ID)] = false;
+	}
 	clearAllPackets({TYPE}){
 		const self = this;
+		
 		if (this.menuRemap[String(TYPE)] == "all") {
 			self.socketData.gmsg = [];
 			self.socketData.pmsg = [];
@@ -1690,21 +1571,20 @@ class CloudLink {
 			self.socketData.statuscode = [];
 			self.socketData.gvar = [];
 			self.socketData.pvar = [];
-		} else {
-			self.socketData[this.menuRemap[String(TYPE)]] = [];
-		};
-	};
-};
-
+			return;
+		}
+		self.socketData[this.menuRemap[String(TYPE)]] = [];
+	}
+}
 (function() {
 	var extensionClass = CloudLink;
 	if (typeof window === "undefined" || !window.vm) {
 		Scratch.extensions.register(new extensionClass());
 		console.log("CloudLink 4.0 loaded. Detecting sandboxed mode, performance will suffer. Please load CloudLink in Unsandboxed mode.");
-	} else {
-		var extensionInstance = new extensionClass(window.vm.extensionManager.runtime);
-		var serviceName = window.vm.extensionManager._registerInternalExtension(extensionInstance);
-		window.vm.extensionManager._loadedExtensions.set(extensionInstance.getInfo().id, serviceName);
-		console.log("CloudLink 4.0 loaded. Detecting unsandboxed mode.");
-	};
+		return;
+	}
+	var extensionInstance = new extensionClass(window.vm.extensionManager.runtime);
+	var serviceName = window.vm.extensionManager._registerInternalExtension(extensionInstance);
+	window.vm.extensionManager._loadedExtensions.set(extensionInstance.getInfo().id, serviceName);
+	console.log("CloudLink 4.0 loaded. Detecting unsandboxed mode.");
 })()
