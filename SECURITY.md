@@ -1,22 +1,23 @@
 # Security Policy
+You are to keep your instance of Cloudlink as up-to-date as possible. You are to assume that support can be discontinued at any time, with or without reason. 
 
 ## Supported Versions
+| Version number | Supported? | Note |
+|--------------|--------------|------|
+| 0.1.9.x      | 🟢 Yes | Latest release |
+| 0.1.8.x      | 🟠 Deprecated | Pre-CL4 optimized: Should be upgraded |
+| 0.1.7.x and older | 🔴 End of life | CL3/CL Legacy - EOL, should NOT be used |
 
-If you are operating your CloudLink server in a public-access environment, it is up to the server administrator to keep the server up-to-date.
+### Notice for public server hosts
+Public server hosts should maintain the latest version. If a public server host has been found to be running on a Deprecated release, or a version that has not been upgraded in over 30 days, your public host will be removed from the public server list and you will be notified to update your server.
 
-All versions of CloudLink Legacy are to be considered deprecated and obsolete. If you are using CloudLink Legacy, you should consider upgrading.
+## Reporting vulnerabilities
 
-If CloudLink has been updated, you are to assume that it will no longer be supported.
+In the event that a vulnerability has been found, please use the following format to report said vulnerability:
 
-## Reporting a Vulnerability
-
-In the event of a security vulnerability is found, please use the following format to report it:
-
-1. The time of Security Vulnerability being discovered in M/D/Y H:M:S Format
-2. A severity level, ranging from low, medium, or high
-3. Describe in detail what CloudLink should be doing.
-4. Describe in detail what CloudLink is actually doing.
-5. Provide a brief description of your application and environment. Include details such as the presence of a reverse proxy/tunneling service, the server machine's OS, Hardware specs, etc.
-6. List the steps needed to reproduce the vulnerability.
-
-Security vulnerabilities should be reported ASAP and will be taken care of as soon as I can.
+1. A title of the vulnerability - Should be less than 20 words
+2. A description of the vulnerability - Describe the vulnerability in as much detail as possible. Should be no larger than two paragraphs.
+3. Steps to reproduce the vulnerability - Brevity is desired.
+4. Scope of the vulnerability - Does the vulnerability allow a hacker to gain access to a remote machine? Does the vulnerability compromise users in any way, shape, or form?
+5. Initial severity assessment - Range from Low, Medium, High or Critical
+6. Any other comments/concerns
