@@ -236,7 +236,7 @@ class supporter:
 
     def log(self, event, force: bool = False):
         if self.parent.enable_logs or force:
-            self.logging.info(event) #let the user choose the format
+            self.logger.info(event) #let the user choose the format
 
     def timestamp(self):
         today = datetime.now()
