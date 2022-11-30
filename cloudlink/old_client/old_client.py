@@ -46,13 +46,13 @@ class multi_client:
         for thread in self.threads:
             thread.start()
         while (len(self.clients_present) + len(self.clients_dead)) != self.clients_counter:
-            print(f"{(len(self.clients_present) + len(self.clients_dead))} / {self.clients_counter}...", end="\r")
+            self.parent.logger.info(f"{(len(self.clients_present) + len(self.clients_dead))} / {self.clients_counter}...")
 
     def stop(self):
         self.shutdown_flag = True
         self.clients_counter = self.clients_counter - len(self.clients_dead)
         while len(self.clients_present) != 0:
-            print(f"{len(self.clients_present)} / {self.clients_counter}...", end="\r")
+            self.parent.logger.info(f"{len(self.clients_present)} / {self.clients_counter}...")
         self.clients_present.clear()
         self.clients_dead.clear()
         self.threads.clear()
