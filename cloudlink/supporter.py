@@ -1,7 +1,7 @@
 import sys
 import traceback
 from datetime import datetime
-
+import logging
 
 class supporter:
     def __init__(self, parent):
@@ -69,6 +69,9 @@ class supporter:
             "cmd": str,
             "value": [str, int, float]
         }
+        
+        #logging
+        self.logger = logging.getLogger("Cloudlink")
 
     # New and improved version of the message sanity checker.
     def validate(self, keys: dict, payload: dict, optional=None, sizes: dict = None):
@@ -233,7 +236,7 @@ class supporter:
 
     def log(self, event, force: bool = False):
         if self.parent.enable_logs or force:
-            print(f"{self.timestamp()}: {event}")
+            self.logging.log(event) #let the user choose the format
 
     def timestamp(self):
         today = datetime.now()
