@@ -1,5 +1,5 @@
 from .supporter import supporter
-
+import logging
 """
 CloudLink 4.0 Server and Client
 
@@ -25,8 +25,10 @@ These dependencies are built-in to Python.
 class cloudlink:
     def __init__(self):
         self.version = "0.1.9.1"
+        self.logger logging.getLogger("Cloudlink")
         self.supporter = supporter
-        print(f"Cloudlink v{self.version}")
+        
+        self.logger.info(f"Cloudlink v{self.version}")
 
     def server(self, logs: bool = False):
         # Initialize Cloudlink server
