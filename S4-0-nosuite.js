@@ -1,4 +1,4 @@
-var servers = {}; ; // Server list
+var servers = {}; // Server list
 let mWS = null;
 
 // Get the server URL list
