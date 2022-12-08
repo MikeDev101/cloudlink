@@ -196,7 +196,8 @@ class cl_methods:
 
     async def ping(self, client, message, listener):
         # Validation is not needed since this command takes no arguments
-
+        # Command remains here for compatibility. 
+        # CL4's websocket server apparently has a built-in keepalive, so this is somewhat redundant...
         # Return ping
         await self.send_code(
             client=client,
@@ -612,7 +613,9 @@ class cl_methods:
         if not await self.__auto_validate__(self.validator[self.direct], client, message, listener):
             return
 
-        # Legacy command formatting will be automatically converted to new format, so this function defaults to doing nothing unless an ID is specified
+        # Legacy command formatting will be automatically converted to new format.
+        # This function defaults to doing nothing unless an ID is specified
+        
         if "id" in message:
             # Attempting to send a packet directly to someone/something
             if not client.username_set:

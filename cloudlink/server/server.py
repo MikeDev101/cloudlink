@@ -64,6 +64,9 @@ class server:
 
         # Load Scratch cloud variable methods
         self.scratch_methods = scratch_methods(self)
+        
+        # Display version
+        self.supporter.log(f"Cloudlink server v{parent.version}")
 
     # == Public API functionality ==
 
@@ -78,7 +81,7 @@ class server:
     def set_motd(self, message: str, enable: bool = True):
         self.enable_motd = enable
         self.motd_message = message
-
+    
     # Sets the client's username and enables private messages/variables, room link/unlink and direct functionality.
     def set_client_username(self, client: type, username: str):
         result = self.clients.set_username(client, username)
@@ -281,6 +284,8 @@ class server:
         if room_id:
             message["rooms"] = room_id
 
+        self.supporter.log_debug(f"Multicasting payload: {message}")
+
         # Send payload
         self.websockets.broadcast(tmp_clients, self.json.dumps(message))
 
@@ -310,11 +315,13 @@ class server:
         if room_id:
             message["rooms"] = room_id
 
+        self.supporter.log_debug(f"Unicasting payload: {message}")
+
         # Send payload
         try:
             await client.send(self.json.dumps(message))
         except self.websockets.exceptions.ConnectionClosedError:
-            self.log(f"Failed to send packet to client {client.id}: Connection closed unexpectedly")
+            self.supporter.log_error(f"Failed to send packet to client {client.id}: Connection closed unexpectedly")
 
     # Unicast status codes - Only used for statuscode.
     async def send_code(self, client: type, code: str, extra_data: dict = None, listener: str = None):
@@ -340,11 +347,13 @@ class server:
         if listener:
             message["listener"] = listener
 
+        self.supporter.log_debug(f"Sending payload: {message}")
+
         # Send payload
         try:
             await client.send(self.json.dumps(message))
         except self.websockets.exceptions.ConnectionClosedError:
-            self.log(f"Failed to send status code to client {client.id}: Connection closed unexpectedly")
+            self.supporter.log_error(f"Failed to send status code to client {client.id}: Connection closed unexpectedly")
 
     # == Server functionality ==
 
@@ -352,7 +361,10 @@ class server:
         # Main event loop
         async with self.websockets.serve(self.__handler__, ip, port):
             await self.asyncio.Future()
-
+    
+    async def reject_client(self, client, reason):
+        await client.close(code=1001, reason=reason)
+    
     def __fire_callbacks__(self, callback_method, client, message, listener):
         if callback_method.__name__ in self.method_callbacks:
             for _method in self.method_callbacks[callback_method.__name__]:
@@ -478,8 +490,10 @@ class server:
         if self.reject_clients:
             rejected = True
             await client.close(code=1013, reason="Reject mode is enabled")
+            self.supporter.log(f"Client disconnected in reject mode: {client.full_ip}")
         elif self.check_ip_addresses and (client.full_ip in self.ip_blocklist):
             rejected = True
+            self.supporter.log(f"Client rejected: IP address {client.full_ip} blocked")
             await client.close(code=1008, reason="IP blocked")
 
         # Do absolutely nothing if the client was rejected
@@ -499,7 +513,13 @@ class server:
             client.username_set = False
             client.linked = False
             client.friendly_username = None
-
+            
+            # Log event
+            if self.check_ip_addresses:
+                self.supporter.log(f"Client {client.id} connected: {client.full_ip}")
+            else:
+                self.supporter.log(f"Client {client.id} connected")
+            
             # Fire events
             self.__fire_event__(self.events.on_connect, client)
 
@@ -573,6 +593,9 @@ class server:
 
                             case self.supporter.unknown_protocol:
                                 await client.close(code=1002, reason="Unknown protocol")
+                            
+                            case _:
+                                self.__fire_event__(self.events.on_msg, client)
 
             # Handle unexpected disconnects
             except self.websockets.exceptions.ConnectionClosedError:
@@ -584,7 +607,7 @@ class server:
 
             # Handle unexpected exceptions
             except Exception as e:
-                self.log(f"Exception was raised: \"{e}\"\n{self.supporter.full_stack()}")
+                self.supporter.log_error(f"Exception was raised: \"{e}\"\n{self.supporter.full_stack()}")
                 await client.close(code=1011, reason="Unexpected exception was raised")
 
             # Gracefully shutdown the handler
@@ -614,6 +637,12 @@ class server:
 
                 # Fire events
                 self.__fire_event__(self.events.on_close, client)
+                
+                # Log event
+                if self.check_ip_addresses:
+                    self.supporter.log(f"Client {client.id} disconnected: {client.full_ip} - Code {client.close_code} and reason \"{client.close_reason}\"")
+                else:
+                    self.supporter.log(f"Client {client.id} disconnected: Code {client.close_code} and reason \"{client.close_reason}\"")
 
 
 # Class to store custom methods
@@ -700,9 +729,9 @@ class clients:
             # Remove user from client type lists
             match self.get(client).protocol:
                 case self.__proto_cloudlink__:
-                    self.__all_cl__.remove(client)
+                    self.__all_cl__.discard(client)
                 case self.__proto_scratch_cloud__:
-                    self.__all_scratch__.remove(client)
+                    self.__all_scratch__.discard(client)
                 case self.__proto_unset__:
                     pass
                 case _:
@@ -918,4 +947,7 @@ class events:
         pass
 
     def on_close(self):
+        pass
+    
+    def on_msg(self):
         pass

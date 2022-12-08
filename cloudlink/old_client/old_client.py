@@ -12,10 +12,14 @@ class multi_client:
         self.threads = set()
         self.logs = logs
         self.parent = parent
+        self.supporter = self.parent.supporter(self)
 
         self.clients_counter = int()
         self.clients_present = set()
         self.clients_dead = set()
+        
+        # Display version
+        self.supporter.log(f"Cloudlink non-asyncio multi client v{self.parent.version}")
 
     def on_connect(self, client):
         self.clients_present.add(client)
@@ -29,7 +33,7 @@ class multi_client:
         self.clients_dead.add(client)
 
     def spawn(self, client_id: any, url: str = "ws://127.0.0.1:3000/"):
-        _client = client(self.parent, logs=self.logs)
+        _client = client(self.parent, logs=self.logs, multi_silent=True)
         _client.obj_id = client_id
         _client.bind_event(_client.events.on_connect, self.on_connect)
         _client.bind_event(_client.events.on_close, self.on_disconnect)
@@ -43,16 +47,20 @@ class multi_client:
         return _client
 
     def run(self):
+        self.supporter.log("Initializing all clients...")
         for thread in self.threads:
             thread.start()
         while (len(self.clients_present) + len(self.clients_dead)) != self.clients_counter:
-            print(f"{(len(self.clients_present) + len(self.clients_dead))} / {self.clients_counter}...", end="\r")
+            pass
+        self.supporter.log("All clients have initialized.")
 
     def stop(self):
         self.shutdown_flag = True
         self.clients_counter = self.clients_counter - len(self.clients_dead)
+        self.supporter.log("Waiting for all clients to shutdown...")
         while len(self.clients_present) != 0:
-            print(f"{len(self.clients_present)} / {self.clients_counter}...", end="\r")
+            pass
+        self.supporter.log("All clients have shut down.")
         self.clients_present.clear()
         self.clients_dead.clear()
         self.threads.clear()
@@ -60,7 +68,7 @@ class multi_client:
 
 # Cloudlink Client
 class client:
-    def __init__(self, parent, logs: bool = True):
+    def __init__(self, parent, logs: bool = True, multi_silent:bool = False):
         self.version = parent.version
 
         # Locally define the client object
@@ -115,6 +123,10 @@ class client:
 
         # Load safe CLPv4 methods to mitigate vulnerabilities
         self.supporter.init_builtin_cl_methods()
+        
+        if not multi_silent:
+            # Display version
+            self.supporter.log(f"Cloudlink non-asyncio client v{parent.version}")
 
     # == Public API functionality ==
 

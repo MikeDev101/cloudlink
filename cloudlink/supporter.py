@@ -1,12 +1,18 @@
 import sys
 import traceback
 from datetime import datetime
-
+import logging
 
 class supporter:
     def __init__(self, parent):
         self.parent = parent
-
+        
+        # Use logging library
+        self.logger = logging
+        
+        # Reconfigure when needed
+        self.logger.basicConfig(format="[%(asctime)s | %(created)f] (%(thread)d - %(threadName)s) %(levelname)s: %(message)s", level=self.logger.INFO)
+        
         # Define protocol types
         self.proto_unset = "proto_unset"
         self.proto_cloudlink = "proto_cloudlink"
@@ -77,38 +83,47 @@ class supporter:
             optional = []
         if (type(keys) != dict) or (type(payload) != dict):
             return self.not_a_dict
+        
+        self.log_debug(f"Running validator: {keys}, {payload}, {optional}, {sizes}")
 
         for key in keys.keys():
             # Check if a key is present
             if (key in payload) or (key in optional):
                 # Bypass checks if a key is optional and not present
                 if (key not in payload) and (key in optional):
+                    self.log_debug(f"Validator: Payload {payload} key {key} is optional")
                     continue
 
                 # Check if there are multiple supported datatypes for a key
                 if type(keys[key]) == list:
                     # Validate key datatype
                     if not type(payload[key]) in keys[key]:
+                        self.log_debug(f"Validator: Payload {payload} key {key} value is invalid type. Expecting {keys[key]}, got {type(payload[key])}")
                         return self.invalid
 
                     # Check if the size of the payload is too large 
                     if sizes:
                         if (key in sizes.keys()) and (len(str(payload[key])) > sizes[key]):
+                            self.log_debug(f"Validator: Payload {payload} key {key} value is too large")
                             return self.too_large
 
                 else:
                     # Validate key datatype
                     if type(payload[key]) != keys[key]:
+                        self.log_debug(f"Validator: Payload {payload} key {key} value is invalid type. Expecting {keys[key]}, got {type(payload[key])}")
                         return self.invalid
 
                     # Check if the size of the payload is too large 
                     if sizes:
                         if (key in sizes.keys()) and (len(str(payload[key])) > sizes[key]):
+                            self.log_debug(f"Validator: Payload {payload} key {key} value is too large")
                             return self.too_large
             else:
+                self.log_debug(f"Validator: Payload {payload} is missing key {key}")
                 return self.missing_key
 
         # Hooray, the message is sane
+        self.log_debug(f"Validator: Payload {payload} is valid")
         return self.valid
 
     def full_stack(self):
@@ -154,7 +169,7 @@ class supporter:
         else:
             raise ValueError
 
-    # Determines if a method 
+    # Determines if a method has a listener
     def detect_listener(self, message):
         validation = self.validate(
             {
@@ -207,7 +222,13 @@ class supporter:
             # Ignore loading private methods
             if "__" in function:
                 continue
-
+            
+            # Do not initialize server methods
+            if hasattr(self.parent, function):
+                continue
+            if hasattr(self.parent.supporter, function):
+                continue
+            
             # Ignore loading commands marked as ignore
             if hasattr(_class, "importer_ignore_functions"):
                 if function in _class.importer_ignore_functions:
@@ -215,7 +236,7 @@ class supporter:
 
             setattr(self.parent.custom_methods, function, getattr(_class, function))
             self.parent.safe_methods.add(function)
-
+    
     # This initializes methods that are guaranteed safe to use. This mitigates the possibility of clients accessing
     # private or sensitive methods.
     def init_builtin_cl_methods(self):
@@ -224,17 +245,30 @@ class supporter:
             if "__" in function:
                 continue
 
+            # Do not initialize server methods
+            if hasattr(self.parent, function):
+                continue
+            if hasattr(self.parent.supporter, function):
+                continue
+
             # Ignore loading commands marked as ignore
             if hasattr(self.parent.cl_methods, "importer_ignore_functions"):
                 if function in self.parent.cl_methods.importer_ignore_functions:
                     continue
 
             self.parent.safe_methods.add(function)
-
-    def log(self, event, force: bool = False):
-        if self.parent.enable_logs or force:
-            print(f"{self.timestamp()}: {event}")
-
-    def timestamp(self):
-        today = datetime.now()
-        return today.strftime("%m/%d/%Y %H:%M.%S")
+    
+    def log(self, msg):
+        self.logger.info(msg)
+    
+    def log_debug(self, msg):
+        self.logger.debug(msg)
+    
+    def log_warning(self, msg):
+        self.logger.warning(msg)
+    
+    def log_critical(self, msg):
+        self.logger.critical(msg)
+    
+    def log_error(self, msg):
+        self.logger.error(msg)
