@@ -8,6 +8,7 @@ import uuid
 class account:
     username: str
     password: bytes 
+    _id: str
 
 class Session:
     def __init__(self, CloudAccount, username, password):
@@ -23,7 +24,7 @@ class Session:
          self.authed = False
          return
 
-        self.account = account(username, usr['password'])
+        self.account = account(username, usr['password'], usr['_id'])
         self._token = secrets.token_urlsafe()
         
     
@@ -86,7 +87,7 @@ class CloudAccount:
             return 
 
         hashed = bcript.hashpw(message['password'], bcript.gensalt())
-        self.db.users.insert_one({"password":hashed, "username":message['username'], "_id": uuid.uuid4()},)
+        self.db.users.insert_one({"password":hashed, "username":message['username'], "_id": uuid.uuid4().hex},)
         await self.cloudlink.send_code(client, "OK", listener=listener)
 
         self.cloudlink.set_client_username(client, message['username'])

@@ -5,6 +5,7 @@ from copy import copy
 
 from pymongo import MongoClient
 from .account import CloudAccount
+from .disk import CloudDisk
 
 try:
     from montydb import MontyClient
@@ -30,8 +31,10 @@ class Home:
         self.cl = server
         self.cl.supporter.disable_methods("setid")
         self.account = CloudAccount(self)
+        self.disk = CloudDisk(self.account)
 
         self.cl.supporter.load_custom_methods(self.account)
+        self.cl.supporter.load_custom_methods(self.disk)
         
     
 
