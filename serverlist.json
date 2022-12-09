@@ -10,5 +10,9 @@
 	"2": {
 		"id": "Tnix's Oceania Server",
 		"url": "wss://cloudlink.tnix.software/"
+	},
+	"3": {
+	       "id": "Cloudlink 4 - Suit demo server",
+	       "url":"wss://Cloudlink.showierdata9971.repl.co"
 	}
 }
