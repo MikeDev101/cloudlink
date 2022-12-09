@@ -1,6 +1,6 @@
-from dataclass import dataclass
-import sockets # for typing stuff
-import bcript
+from dataclasses import dataclass
+import socket # for typing stuff
+import bcrypt
 import secrets
 import uuid
 
@@ -18,22 +18,22 @@ class Session:
        usr = self.db.users.find_one({"username": username})
        if not usr: return
 
-       if bcript.checkpw(password, usr['password']):
+       if bcrypt.checkpw(password.encode(), usr['password']):
          self.authed = True
-        else:
+       else:
          self.authed = False
          return
 
-        self.account = account(username, usr['password'], usr['_id'])
-        self._token = secrets.token_urlsafe()
+       self.account = account(username, usr['password'], usr['_id'])
+       self._token = secrets.token_urlsafe()
         
     
-    @proprety
+    @property
     def token(self): # self destructing proprety
         token = self._token
 
         if type(token) is str:
-          self._token = bcript.hashpw(self._token, bcript.gensalt())
+          self._token = bcrypt.hashpw(self._token.encode(), bcrypt.gensalt())
         
 
         return token
@@ -51,8 +51,8 @@ class CloudAccount:
         self.importer_ignore_functions = [self.isAuthed]
         self.db = home.db
  
-    async def isAuthed(self, client) -> bool:
-        return hasattr(client.session, "authed") and client.session.authed
+    def isAuthed(self, client) -> bool:
+        return hasattr(client, "session")  and hasattr(client.session, "authed") and client.session.authed
 
     async def login(self, client, message, listener):
         if not 'username' in message:
@@ -72,12 +72,12 @@ class CloudAccount:
         await self.cloudlink.send_code(client, "OK", listener=listener)
 
     async def signup(self, client, message, listener):
-        #TODO: signup
+       
         if not 'username' in message:
             self.cloudlink.send_code(client, "Syntax", extra_data={"key":"username"}, listener=listener)
             return
     
-        usr = db.users.find_one({"username":message['username']})
+        usr = self.db.users.find_one({"username":message['username']})
         if usr:
             self.cloudlink.send_code(client, "IDConflict", listener=listener)
             return
@@ -86,7 +86,7 @@ class CloudAccount:
             self.cloudlink.send_code(client, "Syntax", extra_data={"key":"password"}, listener=listener)
             return 
 
-        hashed = bcript.hashpw(message['password'], bcript.gensalt())
+        hashed = bcrypt.hashpw(message['password'].encode(), bcrypt.gensalt())
         self.db.users.insert_one({"password":hashed, "username":message['username'], "_id": uuid.uuid4().hex},)
         await self.cloudlink.send_code(client, "OK", listener=listener)
 

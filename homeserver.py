@@ -1,6 +1,6 @@
 from cloudlink import cloudlink
-from cloudlink.home_server import home, DataBase
-
+from cloudlink.home_server import Home, DataBase
+from montydb import set_storage
 
 if __name__ == "__main__":
     # Initialize Cloudlink. You will only need to initialize one instance of the main cloudlink module.
@@ -8,7 +8,9 @@ if __name__ == "__main__":
 
     # Create a new server object. This supports initializing many servers at once.
     server = cl.server(logs=True)
-    cl_home = home(server, DataBase())
+
+    set_storage("./db/repo", cache_modified=5)  # optional step
+    cl_home = Home(server, DataBase("monty", "./db/repo"))
 
     # Create examples for various ways to extend the functionality of Cloudlink Server.
 
@@ -17,4 +19,4 @@ if __name__ == "__main__":
     server.set_motd("CL4 Optimized Home Server!", True)
 
     # Run the server.
-    server.run(ip="localhost", port=3000)
+    server.run(ip="localhost", port=3200)

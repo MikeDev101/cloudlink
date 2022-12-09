@@ -21,15 +21,14 @@ class DataBase:
       else:
         raise RuntimeError("<Home>: No DB Selected")
     
-    def __getattr__(self, name):
-        return getattr(self._db, name)
+   
 
 
 class Home:
     def __init__(self, server:"Server", db: DataBase):
-        self.db = DataBase
+        self.db = db._db.get_database("cl_homeserver")
         self.cl = server
-        self.cl.supporter.disable_methods("setid")
+        self.cl.supporter.disable_methods(["setid"])
         self.account = CloudAccount(self)
         self.disk = CloudDisk(self.account)
 

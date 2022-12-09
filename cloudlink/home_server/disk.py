@@ -1,10 +1,10 @@
-from dataclass import dataclass
-from typing import any
+from dataclasses import dataclass
 import uuid
+from typing import Any
 
 @dataclass
 class Disk:
-    contents: any
+    contents: Any
     owner_id: str
     _id: str
 
@@ -13,10 +13,10 @@ class Disk:
 class CloudDisk:
     def __init__(self, CloudAccount):
         self.CA = CloudAccount
-        self.db = self.CA.db
         self.cl = self.CA.cloudlink
+        self.db = self.CA.home_server.db.cl_homeserver
 
-        self.cl.supporter.codes.extend({
+        self.cl.supporter.codes.update({
             "ToManyDisks": ("E", 114, "To Many Disks")
         })
 
@@ -34,10 +34,14 @@ class CloudDisk:
             return
         
 
-        disks = self.db.disks.find_many({"owner_id":client.session.account._id})
-        count = len(disks) if disks is not None else 0 #getting num of disks
+        disks = self.db.disks.find({"owner_id":client.session.account._id})
 
-        if len(disks) > 10:
+        count = 0
+        if disks is not None:
+          for _ in disks:
+            count += 1
+
+        if count > 10:
             await self.cl.send_code(client, "ToManyDisks", listener=listener)
             return
         
@@ -64,7 +68,7 @@ class CloudDisk:
             await self.cl.send_code(client, "IDNotFound", listener=listener)
             return
 
-        self.cb.disks.delete_one({"_id": message['diskid'], "owner_id": client.session.account._id})
+        self.db.disks.delete_one({"_id": message['diskid'], "owner_id": client.session.account._id})
         await self.cl.send_code(client, "OK", listener=listener)
     
     async def update_disk(self, client, message, listener):
@@ -109,7 +113,7 @@ class CloudDisk:
             await self.cl.send_code(client, "IDNotFound", listener=listener)
             return
 
-        await self.cl.send_code(client, "OK", extra_data=disk['contents'], listener=listener)
+        await self.cl.send_code(client, "OK", extra_data={"val":disk['contents']}, listener=listener)
 
 
         
