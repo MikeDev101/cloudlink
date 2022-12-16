@@ -5,7 +5,7 @@ You are to keep your instance of Cloudlink as up-to-date as possible. You are to
 | Version number | Supported? | Note |
 |--------------|--------------|------|
 | 0.1.9.x      | 🟢 Yes | Latest release |
-| 0.1.8.x      | 🟠 Deprecated | Pre-CL4 optimized: Should be upgraded |
+| 0.1.8.x      | 🔴 End of life | Pre-CL4 optimized. Should be upgraded. |
 | 0.1.7.x and older | 🔴 End of life | CL3/CL Legacy - EOL, should NOT be used |
 
 ### Notice for public server hosts
