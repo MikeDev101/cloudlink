@@ -11,7 +11,8 @@ class supporter:
         self.logger = logging.getLogger("Cloudlink")
         
         # Reconfigure when needed
-        self.logger.basicConfig(format="[%(asctime)s | %(created)f] (%(thread)d - %(threadName)s) %(levelname)s: %(message)s", level=self.logger.INFO)
+        # should be in exapmles, not the lib itself.
+        logging.basicConfig(format="[%(asctime)s | %(created)f] (%(thread)d - %(threadName)s) %(levelname)s: %(message)s", level=self.logger.INFO)
         
         # Define protocol types
         self.proto_unset = "proto_unset"
