@@ -8,7 +8,7 @@ class supporter:
         self.parent = parent
         
         # Use logging library
-        self.logger = logging
+        self.logger = logging.getLogger("Cloudlink")
         
         # Reconfigure when needed
         self.logger.basicConfig(format="[%(asctime)s | %(created)f] (%(thread)d - %(threadName)s) %(levelname)s: %(message)s", level=self.logger.INFO)
