@@ -25,7 +25,7 @@ class DataBase:
 
 
 class Home:
-    def __init__(self, server:"Server", db: DataBase):
+    def __init__(self, server, db: DataBase):
         self.db = db._db.get_database("cl_homeserver")
         self.cl = server
         self.cl.supporter.disable_methods(["setid"])

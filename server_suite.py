@@ -1,5 +1,9 @@
 from cloudlink import cloudlink
 from cloudlink.server import suite
+import asyncio
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
 
 class example_callbacks:
     def __init__(self, parent):
@@ -106,8 +110,11 @@ if __name__ == "__main__":
     server.bind_callback(commands.foobar, callbacks.test3)
 
     # connect to home server.
-    server.client.run("localhost:8000") 
+    async def main():
+        await asyncio.gather( server.client.run("ABCD", "ABCD","ws://localhost:3200") ,
     
-    # Run the server.
-    server.run(ip="localhost", port=3000)
+        # Run the server.
+         server.__run__(ip="localhost", port=3000))
+
+    asyncio.run(main())
     

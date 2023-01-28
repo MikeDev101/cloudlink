@@ -24,8 +24,9 @@ These dependencies are built-in to Python.
 
 
 class cloudlink:
+    version = "0.1.9.2"
     def __init__(self):
-        self.version = "0.1.9.2"
+        
         self.supporter = supporter
 
     def server(self, logs: bool = False):

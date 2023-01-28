@@ -16,7 +16,9 @@ class Session:
        self.db = self.CA.db
 
        usr = self.db.users.find_one({"username": username})
-       if not usr: return
+       if not usr: 
+            self.authed = False
+            return
 
        if bcrypt.checkpw(password.encode(), usr['password']):
          self.authed = True
@@ -34,7 +36,7 @@ class Session:
         token = self._token
 
         if type(token) is str:
-          self._token = bcrypt.hashpw(self._token.encode(), bcrypt.gensalt())
+          self._token = bcrypt.hashpw(self._token.encode(), bcrypt.gensalt()) #type: ignore
         
 
         return token
@@ -42,18 +44,17 @@ class Session:
 
 
         
-       
-
 
 class CloudAccount:
     def __init__(self, home):
         self.home_server = home
         self.cloudlink = home.cl
+        self.cl = self.cloudlink # ???? past self
         self.importer_ignore_functions = [self.isAuthed]
         self.db = home.db
         self.logged_in_users = {}
         self.cloudlink.supporter.codes.update({
-            (self.cloudlink.supporter.error, 255, "TokenNotFound")
+            "TokenNotFound":(self.cloudlink.supporter.error, 255, "TokenNotFound")
         })
  
     def isAuthed(self, client) -> bool:
@@ -106,7 +107,7 @@ class CloudAccount:
 
 
     async def RegisterServerAccount(self, client, message, listener):
-        if not self.CA.isAuthed(client):
+        if not self.isAuthed(client):
             await self.cl.send_code(client, "Refused", extra_data={"error":"noAuth"} ,listener=listener)
             return
 
@@ -116,10 +117,11 @@ class CloudAccount:
         client.server = True
 
     async def Server_LogClientIn(self, client, message, listener):
-        if not client.server:
-            await self.cl.send_code(client, "Refused", extra_data={"error": "NotServer"}, listener=listener)
+        # screw you, server login
+        if not self.isAuthed(client):
+            await self.cl.send_code(client, "Refused", extra_data={"error":"noAuth"} ,listener=listener)
             return
-
+        
         if "userid" not in message:
             await self.cloudlink.send_code(client, "Syntax", extra_data={"key":"userid"}, listener=listener)
             return 
@@ -132,11 +134,13 @@ class CloudAccount:
         userid = message['userid']
         user_token = message['user_token']
 
-        if userid in self.logged_in_users:
+        if userid not in self.logged_in_users: # UH WHAT THAT WAS if userid in self.logged_in_users
             await self.cloudlink.send_code(client, "IDNotFound", listener=listener)
             return
         
-        user = self.logged_in_users[user_token]
+        _user = self.db.users.find_one({"username": userid})
+
+        user = self.logged_in_users[_user["_id"]]
 
         if not bcrypt.checkpw(user_token.encode(), user.session.token):
             await self.cloudlink.send_code(client, "TokenNotFound", listener=listener)
