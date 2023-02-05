@@ -27,7 +27,7 @@ Cloudlink is also available as a Python module, which comes bundled with the Clo
 There is even a web-friendly version of Cloudlink available as CLJS. 
 
 ### [Discussion Forum (Archive)](https://scratch.mit.edu/discuss/topic/398473)
-### [Cloudlink JS "cljs" (discontinued)](https://github.com/williamhorning/archives/tree/main/cloudlink)
+### [Cloudlink JS "CLJS"](https://www.npmjs.com/package/@williamhorning/cloudlink)
 
 ## FAQ
 > Will my Cloudlink 3.0/TURBO projects support Cloudlink 4.0 Servers?
