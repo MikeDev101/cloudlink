@@ -1,4 +1,38 @@
 ![CLOUDLINK 4 BANNER](https://user-images.githubusercontent.com/12957745/188282246-a221e66a-5d8a-4516-9ae2-79212b745d91.png)
+
+# Cloudlink
+Cloudlink is a free and open-source websocket solution optimized for Scratch. Originally created as a cloud variables alternative, it can function as a multi-purpose websocket framework for other projects.
+
+# 💡 Features 💡
+### 🔨 Low threshold, high ceiling
+To set up a Cloudlink server, all you need is a copy of Cloudlink and the latest version of Python. Install dependencies using `pip install -r requirements.txt` and you'll be ready to go!
+
+You can learn about the protocol using the original Scratch 3.0 client extension. Feel free to test-drive the extension in any of these Scratch mods:
+- [TurboWarp](https://turbowarp.org/editor?extension=https://mikedev101.github.io/cloudlink/S4-0-nosuite.js)
+- [SheepTester's E 羊 icques](https://sheeptester.github.io/scratch-gui/?url=https://mikedev101.github.io/cloudlink/S4-0-nosuite.js)
+- [Ogadaki's Adacraft](https://adacraft.org/studio/)
+- [Ogadaki's Adacraft (Beta)](https://beta.adacraft.org/studio/)
+
+For more advanced usage, you can implement custom apps or entire projects using the Python client/server pair. 
+
+As for the Python server:
+* Unicast and multicast packets across clients
+* Expandable functionality with a built-in method loader
+* Support for bridging servers
+* Admin functionality for management
+
+### 🪶 Fast and lightweight 
+Cloudlink can run on minimal resources. At least 32MB of RAM and any reasonably capable CPU can run a Cloudlink server.
+
+# 📦 Dependencies 📦
+* 🐍 Python >=3.11
+* 🌐 [aaugustin/websockets](https://github.com/aaugustin/websockets)
+* 🌐 [websocket-client](https://github.com/websocket-client/websocket-client)
+
+# 📃 The Cloudlink Protocol 📃
+You can learn more about the Cloudlink protocol on [CL's official HackMD documentation page.](https://hackmd.io/g6BogABhT6ux1GA2oqaOXA)
+
+<!-- ![CLOUDLINK 4 BANNER](https://user-images.githubusercontent.com/12957745/188282246-a221e66a-5d8a-4516-9ae2-79212b745d91.png)
 ##### CL4 banner(s) made by [@zedthehedgehog](https://github.com/zedthehedgehog)
 
 # Cloudlink
@@ -63,3 +97,4 @@ The Cloudlink Suite is a set of extra features built into the Cloudlink Extensio
 
 ## Found an issue?
 Please report any bugs, glitches, and/or security vulnerabilities [here](https://github.com/MikeDev101/cloudlink/issues).
+-->
