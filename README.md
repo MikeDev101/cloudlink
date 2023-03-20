@@ -16,7 +16,7 @@ CloudLink can run on minimal resources. At least 25MB of RAM and any reasonably 
 * Support for bridging servers
 * Admin functionality for management
 
-# 📦 Minimal dependencies
+### 📦 Minimal dependencies
 All dependencies below can be installed using `pip install -r requirements.txt`.
 * 🐍 Python >=3.11
 * 🧵 asyncio (Built-in)
