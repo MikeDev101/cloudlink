@@ -194,10 +194,8 @@ class server:
     # Friendly version of send_packet_unicast / send_packet_multicast
     def send_packet(self, obj, message):
         if type(obj) in [list, set]:
-            print("Multicasting", message)
             self.asyncio.create_task(self.execute_multicast(obj, message))
         else:
-            print("Unicasting", message)
             self.asyncio.create_task(self.execute_unicast(obj, message))
 
     # Send message to a single client
@@ -219,10 +217,13 @@ class server:
 
     # Message processor
     async def message_processor(self, client, message):
+        
         print(client, message)
+        
         # Empty packet
         if not len(message):
-            print("Empty!")
+            self.logger.debug(f"Client {client.snowflake} sent empty message ")
+        
             # Fire on_error events
             asyncio.create_task(self.execute_on_error_events(client, self.exceptions.EmptyMessage))
 
@@ -247,9 +248,10 @@ class server:
         # Parse JSON in message and convert to dict
         try:
             message = self.ujson.loads(message)
-            print("JSON OK")
         
         except Exception as error:
+            self.logger.debug(f"Client {client.snowflake} sent invalid JSON: {error}")
+            
             # Fire on_error events
             self.asyncio.create_task(self.execute_on_error_events(client, error))
 
@@ -281,6 +283,9 @@ class server:
             
             # Identify protocol
             errorlist = list()
+            
+            self.logger.debug(f"Checking for protocol using loaded handlers: {self.command_handlers}")
+            
             for schema in self.command_handlers:
                 if self.validator(message, schema.default):
                     valid = True
@@ -310,7 +315,7 @@ class server:
             self.clients_manager.set_protocol(client, selected_protocol)
 
         else:
-            self.logger.debug(f"Validating client {client.snowflake}'s message using known protocol: {client.protocol}")
+            self.logger.debug(f"Validating client {client.snowflake}'s message using known protocol: {client.protocol.__qualname__}")
             
             # Validate message using known protocol
             selected_protocol = client.protocol
@@ -393,6 +398,8 @@ class server:
         # Fire on_connect events
         self.asyncio.create_task(self.execute_on_connect_events(client))
         
+        self.logger.debug(f"Client {client.snowflake} connected")
+        
         # Run connection loop
         await self.connection_loop(client)
         
@@ -401,6 +408,8 @@ class server:
 
         # Fire on_disconnect events
         self.asyncio.create_task(self.execute_on_disconnect_events(client))
+        
+        self.logger.debug(f"Client {client.snowflake} disconnected")
     
     # Connection loop - Redefine for use with another outside library
     async def connection_loop(self, client):
