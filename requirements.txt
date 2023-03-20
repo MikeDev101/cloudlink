@@ -1,2 +1,4 @@
-websockets
-websocket-client
+snowflake-id>=0.0.2
+cerberus>=1.3.4
+websockets>=10.4
+ujson>=5.7.0
