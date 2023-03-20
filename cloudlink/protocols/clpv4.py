@@ -197,3 +197,7 @@ class clpv4:
         @server.on_command(cmd="bridge", schema=self.protocol_schema)
         async def on_bridge(client, message):
             pass
+        
+        @server.on_command(cmd="echo", schema=self.protocol_schema)
+        async def on_echo(client, message):
+            server.send_packet(client, {"cmd": "echo", "val": message["val"]})

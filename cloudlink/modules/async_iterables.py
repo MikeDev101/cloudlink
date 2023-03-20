@@ -25,11 +25,9 @@ class async_iterable:
 
     async def __anext__(self):
         if self.iterator >= len(self.iterable):
-            self.logger.debug(f"Finished iterating")
             self.iterator = 0
             raise StopAsyncIteration
 
         self.iterator += 1
 
-        self.logger.debug(f"Iterating {self.iterator} of {len(self.iterable)}")
         return self.iterable[self.iterator - 1]

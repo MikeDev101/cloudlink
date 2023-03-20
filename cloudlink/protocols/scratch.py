@@ -26,7 +26,7 @@ class scratch:
                 server.logger.critical(f"Client {client.id} sent scratchsessionsid header(s) - Aborting connection!")
 
                 # Tell the client they are doing a no-no
-                await client.send("The cloud data library you are using is putting your Scratch account at risk by sending your login token for no reason. Change your Scratch password immediately, then contact the maintainers of that library for further information. This connection is being closed to protect your security.")
+                server.send_packet_unicast(client, "The cloud data library you are using is putting your Scratch account at risk by sending your login token for no reason. Change your Scratch password immediately, then contact the maintainers of that library for further information. This connection is being closed to protect your security.")
 
                 # Abort the connection
                 server.close_connection(client, code=4005, reason=f"Connection closed for security reasons")

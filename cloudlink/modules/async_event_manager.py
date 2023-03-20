@@ -45,7 +45,6 @@ class async_event_manager:
     async def __anext__(self):
         # Check for further events in the list of events
         if self.iterator >= len(self.events):
-            self.logger.debug(f"Finished executing awaitable events")
             self.iterator = 0
             raise StopAsyncIteration
 
@@ -53,5 +52,4 @@ class async_event_manager:
         self.iterator += 1
 
         # Execute async event
-        self.logger.debug(f"Executing event {self.iterator} of {len(self.events)}")
         return list(self.events)[self.iterator - 1]
