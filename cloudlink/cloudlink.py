@@ -218,8 +218,6 @@ class server:
     # Message processor
     async def message_processor(self, client, message):
         
-        print(client, message)
-        
         # Empty packet
         if not len(message):
             self.logger.debug(f"Client {client.snowflake} sent empty message ")
