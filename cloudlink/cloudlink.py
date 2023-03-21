@@ -1,6 +1,5 @@
 # Core components of the CloudLink engine
 import asyncio
-import ujson
 import cerberus
 import logging
 from copy import copy
@@ -20,6 +19,13 @@ from cloudlink.modules.schemas import schemas
 # Import protocols
 from cloudlink.protocols import clpv4
 from cloudlink.protocols import scratch
+
+# Import JSON library - Prefer UltraJSON but use native JSON if failed
+try:
+    import ujson
+except ImportError:
+    print("Failed to import UltraJSON, failing back to native JSON library.")
+    import json as ujson
 
 
 # Define server exceptions
@@ -59,9 +65,9 @@ class server:
 
         # Configure websocket framework
         self.ws = websockets
-        self.ujson = ujson
 
         # Components
+        self.ujson = ujson
         self.gen = SnowflakeGenerator(42)
         self.validator = cerberus.Validator()
         self.schemas = schemas
@@ -69,7 +75,6 @@ class server:
         self.copy = copy
         self.clients_manager = clients_manager(self)
         self.exceptions = exceptions()
-        
 
         # Create event managers
         self.on_connect_events = async_event_manager(self)
@@ -99,10 +104,14 @@ class server:
         try:
             # Validate config before startup
             if type(self.max_clients) != int:
-                raise TypeError("The max_clients value must be a integer value set to -1 (unlimited clients) or greater than zero!")
+                raise TypeError(
+                    "The max_clients value must be a integer value set to -1 (unlimited clients) or greater than zero!"
+                )
 
             if self.max_clients < -1 or self.max_clients == 0:
-                raise ValueError("The max_clients value must be a integer value set to -1 (unlimited clients) or greater than zero!")
+                raise ValueError(
+                    "The max_clients value must be a integer value set to -1 (unlimited clients) or greater than zero!"
+                )
 
             if type(self.enable_scratch_support) != bool:
                 raise TypeError("The enable_scratch_support value must be a boolean!")
@@ -132,7 +141,6 @@ class server:
             
             # Start server
             self.asyncio.run(self.__run__(ip, port))
-            
 
         except KeyboardInterrupt:
             pass
@@ -282,8 +290,6 @@ class server:
             # Identify protocol
             errorlist = list()
             
-            self.logger.debug(f"Checking for protocol using loaded handlers: {self.command_handlers}")
-            
             for schema in self.command_handlers:
                 if self.validator(message, schema.default):
                     valid = True
@@ -313,8 +319,8 @@ class server:
             self.clients_manager.set_protocol(client, selected_protocol)
 
         else:
-            self.logger.debug(f"Validating client {client.snowflake}'s message using known protocol: {client.protocol.__qualname__}")
-            
+            self.logger.debug(f"Validating message from {client.snowflake} using protocol {client.protocol}")
+
             # Validate message using known protocol
             selected_protocol = client.protocol
 
@@ -334,7 +340,11 @@ class server:
         if message[selected_protocol.command_key] not in self.command_handlers[selected_protocol]:
 
             # Log invalid command
-            self.logger.debug(f"Invalid command \"{message[selected_protocol.command_key]}\" in protocol {selected_protocol.__qualname__} from client {client.snowflake}")
+            cmd = message[selected_protocol.command_key]
+            proto = selected_protocol.__qualname__
+            self.logger.debug(
+                f"Invalid command \"{cmd}\" in protocol {proto} from client {client.snowflake}"
+            )
 
             # Fire on_error events
             self.asyncio.create_task(self.execute_on_error_events(client, "Invalid command"))
@@ -385,7 +395,7 @@ class server:
         client.snowflake = str(next(self.gen))
         client.protocol = None
         client.protocol_set = False
-        client.rooms = set
+        client.rooms = set()
         client.username_set = False
         client.friendly_username = str()
         client.linked = False
@@ -496,8 +506,10 @@ class server:
         # Attempt to send the packet
         try:
             await client.send(message)
-        except:
-            pass
+        except Exception as e:
+            self.logger.critical(
+                f"Unexpected exception was raised while unicasting message to client {client.snowflake}: {e}"
+            )
     
     async def execute_multicast(self, clients, message):
         
@@ -513,11 +525,18 @@ class server:
         async for client in self.async_iterable(self, clients):
             try:
                 await self.execute_unicast(client, message)
-            except:
-                pass
+            except Exception as e:
+                self.logger.critical(
+                    f"Unexpected exception was raised while multicasting message to client {client.snowflake}: {e}"
+                )
     
     async def execute_close_single(self, client, code=1000, reason=""):
-        await client.close(code, reason)
+        try:
+            await client.close(code, reason)
+        except Exception as e:
+            self.logger.critical(
+                f"Unexpected exception was raised while closing connection to client {client.snowflake}: {e}"
+            )
 
     async def execute_close_multi(self, clients, code=1000, reason=""):
         async for client in self.async_iterable(self, clients):

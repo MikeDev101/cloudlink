@@ -119,7 +119,7 @@ class clients_manager:
         if username not in self.usernames:
             self.usernames[username] = set()
 
-        # Create reference to object from it's username
+        # Create reference to object from its username
         self.usernames[username].add(obj)
 
         # Finally set attributes

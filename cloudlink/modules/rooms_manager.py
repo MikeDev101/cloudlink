@@ -20,7 +20,7 @@ class exceptions:
         """This exception is raised when a client attempts to join a room, but it was already joined."""
         pass
 
-    class RoomsNotJoined(Exception):
+    class RoomNotJoined(Exception):
         """This exception is raised when a client attempts to access a room not joined."""
         pass
 
@@ -48,29 +48,85 @@ class rooms_manager:
         self.logging = parent.logging
         self.logger = self.logging.getLogger(__name__)
 
-    def create(self, room_id, supported_protocols=set):
-        if type(room_id) not in [str, int, float, bool]:
-            raise TypeError("Room IDs only support strings, booleans, or numbers!")
+    def create(self, room_id):
+        # Rooms may only have string names
+        if type(room_id) != str:
+            raise TypeError("Room IDs only support strings!")
 
+        # Prevent re-declaring a room
         if self.exists(room_id):
             raise self.exceptions.RoomAlreadyExists
 
         # Create the room
         self.rooms[room_id] = {
             "clients": set(),
-            "supported_protocols": supported_protocols,
-            "global_variables": set()
+            "global_vars": dict(),
+            "private_vars": dict()
         }
 
     def delete(self, room_id):
+        # Rooms may only have string names
+        if type(room_id) != str:
+            raise TypeError("Room IDs only support strings!")
+
+        # Check if the room exists
         if not self.exists(room_id):
             raise self.exceptions.RoomDoesNotExist
 
+        # Prevent deleting a room if it's not empty
         if len(self.rooms[room_id]["clients"]):
             raise self.exceptions.RoomNotEmpty
 
         # Delete the room
         self.rooms.pop(room_id)
 
+        # Delete reference to room
+        self.room_names.pop(room_id)
+
     def exists(self, room_id):
+        # Rooms may only have string names
+        if type(room_id) != str:
+            raise TypeError("Room IDs only support strings!")
+
         return room_id in self.rooms
+
+    def subscribe(self, obj, room_id):
+        # Rooms may only have string names
+        if type(room_id) != str:
+            raise TypeError("Room IDs only support strings!")
+
+        # Check if room exists
+        if not self.exists(room_id):
+            self.create(room_id)
+
+        # Check if client has not subscribed to a room
+        if obj in self.rooms[room_id]["clients"]:
+            raise self.exceptions.RoomAlreadyJoined
+
+        # Add to room
+        self.rooms[room_id]["clients"].add(obj)
+
+    def unsubscribe(self, obj, room_id):
+        # Rooms may only have string names
+        if type(room_id) != str:
+            raise TypeError("Room IDs only support strings!")
+
+        # Check if room exists
+        if not self.exists(room_id):
+            raise self.exceptions.RoomDoesNotExist
+
+        # Check if a client has subscribed to a room
+        if obj not in self.rooms[room_id]["clients"]:
+            raise self.exceptions.RoomNotJoined
+
+        # Remove from room
+        self.rooms[room_id]["clients"].remove(obj)
+
+    def find_obj(self, query):
+        # Rooms may only have string names
+        if type(query) != str:
+            raise TypeError("Searching for room objects requires a string for the query.")
+        if query in (room for room in self.rooms):
+            return self.rooms[query]
+        else:
+            raise self.exceptions.NoResultsFound

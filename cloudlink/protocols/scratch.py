@@ -1,3 +1,9 @@
+"""
+This is a FOSS reimplementation of Scratch's Cloud Variable protocol.
+See https://github.com/TurboWarp/cloud-server/blob/master/doc/protocol.md for details.
+"""
+
+
 class scratch:
     def __init__(self, server):
 
@@ -49,6 +55,8 @@ class scratch:
 
         @server.on_command(cmd="create", schema=self.protocol_schema)
         async def create_variable(client, message):
+
+            # Validate schema
             if not valid(client, message, self.protocol_schema.method):
                 return
 
@@ -73,8 +81,17 @@ class scratch:
                     "value": self.storage[message["project_id"]][variable]
                 })
 
+        @server.on_command(cmd="rename", schema=self.protocol_schema)
+        async def rename_variable(client, message):
+
+            # Validate schema
+            if not valid(client, message, self.protocol_schema.method):
+                return
+
         @server.on_command(cmd="delete", schema=self.protocol_schema)
         async def create_variable(client, message):
+
+            # Validate schema
             if not valid(client, message, self.protocol_schema.method):
                 return
 
@@ -100,17 +117,18 @@ class scratch:
 
         @server.on_command(cmd="set", schema=self.protocol_schema)
         async def set_value(client, message):
+
+            # Validate schema
             if not valid(client, message, self.protocol_schema.method):
                 return
 
-            server.logger.debug(f"Updating global variable {message['name']} to value {message['value']}")
-
             # Guard clause - Room must exist before adding to it
             if not message["project_id"] in self.storage:
-                server.logger.warning(f"Error: {errors}")
 
                 # Abort the connection
                 server.close_connection(client, code=4004, reason=f"Invalid room ID: {message['project_id']}")
+
+            server.logger.debug(f"Updating global variable {message['name']} to value {message['value']}")
 
             # Update variable state
             self.storage[message["project_id"]][message['name']] = message['value']

@@ -1,11 +1,13 @@
 """
-schemas - A replacement for the validate() function in older versions.
+schemas - A replacement for validate() function in older versions of CloudLink.
 """
 
 
 class schemas:
+
     # Schema for interpreting the Cloudlink protocol v4.0 (CLPv4) command set
     class clpv4:
+
         # Required - Defines the keyword to use to define the command
         command_key = "cmd"
 
@@ -270,6 +272,7 @@ class schemas:
 
     # Schema for interpreting the Cloud Variables protocol used in Scratch 3.0
     class scratch:
+
         # Required - Defines the keyword to use to define the command
         command_key = "method"
 
