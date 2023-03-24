@@ -20,6 +20,9 @@ class scratch:
         # Exposes the schema of the protocol.
         self.schema = scratch
 
+        #TODO: Use rooms manager from server
+        self.storage = dict()
+
         # valid(message, schema): Used to verify messages.
         def valid(client, message, schema):
             if server.validator(message, schema):
@@ -27,7 +30,8 @@ class scratch:
             else:
                 errors = server.validator.errors
                 server.logger.warning(f"Error: {errors}")
-                server.close_connection(client, code=statuscodes.connection_error, reason=f"Message schema validation failed")
+                server.send_packet_unicast(client, f"Validation failed: {dict(errors)}")
+                server.close_connection(client, code=statuscodes.connection_error, reason=f"Validation failed")
                 return False
 
         @server.on_command(cmd="handshake", schema=scratch_protocol)
@@ -46,6 +50,10 @@ class scratch:
                 server.close_connection(client, code=statuscodes.refused_security, reason=f"Connection closed for security reasons")
 
                 # End this guard clause
+                return
+
+            # Validate schema
+            if not valid(client, message, scratch_protocol.handshake):
                 return
 
             # Create project ID (temporary since rooms_manager isn't done yet)
