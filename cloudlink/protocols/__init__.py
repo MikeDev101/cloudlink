@@ -1,3 +1,2 @@
-from .clpv4 import *
-from .scratch import *
-
+from .clpv4.clpv4 import *
+from .scratch.scratch import *

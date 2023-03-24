@@ -2,8 +2,8 @@
 import asyncio
 import cerberus
 import logging
-from copy import copy
 import time
+from copy import copy
 from snowflake import SnowflakeGenerator
 
 # Import websocket engine
@@ -14,9 +14,6 @@ from cloudlink.modules.async_event_manager import async_event_manager
 from cloudlink.modules.async_iterables import async_iterable
 from cloudlink.modules.clients_manager import clients_manager
 from cloudlink.modules.rooms_manager import rooms_manager
-
-# Import builtin schemas to validate the CLPv4 / Scratch Cloud Variable protocol(s)
-from cloudlink.modules.schemas import schemas
 
 # Import JSON library - Prefer UltraJSON but use native JSON if failed
 try:
@@ -72,7 +69,6 @@ class server:
         self.ujson = ujson
         self.gen = SnowflakeGenerator(42)
         self.validator = cerberus.Validator()
-        self.schemas = schemas
         self.async_iterable = async_iterable
         self.copy = copy
         self.clients_manager = clients_manager(self)
@@ -597,7 +593,7 @@ class server:
         
         # Guard clause
         if type(message) not in [dict, str]:
-            raise TypeError("Supported datatypes for messages are dicts and strings, got type {type(message)}.")
+            raise TypeError(f"Supported datatypes for messages are dicts and strings, got type {type(message)}.")
         
         # Convert dict to JSON
         if type(message) == dict:

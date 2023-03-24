@@ -1,3 +1,5 @@
+from .schema import cl4_protocol
+
 """
 This is the default protocol used for the CloudLink server.
 The CloudLink 4.1 Protocol retains full support for CLPv4.
@@ -20,8 +22,8 @@ class clpv4:
         self.enable_motd = False
         self.motd_message = str()
 
-        # protocol_schema: The default schema to identify the protocol.
-        self.protocol = server.schemas.clpv4
+        # Exposes the schema of the protocol.
+        self.schema = cl4_protocol
 
         # Define various status codes for the protocol.
         class statuscodes:
@@ -104,11 +106,11 @@ class clpv4:
 
         # Exception handlers
 
-        @server.on_exception(exception_type=server.exceptions.ValidationError, schema=self.protocol)
+        @server.on_exception(exception_type=server.exceptions.ValidationError, schema=cl4_protocol)
         async def validation_failure(client, details):
             send_statuscode(client, statuscodes.syntax, details=dict(details))
 
-        @server.on_exception(exception_type=server.exceptions.InvalidCommand, schema=self.protocol)
+        @server.on_exception(exception_type=server.exceptions.InvalidCommand, schema=cl4_protocol)
         async def invalid_command(client, details):
             send_statuscode(
                 client,
@@ -116,7 +118,7 @@ class clpv4:
                 details=f"{details} is an invalid command."
             )
 
-        @server.on_disabled_command(schema=self.protocol)
+        @server.on_disabled_command(schema=cl4_protocol)
         async def disabled_command(client, details):
             send_statuscode(
                 client,
@@ -124,7 +126,7 @@ class clpv4:
                 details=f"{details} is a disabled command."
             )
 
-        @server.on_exception(exception_type=server.exceptions.JSONError, schema=self.protocol)
+        @server.on_exception(exception_type=server.exceptions.JSONError, schema=cl4_protocol)
         async def json_exception(client, details):
             send_statuscode(
                 client,
@@ -132,7 +134,7 @@ class clpv4:
                 details=f"A JSON error was raised: {details}"
             )
 
-        @server.on_exception(exception_type=server.exceptions.EmptyMessage, schema=self.protocol)
+        @server.on_exception(exception_type=server.exceptions.EmptyMessage, schema=cl4_protocol)
         async def empty_message(client, details):
             send_statuscode(
                 client,
@@ -142,7 +144,7 @@ class clpv4:
 
         # The CLPv4 command set
 
-        @server.on_command(cmd="handshake", schema=self.protocol)
+        @server.on_command(cmd="handshake", schema=cl4_protocol)
         async def on_handshake(client, message):
             # Send client IP address
             server.send_packet(client, {
@@ -175,7 +177,7 @@ class clpv4:
             else:
                 send_statuscode(client, statuscodes.ok)
 
-        @server.on_command(cmd="ping", schema=self.protocol)
+        @server.on_command(cmd="ping", schema=cl4_protocol)
         async def on_ping(client, message):
             listener = None
 
@@ -184,14 +186,14 @@ class clpv4:
 
             send_statuscode(client, statuscodes.ok, listener=listener)
 
-        @server.on_command(cmd="gmsg", schema=self.protocol)
+        @server.on_command(cmd="gmsg", schema=cl4_protocol)
         async def on_gmsg(client, message):
             # Validate schema
-            if not valid(client, message, self.protocol.gmsg):
+            if not valid(client, message, cl4_protocol.gmsg):
                 return
 
             # Copy the current set of connected client objects
-            clients = server.copy(server.clients_manager.protocols[self.protocol])
+            clients = server.copy(server.clients_manager.protocols[cl4_protocol])
 
             # Attach listener (if present) and broadcast
             if "listener" in message:
@@ -227,7 +229,7 @@ class clpv4:
                 # Broadcast message
                 server.send_packet(clients, tmp_message)
 
-        @server.on_command(cmd="pmsg", schema=self.protocol)
+        @server.on_command(cmd="pmsg", schema=cl4_protocol)
         async def on_pmsg(client, message):
             # Require sending client to have set their username
             if not client.username_set:
@@ -252,7 +254,7 @@ class clpv4:
             tmp_client = None
 
             # Validate schema
-            if not valid(client, message, self.protocol.pmsg):
+            if not valid(client, message, cl4_protocol.pmsg):
                 return
 
             # Find client
@@ -324,11 +326,11 @@ class clpv4:
                     statuscodes.ok
                 )
 
-        @server.on_command(cmd="gvar", schema=self.protocol)
+        @server.on_command(cmd="gvar", schema=cl4_protocol)
         async def on_gvar(client, message):
 
             # Validate schema
-            if not valid(client, message, self.protocol.gvar):
+            if not valid(client, message, cl4_protocol.gvar):
                 return
 
             # Define the message to send
@@ -339,7 +341,7 @@ class clpv4:
             }
 
             # Copy the current set of connected client objects
-            clients = server.copy(server.clients_manager.protocols[self.protocol])
+            clients = server.copy(server.clients_manager.protocols[cl4_protocol])
 
             # Attach listener (if present) and broadcast
             if "listener" in message:
@@ -350,7 +352,7 @@ class clpv4:
             else:
                 server.send_packet(clients, tmp_message)
 
-        @server.on_command(cmd="pvar", schema=self.protocol)
+        @server.on_command(cmd="pvar", schema=cl4_protocol)
         async def on_pvar(client, message):
             # Require sending client to have set their username
             if not client.username_set:
@@ -375,7 +377,7 @@ class clpv4:
             tmp_client = None
 
             # Validate schema
-            if not valid(client, message, self.protocol.pvar):
+            if not valid(client, message, cl4_protocol.pvar):
                 return
 
             # Find client
@@ -429,10 +431,10 @@ class clpv4:
                     statuscodes.ok
                 )
 
-        @server.on_command(cmd="setid", schema=self.protocol)
+        @server.on_command(cmd="setid", schema=cl4_protocol)
         async def on_setid(client, message):
             # Validate schema
-            if not valid(client, message, self.protocol.setid):
+            if not valid(client, message, cl4_protocol.setid):
                 return
 
             # Prevent setting the username more than once
@@ -486,23 +488,23 @@ class clpv4:
                     },
                 )
 
-        @server.on_command(cmd="link", schema=self.protocol)
+        @server.on_command(cmd="link", schema=cl4_protocol)
         async def on_link(client, message):
             server.rooms_manager.subscribe(client, message["rooms"])
 
-        @server.on_command(cmd="unlink", schema=self.protocol)
+        @server.on_command(cmd="unlink", schema=cl4_protocol)
         async def on_unlink(client, message):
             pass
 
-        @server.on_command(cmd="direct", schema=self.protocol)
+        @server.on_command(cmd="direct", schema=cl4_protocol)
         async def on_direct(client, message):
             pass
 
-        @server.on_command(cmd="bridge", schema=self.protocol)
+        @server.on_command(cmd="bridge", schema=cl4_protocol)
         async def on_bridge(client, message):
             pass
 
-        @server.on_command(cmd="echo", schema=self.protocol)
+        @server.on_command(cmd="echo", schema=cl4_protocol)
         async def on_echo(client, message):
             val = None
             listener = None

@@ -1,3 +1,5 @@
+from .schema import scratch_protocol
+
 """
 This is a FOSS reimplementation of Scratch's Cloud Variable protocol.
 See https://github.com/TurboWarp/cloud-server/blob/master/doc/protocol.md for details.
@@ -15,8 +17,8 @@ class scratch:
             unavailable = 4004
             refused_security = 4005
 
-        # protocol_schema: The default schema to identify the protocol.
-        self.protocol_schema = server.schemas.scratch
+        # Exposes the schema of the protocol.
+        self.schema = scratch
 
         # valid(message, schema): Used to verify messages.
         def valid(client, message, schema):
@@ -28,7 +30,7 @@ class scratch:
                 server.close_connection(client, code=statuscodes.connection_error, reason=f"Message schema validation failed")
                 return False
 
-        @server.on_command(cmd="handshake", schema=self.protocol_schema)
+        @server.on_command(cmd="handshake", schema=scratch_protocol)
         async def handshake(client, message):
 
             # Safety first
@@ -59,11 +61,11 @@ class scratch:
                     "value": self.storage[message["project_id"]][variable]
                 })
 
-        @server.on_command(cmd="create", schema=self.protocol_schema)
+        @server.on_command(cmd="create", schema=scratch_protocol)
         async def create_variable(client, message):
 
             # Validate schema
-            if not valid(client, message, self.protocol_schema.method):
+            if not valid(client, message, scratch_protocol.method):
                 return
 
             # Guard clause - Room must exist before adding to it
@@ -87,18 +89,18 @@ class scratch:
                     "value": self.storage[message["project_id"]][variable]
                 })
 
-        @server.on_command(cmd="rename", schema=self.protocol_schema)
+        @server.on_command(cmd="rename", schema=scratch_protocol)
         async def rename_variable(client, message):
 
             # Validate schema
-            if not valid(client, message, self.protocol_schema.method):
+            if not valid(client, message, scratch_protocol.method):
                 return
 
-        @server.on_command(cmd="delete", schema=self.protocol_schema)
+        @server.on_command(cmd="delete", schema=scratch_protocol)
         async def create_variable(client, message):
 
             # Validate schema
-            if not valid(client, message, self.protocol_schema.method):
+            if not valid(client, message, scratch_protocol.method):
                 return
 
             # Guard clause - Room must exist before deleting values from it
@@ -121,11 +123,11 @@ class scratch:
                     "name": variable
                 })
 
-        @server.on_command(cmd="set", schema=self.protocol_schema)
+        @server.on_command(cmd="set", schema=scratch_protocol)
         async def set_value(client, message):
 
             # Validate schema
-            if not valid(client, message, self.protocol_schema.method):
+            if not valid(client, message, scratch_protocol.method):
                 return
 
             # Guard clause - Room must exist before adding to it
