@@ -68,6 +68,27 @@ class schemas:
             }
         }
 
+        setid = {
+            "cmd": {
+                "type": "string",
+                "required": True
+            },
+            "val": {
+                "type": "string",
+                "required": True
+            },
+            "listener": {
+                "type": [
+                    "string",
+                    "integer",
+                    "float",
+                    "boolean",
+                    "number"
+                ],
+                "required": False
+            }
+        }
+
         gmsg = {
             "cmd": {
                 "type": "string",

@@ -12,13 +12,9 @@ async for event in async_iterable(parent, [foo, bar]):
 
 
 class async_iterable:
-    def __init__(self, parent, iterables):
+    def __init__(self, iterables):
         self.iterator = 0
         self.iterable = list(iterables)
-
-        # Init logger
-        self.logging = parent.logging
-        self.logger = self.logging.getLogger(__name__)
 
     def __aiter__(self):
         return self

@@ -12,6 +12,7 @@ import websockets
 from cloudlink.modules.async_event_manager import async_event_manager
 from cloudlink.modules.async_iterables import async_iterable
 from cloudlink.modules.clients_manager import clients_manager
+from cloudlink.modules.rooms_manager import rooms_manager
 
 # Import builtin schemas to validate the CLPv4 / Scratch Cloud Variable protocol(s)
 from cloudlink.modules.schemas import schemas
@@ -74,6 +75,7 @@ class server:
         self.async_iterable = async_iterable
         self.copy = copy
         self.clients_manager = clients_manager(self)
+        self.rooms_manager = rooms_manager(self)
         self.exceptions = exceptions()
 
         # Create event managers
@@ -271,6 +273,7 @@ class server:
                         details=f"JSON parsing error: {error}"
                     )
                 )
+
             else:
                 # Close the connection
                 self.send_packet(client, "Invalid JSON")
@@ -403,6 +406,9 @@ class server:
         # Add to clients manager
         self.clients_manager.add(client)
 
+        # Add to default room
+        self.rooms_manager.subscribe(client, "default")
+
         # Fire on_connect events
         self.asyncio.create_task(self.execute_on_connect_events(client))
         
@@ -416,7 +422,10 @@ class server:
 
         # Fire on_disconnect events
         self.asyncio.create_task(self.execute_on_disconnect_events(client))
-        
+
+        async for room in self.async_iterable(client.rooms):
+            self.rooms_manager.unsubscribe(client, room)
+
         self.logger.debug(f"Client {client.snowflake} disconnected")
     
     # Connection loop - Redefine for use with another outside library
@@ -522,7 +531,7 @@ class server:
             message = self.ujson.dumps(message)
         
         # Attempt to broadcast the packet
-        async for client in self.async_iterable(self, clients):
+        async for client in self.async_iterable(clients):
             try:
                 await self.execute_unicast(client, message)
             except Exception as e:
@@ -539,5 +548,5 @@ class server:
             )
 
     async def execute_close_multi(self, clients, code=1000, reason=""):
-        async for client in self.async_iterable(self, clients):
+        async for client in self.async_iterable(clients):
             await self.execute_close_single(client, code, reason)

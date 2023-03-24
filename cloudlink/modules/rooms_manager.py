@@ -59,7 +59,7 @@ class rooms_manager:
 
         # Create the room
         self.rooms[room_id] = {
-            "clients": set(),
+            "clients": dict(),
             "global_vars": dict(),
             "private_vars": dict()
         }
