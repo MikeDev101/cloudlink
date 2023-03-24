@@ -1,9 +1,10 @@
-from cloudlink import cloudlink
+from cloudlink import server
 from cloudlink.protocols import clpv4, scratch
+
 
 if __name__ == "__main__":
     # Initialize the server
-    server = cloudlink.server()
+    server = server()
 
     # Configure logging settings
     server.logging.basicConfig(
@@ -13,7 +14,7 @@ if __name__ == "__main__":
 
     # Load protocols
     clpv4 = clpv4(server)
-    # scratch = scratch(server)
+    scratch = scratch(server)
 
     # Disable CL commands
     for command in ["gmsg", "gvar"]:
