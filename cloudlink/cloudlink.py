@@ -3,6 +3,7 @@ import asyncio
 import cerberus
 import logging
 from copy import copy
+import time
 from snowflake import SnowflakeGenerator
 
 # Import websocket engine
@@ -16,10 +17,6 @@ from cloudlink.modules.rooms_manager import rooms_manager
 
 # Import builtin schemas to validate the CLPv4 / Scratch Cloud Variable protocol(s)
 from cloudlink.modules.schemas import schemas
-
-# Import protocols
-from cloudlink.protocols import clpv4
-from cloudlink.protocols import scratch
 
 # Import JSON library - Prefer UltraJSON but use native JSON if failed
 try:
@@ -41,6 +38,10 @@ class exceptions:
 
     class JSONError(Exception):
         """This exception is raised when the server fails to parse a message's JSON."""
+        pass
+
+    class ValidationError(Exception):
+        """This exception is raised when a client with a known protocol sends a message that fails validation before commands can execute."""
         pass
 
     class InternalError(Exception):
@@ -78,23 +79,20 @@ class server:
         self.rooms_manager = rooms_manager(self)
         self.exceptions = exceptions()
 
+        # Dictionary containing protocols as keys and sets of commands as values
+        self.disabled_commands = dict()
+
         # Create event managers
         self.on_connect_events = async_event_manager(self)
         self.on_message_events = async_event_manager(self)
         self.on_disconnect_events = async_event_manager(self)
         self.on_error_events = async_event_manager(self)
         self.exception_handlers = dict()
+        self.disabled_commands_handlers = dict()
 
         # Create method handlers
         self.command_handlers = dict()
 
-        # Enable scratch protocol support on startup
-        self.enable_scratch_support = True
-
-        # Message of the day
-        self.enable_motd = False
-        self.motd_message = str()
-        
         # Configure framework logging
         self.supress_websocket_logs = True
         
@@ -114,22 +112,6 @@ class server:
                 raise ValueError(
                     "The max_clients value must be a integer value set to -1 (unlimited clients) or greater than zero!"
                 )
-
-            if type(self.enable_scratch_support) != bool:
-                raise TypeError("The enable_scratch_support value must be a boolean!")
-
-            if type(self.enable_motd) != bool:
-                raise TypeError("The enable_motd value must be a boolean!")
-
-            if type(self.motd_message) != str:
-                raise TypeError("The motd_message value must be a string!")
-            
-            # Load CLPv4 protocol
-            clpv4(self)
-            
-            # Load Scratch protocol
-            if self.enable_scratch_support:
-                scratch(self)
             
             # Startup message
             self.logger.info(f"CloudLink {self.version} - Now listening to {ip}:{port}")
@@ -153,7 +135,7 @@ class server:
 
             # Create schema category for command event manager
             if schema not in self.command_handlers:
-                self.logger.info(f"Creating command event manager {schema.__qualname__}")
+                self.logger.info(f"Creating protocol {schema.__qualname__} command event manager")
                 self.command_handlers[schema] = dict()
 
             # Create command event handler
@@ -172,7 +154,7 @@ class server:
 
             # Create schema category for error event manager
             if schema not in self.exception_handlers:
-                self.logger.info(f"Creating exception event manager {schema.__qualname__}")
+                self.logger.info(f"Creating protocol {schema.__qualname__} exception event manager")
                 self.exception_handlers[schema] = dict()
 
             # Create error event handler
@@ -181,6 +163,21 @@ class server:
 
             # Add function to the error command handler
             self.exception_handlers[schema][exception_type].bind(func)
+
+        # End on_error_specific binder
+        return bind_event
+
+    # Event binder for invalid command events with specific shemas/exception types
+    def on_disabled_command(self, schema):
+        def bind_event(func):
+
+            # Create disabled command event manager
+            if schema not in self.disabled_commands_handlers:
+                self.logger.info(f"Creating disabled command event manager {schema.__qualname__}")
+                self.disabled_commands_handlers[schema] = async_event_manager(self)
+
+            # Add function to the error command handler
+            self.disabled_commands_handlers[schema].bind(func)
 
         # End on_error_specific binder
         return bind_event
@@ -224,6 +221,38 @@ class server:
             self.asyncio.create_task(self.execute_close_multi(obj, code, reason))
         else:
             self.asyncio.create_task(self.execute_close_single(obj, code, reason))
+
+    # Command disabler
+    def disable_command(self, cmd, schema):
+        # Check if the schema has no disabled commands
+        if schema not in self.disabled_commands:
+            self.disabled_commands[schema] = set()
+
+        # Check if the command isn't already disabled
+        if cmd in self.disabled_commands[schema]:
+            raise ValueError(f"The command {cmd} is already disabled in protocol {schema.__qualname__}, or was enabled beforehand.")
+
+        # Disable the command
+        self.disabled_commands[schema].add(cmd)
+        self.logger.debug(f"Disabled command {cmd} in protocol {schema.__qualname__}")
+
+    # Command enabler
+    def enable_command(self, cmd, schema):
+        # Check if the schema has disabled commands
+        if schema not in self.disabled_commands:
+            raise ValueError(f"There are no commands to disable in protocol {schema.__qualname__}.")
+
+        # Check if the command is disabled
+        if cmd not in self.disabled_commands[schema]:
+            raise ValueError(f"The command {cmd} is already enabled in protocol {schema.__qualname__}, or wasn't disabled beforehand.")
+
+        # Enable the command
+        self.disabled_commands[schema].remove(cmd)
+        self.logger.debug(f"Enabled command {cmd} in protocol {schema.__qualname__}")
+
+        # Free up unused disablers
+        if not len(self.disabled_commands[schema]):
+            self.disabled_commands.pop(schema)
 
     # Message processor
     async def message_processor(self, client, message):
@@ -270,7 +299,7 @@ class server:
                         client=client,
                         exception_type=self.exceptions.JSONError,
                         schema=client.protocol,
-                        details=f"JSON parsing error: {error}"
+                        details=error
                     )
                 )
 
@@ -322,7 +351,7 @@ class server:
             self.clients_manager.set_protocol(client, selected_protocol)
 
         else:
-            self.logger.debug(f"Validating message from {client.snowflake} using protocol {client.protocol}")
+            self.logger.debug(f"Validating message from {client.snowflake} using protocol {client.protocol.__qualname__}")
 
             # Validate message using known protocol
             selected_protocol = client.protocol
@@ -336,6 +365,17 @@ class server:
                 # Fire on_error events
                 self.asyncio.create_task(self.execute_on_error_events(client, errors))
 
+                # Fire exception handling events
+                if client.protocol_set:
+                    self.asyncio.create_task(
+                        self.execute_exception_handlers(
+                            client=client,
+                            exception_type=self.exceptions.ValidationError,
+                            schema=client.protocol,
+                            details=errors
+                        )
+                    )
+
                 # End message_processor coroutine
                 return
 
@@ -343,11 +383,7 @@ class server:
         if message[selected_protocol.command_key] not in self.command_handlers[selected_protocol]:
 
             # Log invalid command
-            cmd = message[selected_protocol.command_key]
-            proto = selected_protocol.__qualname__
-            self.logger.debug(
-                f"Invalid command \"{cmd}\" in protocol {proto} from client {client.snowflake}"
-            )
+            self.logger.debug(f"Client {client.snowflake} sent an invalid command \"{message[selected_protocol.command_key]}\" in protocol {selected_protocol.__qualname__}")
 
             # Fire on_error events
             self.asyncio.create_task(self.execute_on_error_events(client, "Invalid command"))
@@ -359,12 +395,29 @@ class server:
                         client=client,
                         exception_type=self.exceptions.InvalidCommand,
                         schema=client.protocol,
-                        details=f"Invalid command: {message[selected_protocol.command_key]}"
+                        details=message[selected_protocol.command_key]
                     )
                 )
 
             # End message_processor coroutine
             return
+
+        # Check if the command is disabled
+        if selected_protocol in self.disabled_commands:
+            if message[selected_protocol.command_key] in self.disabled_commands[selected_protocol]:
+                self.logger.debug(f"Client {client.snowflake} sent a disabled command \"{message[selected_protocol.command_key]}\" in protocol {selected_protocol.__qualname__}")
+
+                # Fire disabled command event
+                self.asyncio.create_task(
+                    self.execute_disabled_command_events(
+                        client,
+                        selected_protocol,
+                        message[selected_protocol.command_key]
+                    )
+                )
+
+                # End message_processor coroutine
+                return
 
         # Fire on_command events
         self.asyncio.create_task(
@@ -400,9 +453,12 @@ class server:
         client.protocol_set = False
         client.rooms = set()
         client.username_set = False
-        client.friendly_username = str()
+        client.username = str()
         client.linked = False
-        
+
+        # Begin tracking the lifetime of the client
+        client.birth_time = time.monotonic()
+
         # Add to clients manager
         self.clients_manager.add(client)
 
@@ -426,14 +482,22 @@ class server:
         async for room in self.async_iterable(client.rooms):
             self.rooms_manager.unsubscribe(client, room)
 
-        self.logger.debug(f"Client {client.snowflake} disconnected")
+        self.logger.debug(f"Client {client.snowflake} disconnected: Total lifespan of {time.monotonic() - client.birth_time} seconds.")
     
     # Connection loop - Redefine for use with another outside library
     async def connection_loop(self, client):
         # Primary asyncio loop for the lifespan of the websocket connection
         try:
             async for message in client:
+                # Start keeping track of processing time
+                start = time.perf_counter()
+                self.logger.debug(f"Now processing message from client {client.snowflake}...")
+
+                # Process the message
                 await self.message_processor(client, message)
+
+                # Log processing time
+                self.logger.debug(f"Done processing message from client {client.snowflake}. Processing took {time.perf_counter() - start} seconds.")
 
         # Handle unexpected disconnects
         except self.ws.exceptions.ConnectionClosedError:
@@ -461,7 +525,7 @@ class server:
                     )
                 )
     
-    # Server - You can modify this code to use a different websocket engine.
+    # WebSocket-specific server loop
     async def __run__(self, ip, port):
         # Main event loop
         async with self.ws.serve(self.connection_handler, ip, port):
@@ -499,8 +563,17 @@ class server:
         # Fire events
         async for event in self.exception_handlers[schema][exception_type]:
             await event(client, details)
+
+    async def execute_disabled_command_events(self, client, schema, cmd):
+        # Guard clauses
+        if schema not in self.disabled_commands_handlers:
+            return
+
+        # Fire events
+        async for event in self.disabled_commands_handlers[schema]:
+            await event(client, cmd)
     
-    # You can modify the code below to use different websocket engines.
+    # WebSocket-specific coroutines
     
     async def execute_unicast(self, client, message):
     

@@ -101,8 +101,8 @@ class clients_manager:
         if obj.username_set:
 
             # Remove reference to username object
-            if obj.friendly_username in self.usernames:
-                self.usernames[obj.friendly_username].remove(obj)
+            if obj.username in self.usernames:
+                self.usernames[obj.username].remove(obj)
 
             # Clean up unused usernames
             if not len(self.usernames[obj.friendly_username]):
@@ -124,7 +124,7 @@ class clients_manager:
 
         # Finally set attributes
         obj.username_set = True
-        obj.friendly_username = username
+        obj.username = username
 
     def set_protocol(self, obj, schema):
         if not self.exists(obj):
@@ -145,6 +145,9 @@ class clients_manager:
         obj.protocol_set = True
 
     def find_obj(self, query):
+        if type(query) not in [str, dict]:
+            raise TypeError("Clients can only be usernames (str), snowflakes (str), UUIDs (str), or Objects (dict).")
+
         if query in self.usernames:
             return self.usernames[query]
         elif query in self.get_uuids():

@@ -104,7 +104,7 @@ class rooms_manager:
             raise self.exceptions.RoomAlreadyJoined
 
         # Add to room
-        self.rooms[room_id]["clients"].add(obj)
+        self.rooms[room_id]["clients"][obj.snowflake] = obj
 
     def unsubscribe(self, obj, room_id):
         # Rooms may only have string names
@@ -120,7 +120,7 @@ class rooms_manager:
             raise self.exceptions.RoomNotJoined
 
         # Remove from room
-        self.rooms[room_id]["clients"].remove(obj)
+        del self.rooms[room_id]["clients"][obj.snowflake]
 
     def find_obj(self, query):
         # Rooms may only have string names

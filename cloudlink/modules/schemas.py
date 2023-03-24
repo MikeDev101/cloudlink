@@ -37,10 +37,7 @@ class schemas:
             "id": {
                 "type": [
                     "string",
-                    "integer",
-                    "float",
-                    "boolean",
-                    "number"
+                    "dict"
                 ],
                 "required": False
             },
@@ -185,13 +182,7 @@ class schemas:
             "id": {
                 "type": [
                     "string",
-                    "integer",
-                    "float",
-                    "number",
-                    "boolean",
-                    "dict",
-                    "list",
-                    "set",
+                    "dict"
                 ],
                 "required": True
             },
@@ -244,13 +235,7 @@ class schemas:
             "id": {
                 "type": [
                     "string",
-                    "integer",
-                    "float",
-                    "number",
-                    "boolean",
-                    "dict",
-                    "list",
-                    "set",
+                    "dict"
                 ],
                 "required": True
             },

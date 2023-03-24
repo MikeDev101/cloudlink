@@ -7,10 +7,16 @@ See https://github.com/TurboWarp/cloud-server/blob/master/doc/protocol.md for de
 class scratch:
     def __init__(self, server):
 
+        # Define various status codes for the protocol.
+        class statuscodes:
+            connection_error = 4000
+            username_error = 4002
+            overloaded = 4003
+            unavailable = 4004
+            refused_security = 4005
+
         # protocol_schema: The default schema to identify the protocol.
         self.protocol_schema = server.schemas.scratch
-
-        self.storage = dict()
 
         # valid(message, schema): Used to verify messages.
         def valid(client, message, schema):
@@ -19,7 +25,7 @@ class scratch:
             else:
                 errors = server.validator.errors
                 server.logger.warning(f"Error: {errors}")
-                server.close_connection(client, reason=f"Message schema validation failed")
+                server.close_connection(client, code=statuscodes.connection_error, reason=f"Message schema validation failed")
                 return False
 
         @server.on_command(cmd="handshake", schema=self.protocol_schema)
@@ -35,7 +41,7 @@ class scratch:
                 server.send_packet_unicast(client, "The cloud data library you are using is putting your Scratch account at risk by sending your login token for no reason. Change your Scratch password immediately, then contact the maintainers of that library for further information. This connection is being closed to protect your security.")
 
                 # Abort the connection
-                server.close_connection(client, code=4005, reason=f"Connection closed for security reasons")
+                server.close_connection(client, code=statuscodes.refused_security, reason=f"Connection closed for security reasons")
 
                 # End this guard clause
                 return
@@ -65,7 +71,7 @@ class scratch:
                 server.logger.warning(f"Error: room {message['project_id']} does not exist yet")
 
                 # Abort the connection
-                server.close_connection(client, code=4004, reason=f"Invalid room ID: {message['project_id']}")
+                server.close_connection(client, code=statuscodes.unavailable, reason=f"Invalid room ID: {message['project_id']}")
 
             server.logger.debug(f"Creating global variable {message['name']} in {message['project_id']}")
 
@@ -100,7 +106,7 @@ class scratch:
                 server.logger.warning(f"Error: room {message['project_id']} does not exist yet")
 
                 # Abort the connection
-                server.close_connection(client, code=4004, reason=f"Invalid room ID: {message['project_id']}")
+                server.close_connection(client, code=statuscodes.unavailable, reason=f"Invalid room ID: {message['project_id']}")
 
             server.logger.debug(f"Deleting global variable {message['name']} in {message['project_id']}")
 
@@ -126,7 +132,7 @@ class scratch:
             if not message["project_id"] in self.storage:
 
                 # Abort the connection
-                server.close_connection(client, code=4004, reason=f"Invalid room ID: {message['project_id']}")
+                server.close_connection(client, code=statuscodes.unavailable, reason=f"Invalid room ID: {message['project_id']}")
 
             server.logger.debug(f"Updating global variable {message['name']} to value {message['value']}")
 
