@@ -142,6 +142,12 @@ class clpv4:
                 details="Your client has sent an empty message."
             )
 
+        # Protocol identified event
+        @server.on_protocol_identified(schema=cl4_protocol)
+        async def protocol_identified(client):
+            server.logger.debug(f"Adding client {client.snowflake} to default room.")
+            server.rooms_manager.subscribe(client, "default")
+
         # The CLPv4 command set
 
         @server.on_command(cmd="handshake", schema=cl4_protocol)
@@ -283,23 +289,25 @@ class clpv4:
                 return
 
             # Warn client if they are attempting to send to a username with multiple matches
-            if self.warn_if_multiple_username_matches and len(tmp_client) >> 1:
-                # Attach listener
-                if "listener" in message:
-                    send_statuscode(
-                        client,
-                        statuscodes.id_not_specific,
-                        details=f'Multiple matches found for {message["id"]}, found {len(tmp_client)} matches. Please use Snowflakes or dict objects instead.',
-                        listener=message["listener"]
-                    )
-                else:
-                    send_statuscode(
-                        client,
-                        statuscodes.id_not_specific,
-                        details=f'Multiple matches found for {message["id"]}, found {len(tmp_client)} matches. Please use Snowflakes or dict objects instead.'
-                    )
-                # End pmsg command handler
-                return
+            if self.warn_if_multiple_username_matches:
+                if type(tmp_client) == set:
+                    if len(tmp_client) >> 1:
+                        # Attach listener
+                        if "listener" in message:
+                            send_statuscode(
+                                client,
+                                statuscodes.id_not_specific,
+                                details=f'Multiple matches found for {message["id"]}, found {len(tmp_client)} matches. Please use Snowflakes, UUIDs, or client objects instead.',
+                                listener=message["listener"]
+                            )
+                        else:
+                            send_statuscode(
+                                client,
+                                statuscodes.id_not_specific,
+                                details=f'Multiple matches found for {message["id"]}, found {len(tmp_client)} matches. Please use Snowflakes, UUIDs, or client objects instead.'
+                            )
+                        # End pmsg command handler
+                        return
 
             # Broadcast message to client
             tmp_message = {

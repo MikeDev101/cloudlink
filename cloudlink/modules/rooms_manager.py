@@ -48,6 +48,12 @@ class rooms_manager:
         self.logging = parent.logging
         self.logger = self.logging.getLogger(__name__)
 
+    def get(self, room_id):
+        try:
+            return self.find_obj(room_id)
+        except self.exceptions.NoResultsFound:
+            return dict()
+
     def create(self, room_id):
         # Rooms may only have string names
         if type(room_id) != str:
@@ -60,6 +66,7 @@ class rooms_manager:
         # Create the room
         self.rooms[room_id] = {
             "clients": dict(),
+            "usernames": dict(),
             "global_vars": dict(),
             "private_vars": dict()
         }
@@ -80,8 +87,8 @@ class rooms_manager:
         # Delete the room
         self.rooms.pop(room_id)
 
-        # Delete reference to room
-        self.room_names.pop(room_id)
+        # Log deletion
+        self.parent.logger.debug(f"Deleted room {room_id}")
 
     def exists(self, room_id):
         # Rooms may only have string names
@@ -103,8 +110,25 @@ class rooms_manager:
         if obj in self.rooms[room_id]["clients"]:
             raise self.exceptions.RoomAlreadyJoined
 
+        # Create room protocol categories
+        if obj.protocol not in self.rooms[room_id]["clients"]:
+            self.rooms[room_id]["clients"][obj.protocol] = set()
+
         # Add to room
-        self.rooms[room_id]["clients"][obj.snowflake] = obj
+        self.rooms[room_id]["clients"][obj.protocol].add(obj)
+
+        # Create room username reference
+        if obj.username not in self.rooms[room_id]["usernames"]:
+            self.rooms[room_id]["usernames"][obj.username] = set()
+
+        # Add to usernames reference
+        self.rooms[room_id]["usernames"][obj.username].add(obj)
+
+        # Add room to client object
+        obj.rooms.add(room_id)
+
+        # Log room subscribe
+        self.parent.logger.debug(f"Subscribed client {obj.snowflake} to room {room_id}")
 
     def unsubscribe(self, obj, room_id):
         # Rooms may only have string names
@@ -116,11 +140,34 @@ class rooms_manager:
             raise self.exceptions.RoomDoesNotExist
 
         # Check if a client has subscribed to a room
-        if obj not in self.rooms[room_id]["clients"]:
-            raise self.exceptions.RoomNotJoined
+        if obj not in self.rooms[room_id]["clients"][obj.protocol]:
+            raise self.exceptions.RoomNotJoined(f"Client was not found in room {room_id}!")
 
         # Remove from room
-        del self.rooms[room_id]["clients"][obj.snowflake]
+        self.rooms[room_id]["clients"][obj.protocol].remove(obj)
+
+        # Clean up room protocol categories
+        if not len(self.rooms[room_id]["clients"][obj.protocol]):
+            self.rooms[room_id]["clients"].pop(obj.protocol)
+
+        # Remove from username reference
+        if obj.username in self.rooms[room_id]["usernames"]:
+            self.rooms[room_id]["usernames"][obj.username].remove(obj)
+
+        # Remove empty username reference set
+        if not len(self.rooms[room_id]["usernames"][obj.username]):
+            self.rooms[room_id]["usernames"].pop(obj.username)
+
+        # Remove room from client object
+        obj.rooms.remove(room_id)
+
+        # Log room unsubscribe
+        self.parent.logger.debug(f"Unsubscribed client {obj.snowflake} from room {room_id}")
+
+        # Delete empty room
+        if not len(self.rooms[room_id]["clients"]):
+            self.parent.logger.debug(f"Deleting emptied room {room_id}...")
+            self.delete(room_id)
 
     def find_obj(self, query):
         # Rooms may only have string names

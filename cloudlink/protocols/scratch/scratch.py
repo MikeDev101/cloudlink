@@ -20,9 +20,6 @@ class scratch:
         # Exposes the schema of the protocol.
         self.schema = scratch
 
-        #TODO: Use rooms manager from server
-        self.storage = dict()
-
         # valid(message, schema): Used to verify messages.
         def valid(client, message, schema):
             if server.validator(message, schema):
@@ -56,17 +53,25 @@ class scratch:
             if not valid(client, message, scratch_protocol.handshake):
                 return
 
-            # Create project ID (temporary since rooms_manager isn't done yet)
-            if not message["project_id"] in self.storage:
-                self.storage[message["project_id"]] = dict()
+            # Set username
+            server.logger.debug(f"Scratch client {client.snowflake} declares username {message['user']}.")
+
+            # Set client username
+            server.clients_manager.set_username(client, message['user'])
+
+            # Subscribe to room
+            server.rooms_manager.subscribe(client, message["project_id"])
+
+            # Get values
+            room_data = server.rooms_manager.get(message["project_id"])
 
             # Sync project ID variable state
-            for variable in self.storage[message["project_id"]]:
+            async for variable in server.async_iterable(room_data["global_vars"]):
                 server.logger.debug(f"Sending variable {variable} to client {client.id}")
                 server.send_packet_unicast(client, {
                     "method": "set",
                     "name": variable,
-                    "value": self.storage[message["project_id"]][variable]
+                    "value": room_data["global_vars"][variable]
                 })
 
         @server.on_command(cmd="create", schema=scratch_protocol)
@@ -85,17 +90,18 @@ class scratch:
 
             server.logger.debug(f"Creating global variable {message['name']} in {message['project_id']}")
 
-            # Create the variable
-            self.storage[message["project_id"]][message['name']] = message["value"]
+            # Get values
+            room_data = server.rooms_manager.get(message["project_id"])
 
-            # Broadcast the variable
-            for variable in self.storage[message["project_id"]]:
-                server.logger.debug(f"Creating variable {variable} in {len(server.clients_manager)} clients")
-                server.send_packet_multicast(server.clients_manager.clients, {
-                    "method": "create",
-                    "name": variable,
-                    "value": self.storage[message["project_id"]][variable]
-                })
+            # Create variable
+            room_data["global_vars"][message['name']] = message["value"]
+
+            # Broadcast the variable state
+            server.send_packet_multicast(room_data["clients"][scratch_protocol], {
+                "method": "create",
+                "name": message['name'],
+                "value": room_data["global_vars"][message['name']]
+            })
 
         @server.on_command(cmd="rename", schema=scratch_protocol)
         async def rename_variable(client, message):
@@ -120,16 +126,17 @@ class scratch:
 
             server.logger.debug(f"Deleting global variable {message['name']} in {message['project_id']}")
 
-            # Delete the variable
-            del self.storage[message["project_id"]][message['name']]
+            # Get values
+            room_data = server.rooms_manager.get(message["project_id"])
 
-            # Broadcast the variable
-            for variable in self.storage[message["project_id"]]:
-                server.logger.debug(f"Deleting variable {variable} in {len(server.clients_manager)} clients")
-                server.send_packet_multicast(server.clients_manager.clients, {
-                    "method": "delete",
-                    "name": variable
-                })
+            # Delete variable
+            room_data["global_vars"].pop(message['name'])
+
+            # Broadcast the variable state
+            server.send_packet_multicast(room_data["clients"][scratch_protocol], {
+                "method": "delete",
+                "name": message['name']
+            })
 
         @server.on_command(cmd="set", schema=scratch_protocol)
         async def set_value(client, message):
@@ -139,21 +146,22 @@ class scratch:
                 return
 
             # Guard clause - Room must exist before adding to it
-            if not message["project_id"] in self.storage:
+            if not server.rooms_manager.exists(message["project_id"]):
 
                 # Abort the connection
                 server.close_connection(client, code=statuscodes.unavailable, reason=f"Invalid room ID: {message['project_id']}")
 
-            server.logger.debug(f"Updating global variable {message['name']} to value {message['value']}")
+            server.logger.debug(f"Updating global variable {message['name']} in {message['project_id']} to value {message['value']}")
 
-            # Update variable state
-            self.storage[message["project_id"]][message['name']] = message['value']
+            # Get values
+            room_data = server.rooms_manager.get(message["project_id"])
 
-            # Broadcast the variable
-            for variable in self.storage[message["project_id"]]:
-                server.logger.debug(f"Sending variable {variable} to {len(server.clients_manager)} clients")
-                server.send_packet_multicast(server.clients_manager.clients, {
-                    "method": "set",
-                    "name": variable,
-                    "value": self.storage[message["project_id"]][variable]
-                })
+            # Update variable
+            room_data["global_vars"][message['name']] = message["value"]
+
+            # Broadcast the variable state
+            server.send_packet_multicast(room_data["clients"][scratch_protocol], {
+                "method": "set",
+                "name": message['name'],
+                "value": room_data["global_vars"][message['name']]
+            })

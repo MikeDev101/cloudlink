@@ -85,6 +85,7 @@ class server:
         self.on_error_events = async_event_manager(self)
         self.exception_handlers = dict()
         self.disabled_commands_handlers = dict()
+        self.protocol_identified_events = dict()
 
         # Create method handlers
         self.command_handlers = dict()
@@ -186,6 +187,20 @@ class server:
             self.disabled_commands_handlers[schema].bind(func)
 
         # End on_error_specific binder
+        return bind_event
+
+    def on_protocol_identified(self, schema):
+        def bind_event(func):
+
+            # Create protocol identified event manager
+            if schema not in self.protocol_identified_events:
+                self.logger.info(f"Creating protocol identified event manager {schema.__qualname__}")
+                self.protocol_identified_events[schema] = async_event_manager(self)
+
+            # Add function to the protocol identified event manager
+            self.protocol_identified_events[schema].bind(func)
+
+        # End on_protocol_identified binder
         return bind_event
 
     # Event binder for on_message events
@@ -356,6 +371,9 @@ class server:
             # Make the client's protocol known
             self.clients_manager.set_protocol(client, selected_protocol)
 
+            # Fire protocol identified events
+            self.asyncio.create_task(self.execute_protocol_identified_events(client, selected_protocol))
+
         else:
             self.logger.debug(f"Validating message from {client.snowflake} using protocol {client.protocol.__qualname__}")
 
@@ -468,9 +486,6 @@ class server:
         # Add to clients manager
         self.clients_manager.add(client)
 
-        # Add to default room
-        self.rooms_manager.subscribe(client, "default")
-
         # Fire on_connect events
         self.asyncio.create_task(self.execute_on_connect_events(client))
         
@@ -485,8 +500,9 @@ class server:
         # Fire on_disconnect events
         self.asyncio.create_task(self.execute_on_disconnect_events(client))
 
-        async for room in self.async_iterable(client.rooms):
-            self.rooms_manager.unsubscribe(client, room)
+        # Unsubscribe from all rooms
+        async for room_id in self.async_iterable(self.copy(client.rooms)):
+            self.rooms_manager.unsubscribe(client, room_id)
 
         self.logger.debug(f"Client {client.snowflake} disconnected: Total lifespan of {time.monotonic() - client.birth_time} seconds.")
     
@@ -583,6 +599,15 @@ class server:
         # Fire events
         async for event in self.disabled_commands_handlers[schema]:
             await event(client, cmd)
+
+    async def execute_protocol_identified_events(self, client, schema):
+        # Guard clauses
+        if schema not in self.protocol_identified_events:
+            return
+
+        # Fire events
+        async for event in self.protocol_identified_events[schema]:
+            await event(client)
     
     # WebSocket-specific coroutines
     
