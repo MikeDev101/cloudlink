@@ -14,6 +14,10 @@ class scratch_protocol:
             "type": "string",
             "required": False
         },
+        "new_name": {
+            "type": "string",
+            "required": False
+        },
         "value": {
             "type": [
                 "string",
@@ -71,6 +75,10 @@ class scratch_protocol:
         "name": {
             "type": "string",
             "required": True
+        },
+        "new_name": {
+            "type": "string",
+            "required": False
         },
         "value": {
             "type": [

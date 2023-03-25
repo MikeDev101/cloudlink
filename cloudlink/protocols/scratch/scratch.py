@@ -66,8 +66,8 @@ class scratch:
             room_data = server.rooms_manager.get(message["project_id"])
 
             # Sync project ID variable state
+            server.logger.debug(f"Synchronizing room {message['project_id']} state to client {client.id}")
             async for variable in server.async_iterable(room_data["global_vars"]):
-                server.logger.debug(f"Sending variable {variable} to client {client.id}")
                 server.send_packet_unicast(client, {
                     "method": "set",
                     "name": variable,
@@ -82,7 +82,7 @@ class scratch:
                 return
 
             # Guard clause - Room must exist before adding to it
-            if not message["project_id"] in self.storage:
+            if not server.rooms_manager.exists(message["project_id"]):
                 server.logger.warning(f"Error: room {message['project_id']} does not exist yet")
 
                 # Abort the connection
@@ -110,6 +110,39 @@ class scratch:
             if not valid(client, message, scratch_protocol.method):
                 return
 
+            # Guard clause - Room must exist before deleting values from it
+            if not server.rooms_manager.exists(message["project_id"]):
+                server.logger.warning(f"Error: room {message['project_id']} does not exist yet")
+                # Abort the connection
+                server.close_connection(
+                    client,
+                    code=statuscodes.unavailable,
+                    reason=f"Invalid room ID: {message['project_id']}"
+                )
+                return
+
+            server.logger.debug(f"Renaming global variable {message['name']} to {message['new_name']} in {message['project_id']}")
+
+            # Get values
+            room_data = server.rooms_manager.get(message["project_id"])
+
+            if message["name"] in room_data["global_vars"]:
+                # Copy variable
+                room_data["global_vars"][message["new_name"]] = server.copy(room_data["global_vars"][message["name"]])
+
+                # Delete old variable
+                room_data["global_vars"].pop(message['name'])
+            else:
+                # Create new variable (renamed from a value in a deleted room)
+                room_data["global_vars"][message["new_name"]] = str()
+
+            # Broadcast the variable state
+            server.send_packet_multicast(room_data["clients"][scratch_protocol], {
+                "method": "rename",
+                "name": message['name'],
+                "new_name": message['new_name']
+            })
+
         @server.on_command(cmd="delete", schema=scratch_protocol)
         async def create_variable(client, message):
 
@@ -118,11 +151,15 @@ class scratch:
                 return
 
             # Guard clause - Room must exist before deleting values from it
-            if not message["project_id"] in self.storage:
+            if not server.rooms_manager.exists(message["project_id"]):
                 server.logger.warning(f"Error: room {message['project_id']} does not exist yet")
-
                 # Abort the connection
-                server.close_connection(client, code=statuscodes.unavailable, reason=f"Invalid room ID: {message['project_id']}")
+                server.close_connection(
+                    client,
+                    code=statuscodes.unavailable,
+                    reason=f"Invalid room ID: {message['project_id']}"
+                )
+                return
 
             server.logger.debug(f"Deleting global variable {message['name']} in {message['project_id']}")
 
@@ -147,14 +184,25 @@ class scratch:
 
             # Guard clause - Room must exist before adding to it
             if not server.rooms_manager.exists(message["project_id"]):
-
+                server.logger.warning(f"Error: room {message['project_id']} does not exist yet")
                 # Abort the connection
-                server.close_connection(client, code=statuscodes.unavailable, reason=f"Invalid room ID: {message['project_id']}")
-
-            server.logger.debug(f"Updating global variable {message['name']} in {message['project_id']} to value {message['value']}")
+                server.close_connection(
+                    client,
+                    code=statuscodes.unavailable,
+                    reason=f"Invalid room ID: {message['project_id']}"
+                )
+                return
 
             # Get values
             room_data = server.rooms_manager.get(message["project_id"])
+
+            # Don't re-broadcast values that are identical
+            if message["name"] in room_data["global_vars"]:
+                if room_data["global_vars"][message['name']] == message["value"]:
+                    server.logger.debug(f"Not going to rebroadcast global variable {message['name']} in {message['project_id']}")
+                    return
+
+            server.logger.debug(f"Updating global variable {message['name']} in {message['project_id']} to value {message['value']}")
 
             # Update variable
             room_data["global_vars"][message['name']] = message["value"]
