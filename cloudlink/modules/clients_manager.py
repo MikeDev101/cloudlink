@@ -105,8 +105,8 @@ class clients_manager:
                 self.usernames[obj.username].remove(obj)
 
             # Clean up unused usernames
-            if not len(self.usernames[obj.friendly_username]):
-                del self.usernames[obj.friendly_username]
+            if not len(self.usernames[obj.usernames]):
+                del self.usernames[obj.usernames]
 
     def set_username(self, obj, username):
         if not self.exists(obj):
