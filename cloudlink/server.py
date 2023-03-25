@@ -94,6 +94,16 @@ class server:
         
         # Set to -1 to allow as many client as possible
         self.max_clients = -1
+        
+        # Configure SSL support
+        self.ssl_enabled = False
+        self.ssl_context = None
+    
+    # Enables SSL support
+    def enable_ssl(self, ctx):
+        self.ssl_context = ctx
+        self.ssl_enabled = True
+        self.logger.info(f"SSL Support enabled!")
     
     # Runs the server.
     def run(self, ip="127.0.0.1", port=3000):
@@ -523,9 +533,14 @@ class server:
     
     # WebSocket-specific server loop
     async def __run__(self, ip, port):
-        # Main event loop
-        async with self.ws.serve(self.connection_handler, ip, port):
-            await self.asyncio.Future()
+        if self.ssl_enabled:
+            # Run with SSL support
+            async with self.ws.serve(self.connection_handler, ip, port, ssl=self.ssl_context):
+                await self.asyncio.Future()
+        else:
+            # Run without security
+            async with self.ws.serve(self.connection_handler, ip, port):
+                await self.asyncio.Future()
 
     # Asyncio event-handling coroutines
     
