@@ -6,8 +6,9 @@ import time
 from copy import copy
 from snowflake import SnowflakeGenerator
 
-# Import websocket engine
+# Import websocket engine and SSL support
 import websockets
+import ssl
 
 # Import CloudLink modules
 from cloudlink.modules.async_event_manager import async_event_manager
@@ -101,10 +102,14 @@ class server:
         self.ssl_context = None
     
     # Enables SSL support
-    def enable_ssl(self, ctx):
-        self.ssl_context = ctx
-        self.ssl_enabled = True
-        self.logger.info(f"SSL Support enabled!")
+    def enable_ssl(self, certfile, keyfile):
+        try:
+            self.ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+            self.ssl_context.load_cert_chain(certfile=certfile, keyfile=keyfile)
+            self.ssl_enabled = True
+            self.logger.info(f"SSL support initialized!")
+        except Exception as e:
+            self.logger.error(f"Failed to initialize SSL support! {e}")
     
     # Runs the server.
     def run(self, ip="127.0.0.1", port=3000):
@@ -478,7 +483,6 @@ class server:
         client.rooms = set()
         client.username_set = False
         client.username = str()
-        client.linked = False
 
         # Begin tracking the lifetime of the client
         client.birth_time = time.monotonic()
@@ -554,7 +558,7 @@ class server:
             async with self.ws.serve(self.connection_handler, ip, port, ssl=self.ssl_context):
                 await self.asyncio.Future()
         else:
-            # Run without security
+            # Run without SSL support
             async with self.ws.serve(self.connection_handler, ip, port):
                 await self.asyncio.Future()
 
@@ -615,7 +619,7 @@ class server:
     
         # Guard clause
         if type(message) not in [dict, str]:
-            raise TypeError("Supported datatypes for messages are dicts and strings, got type {type(message)}.")
+            raise TypeError(f"Supported datatypes for messages are dicts and strings, got type {type(message)}.")
         
         # Convert dict to JSON
         if type(message) == dict:

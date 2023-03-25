@@ -54,6 +54,9 @@ class clpv4:
             def generate(code: tuple):
                 return f"{code[0]}:{code[1]} | {code[2]}", code[1]
 
+        # Expose statuscodes class for extension usage
+        self.statuscodes = statuscodes
+
         # Identification of a client's IP address
         def get_client_ip(client):
             # Grab forwarded IP address
@@ -71,6 +74,9 @@ class clpv4:
             # Default if none of the above work
             return client.remote_address
 
+        # Expose get_client_ip for extension usage
+        self.get_client_ip = get_client_ip
+
         # valid(message, schema): Used to verify messages.
         def valid(client, message, schema):
             if server.validator(message, schema):
@@ -79,6 +85,9 @@ class clpv4:
             # Alert the client that the schema was invalid
             send_statuscode(client, statuscodes.syntax, details=dict(server.validator.errors))
             return False
+
+        # Expose validator function for extension usage
+        self.valid = valid
 
         # Simplify sending error/info messages
         def send_statuscode(client, code, details=None, listener=None, val=None):
@@ -103,6 +112,9 @@ class clpv4:
 
             # Send the code
             server.send_packet(client, tmp_message)
+
+        # Expose the statuscode generator for extension usage
+        self.send_statuscode = send_statuscode
 
         # Exception handlers
 
