@@ -30,7 +30,9 @@ class cl4_protocol:
         "id": {
             "type": [
                 "string",
-                "dict"
+                "dict",
+                "list",
+                "set"
             ],
             "required": False
         },
@@ -53,6 +55,36 @@ class cl4_protocol:
                 "number",
                 "list",
                 "set"
+            ],
+            "required": False
+        }
+    }
+
+    linking = {
+        "cmd": {
+            "type": "string",
+            "required": True
+        },
+        "val": {
+            "type": [
+                "string",
+                "integer",
+                "float",
+                "number",
+                "boolean",
+                "dict",
+                "list",
+                "set",
+            ],
+            "required": True,
+        },
+        "listener": {
+            "type": [
+                "string",
+                "integer",
+                "float",
+                "boolean",
+                "number"
             ],
             "required": False
         }
@@ -175,7 +207,9 @@ class cl4_protocol:
         "id": {
             "type": [
                 "string",
-                "dict"
+                "dict",
+                "list",
+                "set"
             ],
             "required": True
         },
@@ -216,6 +250,40 @@ class cl4_protocol:
         }
     }
 
+    direct = {
+        "cmd": {
+            "type": "string",
+            "required": True
+        },
+        "id": {
+            "type": "string",
+            "required": True
+        },
+        "val": {
+            "type": [
+                "string",
+                "integer",
+                "float",
+                "number",
+                "boolean",
+                "dict",
+                "list",
+                "set",
+            ],
+            "required": True
+        },
+        "listener": {
+            "type": [
+                "string",
+                "integer",
+                "float",
+                "boolean",
+                "number"
+            ],
+            "required": False
+        }
+    }
+
     pvar = {
         "cmd": {
             "type": "string",
@@ -228,7 +296,9 @@ class cl4_protocol:
         "id": {
             "type": [
                 "string",
-                "dict"
+                "dict",
+                "list",
+                "set"
             ],
             "required": True
         },

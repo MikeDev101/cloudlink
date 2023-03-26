@@ -97,7 +97,7 @@ class scratch:
             room_data["global_vars"][message['name']] = message["value"]
 
             # Broadcast the variable state
-            server.send_packet_multicast(room_data["clients"][scratch_protocol], {
+            server.send_packet_multicast(room_data["clients"][scratch_protocol]["all"], {
                 "method": "create",
                 "name": message['name'],
                 "value": room_data["global_vars"][message['name']]
@@ -137,7 +137,7 @@ class scratch:
                 room_data["global_vars"][message["new_name"]] = str()
 
             # Broadcast the variable state
-            server.send_packet_multicast(room_data["clients"][scratch_protocol], {
+            server.send_packet_multicast(room_data["clients"][scratch_protocol]["all"], {
                 "method": "rename",
                 "name": message['name'],
                 "new_name": message['new_name']
@@ -170,7 +170,7 @@ class scratch:
             room_data["global_vars"].pop(message['name'])
 
             # Broadcast the variable state
-            server.send_packet_multicast(room_data["clients"][scratch_protocol], {
+            server.send_packet_multicast(room_data["clients"][scratch_protocol]["all"], {
                 "method": "delete",
                 "name": message['name']
             })
@@ -208,7 +208,7 @@ class scratch:
             room_data["global_vars"][message['name']] = message["value"]
 
             # Broadcast the variable state
-            server.send_packet_multicast(room_data["clients"][scratch_protocol], {
+            server.send_packet_multicast(room_data["clients"][scratch_protocol]["all"], {
                 "method": "set",
                 "name": message['name'],
                 "value": room_data["global_vars"][message['name']]
