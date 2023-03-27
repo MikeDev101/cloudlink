@@ -678,12 +678,11 @@ class clpv4:
                 # Broadcast userlist state to existing members
                 clients = await server.rooms_manager.get_all_in_rooms("default", cl4_protocol)
                 clients = server.copy(clients)
-                clients.remove(client)
                 server.send_packet(clients, {
                     "cmd": "ulist",
                     "mode": "remove",
                     "val": generate_user_object(client),
-                    "rooms": room
+                    "rooms": "default"
                 })
 
             async for room in server.async_iterable(message["val"]):
@@ -744,7 +743,6 @@ class clpv4:
                 # Broadcast userlist state to existing members
                 clients = await server.rooms_manager.get_all_in_rooms(room, cl4_protocol)
                 clients = server.copy(clients)
-                clients.remove(client)
                 server.send_packet(clients, {
                     "cmd": "ulist",
                     "mode": "remove",
