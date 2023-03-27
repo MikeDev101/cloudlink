@@ -38,28 +38,34 @@ when a client sends the message `{ "cmd": "foo" }` to the server.
 # Import the server
 from cloudlink import server
 
+# Import default protocol
+from cloudlink.server.protocols import clpv4
+
 # Instanciate the server object
-cl = server()
+server = server()
 
 # Set logging level
-cl.logging.basicConfig(
+server.logging.basicConfig(
     level=cl.logging.DEBUG
 )
 
+# Load default CL protocol
+clpv4 = clpv4(server)
+
 # Define the functions your plugin executes
 class myplugin:
-	def __init__(self, server):
+	def __init__(self, server, protocol):
         
         # Example command - client sends { "cmd": "foo" } to the server, this function will execute
-		@server.on_command(cmd="foo", schema=cl.schemas.clpv4)
+		@server.on_command(cmd="foo", schema=protocol.schema)
 		async def foobar(client, message):
 			print("Foobar!")
 
 # Load the plugin!
-myplugin(cl)
+myplugin(server, clpv4)
 
 # Start the server!
-cl.run()
+server.run()
 ```
 
 # 🐈 A powerful extension for Scratch 3.0
