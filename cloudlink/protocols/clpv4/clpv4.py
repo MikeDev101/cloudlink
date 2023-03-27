@@ -233,6 +233,16 @@ class clpv4:
                 "val": client.snowflake
             })
 
+            # Send userlists of any rooms
+            async for room in server.async_iterable(client.rooms):
+                server.send_packet(client, {
+                    "cmd": "ulist",
+                    "val": {
+                        "mode": "set",
+                        "val": server.rooms_manager.generate_userlist(room, cl4_protocol)
+                    }
+                })
+
             # Attach listener
             if "listener" in message:
                 send_statuscode(client, statuscodes.ok, listener=message["listener"])
@@ -644,6 +654,16 @@ class clpv4:
             # Re-join rooms
             async for room in server.async_iterable(rooms):
                 server.rooms_manager.subscribe(client, room)
+
+                # Broadcast userlist state
+                clients = await server.rooms_manager.get_all_in_rooms(room, cl4_protocol)
+                server.send_packet(clients, {
+                    "cmd": "ulist",
+                    "val": {
+                        "mode": "add",
+                        "val": server.clients_manager.generate_user_object(client)
+                    }
+                })
 
             # Attach listener (if present) and broadcast
             if "listener" in message:

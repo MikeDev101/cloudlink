@@ -204,6 +204,23 @@ class rooms_manager:
         else:
             raise self.exceptions.NoResultsFound
 
+    def generate_userlist(self, room_id, protocol):
+        userlist = set()
+
+        room = self.get(room_id)[protocol]["all"]
+
+        for obj in room:
+            if not obj.username_set:
+                continue
+
+            userlist.add({
+                "id": obj.snowflake,
+                "username": obj.username,
+                "uuid": str(obj.id)
+            })
+
+        return list(userlist)
+
     def get_snowflakes(self, room):
         return set(obj for obj in room["snowflakes"])
 
