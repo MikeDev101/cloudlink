@@ -12,6 +12,7 @@ class cl_admin:
         server.logging.info("Initializing CL Admin Extension...")
 
         # Example config
+        #TODO: make this secure
         self.admin_users = {
             "admin": {
                 "password": "cloudlink",
