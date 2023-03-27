@@ -4,8 +4,8 @@
 		"url": "ws://127.0.0.1:3000/"
 	},
 	"1": {
-		"id": "CloudLink 4 Demo Server - Provided by Meower Media Co.",
-		"url": "wss://cl4-test.meower.org/"
+		"id": "CL4 0.2.0  Demo Server - By MikeDEV",
+		"url": "wss://cloudlink.ddns.net:3000/"
 	},
 	"2": {
 	       "id": "Cloudlink 4 - Suite demo server",
