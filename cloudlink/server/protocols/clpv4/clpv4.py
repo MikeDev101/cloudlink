@@ -13,14 +13,34 @@ https://hackmd.io/@MikeDEV/HJiNYwOfo
 
 class clpv4:
     def __init__(self, server):
-        # Configuration settings
 
-        # Warn origin client if it's attempting to send messages using a username that resolves more than one client.
+        """
+        Configuration settings
+
+        warn_if_multiple_username_matches: Boolean, Default: True
+        If True, the server will warn users if they are resolving multiple clients for a username search.
+
+        enable_motd: Boolean, Default: False
+        If True, whenever a client sends the handshake command or whenever the client's protocol is identified,
+        the server will send the Message-Of-The-Day from whatever value motd_message is set to.
+
+        motd_message: String, Default: Blank string
+        If enable_mod is True, this string will be sent as the server's Message-Of-The-Day.
+
+        real_ip_header: String, Default: None
+        If you use CloudLink behind a tunneling service or reverse proxy, set this value to whatever
+        IP address-fetching request header to resolve valid IP addresses. When set to None, it will
+        utilize the host's incoming network for resolving IP addresses.
+
+        Examples include:
+        * x-forwarded-for
+        * cf-connecting-ip
+
+        """
         self.warn_if_multiple_username_matches = True
-
-        # Message of the day
         self.enable_motd = False
         self.motd_message = str()
+        self.real_ip_header = None
 
         # Exposes the schema of the protocol.
         self.schema = cl4_protocol
@@ -60,20 +80,14 @@ class clpv4:
 
         # Identification of a client's IP address
         def get_client_ip(client):
-            # Grab forwarded IP address
-            if "x-forwarded-for" in client.request_headers:
-                return client.request_headers.get("x-forwarded-for")
+            # Grab IP address using headers
+            if self.real_ip_header:
+                if self.real_ip_header in client.request_headers:
+                    return client.request_headers.get(self.real_ip_header)
 
-            # Grab Cloudflare IP address
-            if "cf-connecting-ip" in client.request_headers:
-                return client.request_headers.get("cf-connecting-ip")
-
-            # Grab host address, ignoring port info
+            # Use system identified IP address
             if type(client.remote_address) == tuple:
                 return str(client.remote_address[0])
-
-            # Default if none of the above work
-            return client.remote_address
 
         # Expose get_client_ip for extension usage
         self.get_client_ip = get_client_ip
@@ -91,7 +105,7 @@ class clpv4:
         self.valid = valid
 
         # Simplify sending error/info messages
-        def send_statuscode(client, code, details=None, listener=None, val=None):
+        def send_statuscode(client, code, details=None, message=None, val=None):
             # Generate a statuscode
             code_human, code_id = statuscodes.generate(code)
 
@@ -105,8 +119,9 @@ class clpv4:
             if details:
                 tmp_message["details"] = details
 
-            if listener:
-                tmp_message["listener"] = listener
+            if message:
+                if "listener" in message:
+                    tmp_message["listener"] = message["listener"]
 
             if val:
                 tmp_message["val"] = val
@@ -117,23 +132,27 @@ class clpv4:
         # Expose the statuscode generator for extension usage
         self.send_statuscode = send_statuscode
 
+        # Send messages with automatic listener attaching
+        def send_message(client, payload, message=None):
+            if message:
+                if "listener" in message:
+                    payload["listener"] = message["listener"]
+
+            # Send the code
+            server.send_packet(client, payload)
+
+        # Expose the message sender for extension usage
+        self.send_message = send_message
+
         # Simplify alerting users that a command requires a username to be set
         def require_username_set(client, message):
             if not client.username_set:
-                # Attach listener
-                if "listener" in message:
-                    send_statuscode(
-                        client,
-                        statuscodes.id_required,
-                        details="This command requires setting a username.",
-                        listener=message["listener"]
-                    )
-                else:
-                    send_statuscode(
-                        client,
-                        statuscodes.id_required,
-                        details="This command requires setting a username."
-                    )
+                send_statuscode(
+                    client,
+                    statuscodes.id_required,
+                    details="This command requires setting a username.",
+                    message=message
+                )
 
             return client.username_set
 
@@ -303,21 +322,12 @@ class clpv4:
         @server.on_command(cmd="handshake", schema=cl4_protocol)
         async def on_handshake(client, message):
             await automatic_notify_handshake(client)
-
-            # Attach listener
-            if "listener" in message:
-                send_statuscode(client, statuscodes.ok, listener=message["listener"])
-            else:
-                send_statuscode(client, statuscodes.ok)
+            send_statuscode(client, statuscodes.ok, message=message)
 
         @server.on_command(cmd="ping", schema=cl4_protocol)
         async def on_ping(client, message):
             await automatic_notify_handshake(client)
-
-            if "listener" in message:
-                send_statuscode(client, statuscodes.ok, listener=message["listener"])
-            else:
-                send_statuscode(client, statuscodes.ok)
+            send_statuscode(client, statuscodes.ok, message=message)
 
         @server.on_command(cmd="gmsg", schema=cl4_protocol)
         async def on_gmsg(client, message):
@@ -335,26 +345,18 @@ class clpv4:
 
                 # Prevent accessing rooms not joined
                 if room not in client.rooms:
-
-                    # Attach listener
-                    if "listener" in message:
-                        send_statuscode(
-                            client,
-                            statuscodes.room_not_joined,
-                            details=f'Attempted to access room {room} while not joined.',
-                            listener=message["listener"]
-                        )
-                    else:
-                        send_statuscode(
-                            client,
-                            statuscodes.room_not_joined,
-                            details=f'Attempted to access room {room} while not joined.'
-                        )
+                    send_statuscode(
+                        client,
+                        statuscodes.room_not_joined,
+                        details=f'Attempted to access room {room} while not joined.',
+                        message=message
+                    )
 
                     # Stop gmsg command
                     return
 
                 clients = await server.rooms_manager.get_all_in_rooms(room, cl4_protocol)
+                clients = server.copy(clients)
 
                 # Attach listener (if present) and broadcast
                 if "listener" in message:
@@ -382,15 +384,12 @@ class clpv4:
                     # Unicast message
                     server.send_packet(client, tmp_message)
                 else:
-                    # Define the message to broadcast
-                    tmp_message = {
+                    # Broadcast message
+                    server.send_packet(clients, {
                         "cmd": "gmsg",
                         "val": message["val"],
                         "room": room
-                    }
-
-                    # Broadcast message
-                    server.send_packet(clients, tmp_message)
+                    })
 
         @server.on_command(cmd="pmsg", schema=cl4_protocol)
         async def on_pmsg(client, message):
@@ -413,21 +412,12 @@ class clpv4:
 
                 # Prevent accessing rooms not joined
                 if room not in client.rooms:
-
-                    # Attach listener
-                    if "listener" in message:
-                        send_statuscode(
-                            client,
-                            statuscodes.room_not_joined,
-                            details=f'Attempted to access room {room} while not joined.',
-                            listener=message["listener"]
-                        )
-                    else:
-                        send_statuscode(
-                            client,
-                            statuscodes.room_not_joined,
-                            details=f'Attempted to access room {room} while not joined.'
-                        )
+                    send_statuscode(
+                        client,
+                        statuscodes.room_not_joined,
+                        details=f'Attempted to access room {room} while not joined.',
+                        message=message
+                    )
 
                     # Stop pmsg command
                     return
@@ -444,20 +434,12 @@ class clpv4:
 
                 # Warn if multiple matches are found (mainly for username queries)
                 if self.warn_if_multiple_username_matches and len(clients) >> 1:
-                    # Attach listener
-                    if "listener" in message:
-                        send_statuscode(
-                            client,
-                            statuscodes.id_not_specific,
-                            details=f'Multiple matches found for {message["id"]}, found {len(clients)} matches. Please use Snowflakes, UUIDs, or client objects instead.',
-                            listener=message["listener"]
-                        )
-                    else:
-                        send_statuscode(
-                            client,
-                            statuscodes.id_not_specific,
-                            details=f'Multiple matches found for {message["id"]}, found {len(clients)} matches. Please use Snowflakes, UUIDs, or client objects instead.'
-                        )
+                    send_statuscode(
+                        client,
+                        statuscodes.id_not_specific,
+                        details=f'Multiple matches found for {message["id"]}, found {len(clients)} matches. Please use Snowflakes, UUIDs, or client objects instead.',
+                        message=message
+                    )
 
                     # Stop pmsg command
                     return
@@ -472,36 +454,22 @@ class clpv4:
                 server.send_packet(clients, tmp_message)
 
             if not any_results_found:
-                # Attach listener
-                if "listener" in message:
-                    send_statuscode(
-                        client,
-                        statuscodes.id_not_found,
-                        details=f'No matches found: {message["id"]}',
-                        listener=message["listener"]
-                    )
-                else:
-                    send_statuscode(
-                        client,
-                        statuscodes.id_not_found,
-                        details=f'No matches found: {message["id"]}'
-                    )
+                send_statuscode(
+                    client,
+                    statuscodes.id_not_found,
+                    details=f'No matches found: {message["id"]}',
+                    message=message
+                )
 
                 # End pmsg command handler
                 return
 
             # Results were found and sent successfully
-            if "listener" in message:
-                send_statuscode(
-                    client,
-                    statuscodes.ok,
-                    listener=message["listener"]
-                )
-            else:
-                send_statuscode(
-                    client,
-                    statuscodes.ok
-                )
+            send_statuscode(
+                client,
+                statuscodes.ok,
+                message=message
+            )
 
         @server.on_command(cmd="gvar", schema=cl4_protocol)
         async def on_gvar(client, message):
@@ -519,26 +487,18 @@ class clpv4:
 
                 # Prevent accessing rooms not joined
                 if room not in client.rooms:
-
-                    # Attach listener
-                    if "listener" in message:
-                        send_statuscode(
-                            client,
-                            statuscodes.room_not_joined,
-                            details=f'Attempted to access room {room} while not joined.',
-                            listener=message["listener"]
-                        )
-                    else:
-                        send_statuscode(
-                            client,
-                            statuscodes.room_not_joined,
-                            details=f'Attempted to access room {room} while not joined.'
-                        )
+                    send_statuscode(
+                        client,
+                        statuscodes.room_not_joined,
+                        details=f'Attempted to access room {room} while not joined.',
+                        message=message
+                    )
 
                     # Stop gvar command
                     return
 
                 clients = await server.rooms_manager.get_all_in_rooms(room, cl4_protocol)
+                clients = server.copy(clients)
 
                 # Define the message to send
                 tmp_message = {
@@ -578,26 +538,18 @@ class clpv4:
 
                 # Prevent accessing rooms not joined
                 if room not in client.rooms:
-
-                    # Attach listener
-                    if "listener" in message:
-                        send_statuscode(
-                            client,
-                            statuscodes.room_not_joined,
-                            details=f'Attempted to access room {room} while not joined.',
-                            listener=message["listener"]
-                        )
-                    else:
-                        send_statuscode(
-                            client,
-                            statuscodes.room_not_joined,
-                            details=f'Attempted to access room {room} while not joined.'
-                        )
+                    send_statuscode(
+                        client,
+                        statuscodes.room_not_joined,
+                        details=f'Attempted to access room {room} while not joined.',
+                        message=message
+                    )
 
                     # Stop pvar command
                     return
 
                 clients = await server.rooms_manager.get_specific_in_room(room, cl4_protocol, message['id'])
+                clients = server.copy(clients)
 
                 # Continue if no results are found
                 if not len(clients):
@@ -609,20 +561,12 @@ class clpv4:
 
                 # Warn if multiple matches are found (mainly for username queries)
                 if self.warn_if_multiple_username_matches and len(clients) >> 1:
-                    # Attach listener
-                    if "listener" in message:
-                        send_statuscode(
-                            client,
-                            statuscodes.id_not_specific,
-                            details=f'Multiple matches found for {message["id"]}, found {len(clients)} matches. Please use Snowflakes, UUIDs, or client objects instead.',
-                            listener=message["listener"]
-                        )
-                    else:
-                        send_statuscode(
-                            client,
-                            statuscodes.id_not_specific,
-                            details=f'Multiple matches found for {message["id"]}, found {len(clients)} matches. Please use Snowflakes, UUIDs, or client objects instead.'
-                        )
+                    send_statuscode(
+                        client,
+                        statuscodes.id_not_specific,
+                        details=f'Multiple matches found for {message["id"]}, found {len(clients)} matches. Please use Snowflakes, UUIDs, or client objects instead.',
+                        message=message
+                    )
 
                     # Stop pvar command
                     return
@@ -638,36 +582,22 @@ class clpv4:
                 server.send_packet(clients, tmp_message)
 
             if not any_results_found:
-                # Attach listener
-                if "listener" in message:
-                    send_statuscode(
-                        client,
-                        statuscodes.id_not_found,
-                        details=f'No matches found: {message["id"]}',
-                        listener=message["listener"]
-                    )
-                else:
-                    send_statuscode(
-                        client,
-                        statuscodes.id_not_found,
-                        details=f'No matches found: {message["id"]}'
-                    )
+                send_statuscode(
+                    client,
+                    statuscodes.id_not_found,
+                    details=f'No matches found: {message["id"]}',
+                    message=message
+                )
 
                 # End pmsg command handler
                 return
 
             # Results were found and sent successfully
-            if "listener" in message:
-                send_statuscode(
-                    client,
-                    statuscodes.ok,
-                    listener=message["listener"]
-                )
-            else:
-                send_statuscode(
-                    client,
-                    statuscodes.ok
-                )
+            send_statuscode(
+                client,
+                statuscodes.ok,
+                message=message
+            )
 
         @server.on_command(cmd="setid", schema=cl4_protocol)
         async def on_setid(client, message):
@@ -680,25 +610,15 @@ class clpv4:
             # Prevent setting the username more than once
             if client.username_set:
                 server.logger.error(f"Client {client.snowflake} attempted to set username again!")
-                if "listener" in message:
-                    send_statuscode(
-                        client,
-                        statuscodes.id_already_set,
-                        val=generate_user_object(client),
-                        listener=message["listener"]
-                    )
-                else:
-                    send_statuscode(
-                        client,
-                        statuscodes.id_already_set,
-                        val=generate_user_object(client)
-                    )
+                send_statuscode(
+                    client,
+                    statuscodes.id_already_set,
+                    val=generate_user_object(client),
+                    message=message
+                )
 
                 # Exit setid command
                 return
-
-            # Gather rooms
-            rooms = server.copy(client.rooms)
 
             # Leave default room
             server.rooms_manager.unsubscribe(client, "default")
@@ -733,18 +653,12 @@ class clpv4:
             })
 
             # Attach listener (if present) and broadcast
-            if "listener" in message:
-                send_statuscode(
-                    client,
-                    statuscodes.ok,
-                    val=generate_user_object(client),
-                    listener=message["listener"])
-            else:
-                send_statuscode(
-                    client,
-                    statuscodes.ok,
-                    val=generate_user_object(client),
-                )
+            send_statuscode(
+                client,
+                statuscodes.ok,
+                val=generate_user_object(client),
+                message=message
+            )
 
         @server.on_command(cmd="link", schema=cl4_protocol)
         async def on_link(client, message):
@@ -796,16 +710,11 @@ class clpv4:
                 })
 
             # Attach listener (if present) and broadcast
-            if "listener" in message:
-                send_statuscode(
-                    client,
-                    statuscodes.ok,
-                    listener=message["listener"])
-            else:
-                send_statuscode(
-                    client,
-                    statuscodes.ok
-                )
+            send_statuscode(
+                client,
+                statuscodes.ok,
+                message=message
+            )
 
         @server.on_command(cmd="unlink", schema=cl4_protocol)
         async def on_unlink(client, message):
@@ -870,16 +779,11 @@ class clpv4:
                 })
 
             # Attach listener (if present) and broadcast
-            if "listener" in message:
-                send_statuscode(
-                    client,
-                    statuscodes.ok,
-                    listener=message["listener"])
-            else:
-                send_statuscode(
-                    client,
-                    statuscodes.ok
-                )
+            send_statuscode(
+                client,
+                statuscodes.ok,
+                message=message
+            )
 
         @server.on_command(cmd="direct", schema=cl4_protocol)
         async def on_direct(client, message):
@@ -912,18 +816,11 @@ class clpv4:
                 server.send_packet_unicast(tmp_client, tmp_msg)
 
             except server.clients_manager.exceptions.NoResultsFound:
-                # Attach listener
-                if "listener" in message:
-                    send_statuscode(
-                        client,
-                        statuscodes.id_not_found,
-                        listener=message["listener"]
-                    )
-                else:
-                    send_statuscode(
-                        client,
-                        statuscodes.id_not_found
-                    )
+                send_statuscode(
+                    client,
+                    statuscodes.id_not_found,
+                    message=message
+                )
 
                 # Stop direct command
                 return
