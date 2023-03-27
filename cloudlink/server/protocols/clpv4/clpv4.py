@@ -664,16 +664,27 @@ class clpv4:
             if not require_username_set(client, message):
                 return
 
-            # Clear all rooms beforehand
-            async for room in server.async_iterable(client.rooms):
-                server.rooms_manager.unsubscribe(client, room)
-
             # Convert to set
             if type(message["val"]) in [list, str]:
                 if type(message["val"]) == list:
                     message["val"] = set(message["val"])
                 if type(message["val"]) == str:
                     message["val"] = {message["val"]}
+            
+            # Unsubscribe from default room if not mentioned
+            if not "default" in message["val"]:
+                server.rooms_manager.unsubscribe(client, "default")
+                
+                # Broadcast userlist state to existing members
+                clients = await server.rooms_manager.get_all_in_rooms("default", cl4_protocol)
+                clients = server.copy(clients)
+                clients.remove(client)
+                server.send_packet(clients, {
+                    "cmd": "ulist",
+                    "mode": "remove",
+                    "val": generate_user_object(client),
+                    "rooms": room
+                })
 
             async for room in server.async_iterable(message["val"]):
                 server.rooms_manager.subscribe(client, room)
@@ -684,10 +695,8 @@ class clpv4:
                 clients.remove(client)
                 server.send_packet(clients, {
                     "cmd": "ulist",
-                    "val": {
-                        "mode": "add",
-                        "val": generate_user_object(client)
-                    },
+                    "mode": "add",
+                    "val": generate_user_object(client),
                     "rooms": room
                 })
 
@@ -717,6 +726,10 @@ class clpv4:
             # Require sending client to have set their username
             if not require_username_set(client, message):
                 return
+
+            # If blank, assume all rooms
+            if type(message["val"]) == str and not len(message["val"]):
+                message["val"] = client.rooms
 
             # Convert to set
             if type(message["val"]) in [list, str]:
