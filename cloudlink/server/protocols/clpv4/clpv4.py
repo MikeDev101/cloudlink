@@ -235,7 +235,7 @@ class clpv4:
                 server.send_packet(client, {
                     "cmd": "ulist",
                     "mode": "set",
-                    "val": server.rooms_manager.generate_userlist(room, cl4_protocol)
+                    "val": server.rooms_manager.generate_userlist(room, cl4_protocol),
                     "rooms": room
                 })
 
