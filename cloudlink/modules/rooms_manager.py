@@ -207,7 +207,7 @@ class rooms_manager:
     def generate_userlist(self, room_id, protocol):
         userlist = set()
 
-        room = self.get(room_id)[protocol]["all"]
+        room = self.get(room_id)["clients"][protocol]["all"]
 
         for obj in room:
             if not obj.username_set:

@@ -1,6 +1,6 @@
 from cloudlink import server
-from cloudlink.protocols import clpv4, scratch
-from cloudlink.plugins import cl_admin
+from cloudlink.server.plugins import cl_admin
+from cloudlink.server.protocols import clpv4, scratch
 
 if __name__ == "__main__":
     # Initialize the server

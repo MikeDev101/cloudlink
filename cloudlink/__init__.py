@@ -1,1 +1,1 @@
-from .server import server
+from cloudlink.server import server

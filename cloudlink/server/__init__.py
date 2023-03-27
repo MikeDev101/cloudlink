@@ -1,4 +1,4 @@
-# Core components of the CloudLink engine
+# Core components of the CloudLink server
 import asyncio
 import cerberus
 import logging
@@ -6,7 +6,7 @@ import time
 from copy import copy
 from snowflake import SnowflakeGenerator
 
-# Import websocket engine and SSL support
+# Import websockets and SSL support
 import websockets
 import ssl
 
@@ -20,7 +20,7 @@ from cloudlink.modules.rooms_manager import rooms_manager
 try:
     import ujson
 except ImportError:
-    print("Failed to import UltraJSON, failing back to native JSON library.")
+    print("Server failed to import UltraJSON, failing back to native JSON library.")
     import json as ujson
 
 
@@ -92,15 +92,15 @@ class server:
         self.command_handlers = dict()
 
         # Configure framework logging
-        self.supress_websocket_logs = True
-        
+        self.suppress_websocket_logs = True
+
         # Set to -1 to allow as many client as possible
         self.max_clients = -1
-        
+
         # Configure SSL support
         self.ssl_enabled = False
         self.ssl_context = None
-    
+
     # Enables SSL support
     def enable_ssl(self, certfile, keyfile):
         try:
@@ -110,7 +110,7 @@ class server:
             self.logger.info(f"SSL support initialized!")
         except Exception as e:
             self.logger.error(f"Failed to initialize SSL support! {e}")
-    
+
     # Runs the server.
     def run(self, ip="127.0.0.1", port=3000):
         try:
@@ -124,17 +124,17 @@ class server:
                 raise ValueError(
                     "The max_clients value must be a integer value set to -1 (unlimited clients) or greater than zero!"
                 )
-            
+
             # Startup message
             self.logger.info(f"CloudLink {self.version} - Now listening to {ip}:{port}")
-            
-            # Supress websocket library logging
-            if self.supress_websocket_logs:
+
+            # Suppress websocket library logging
+            if self.suppress_websocket_logs:
                 self.logging.getLogger('asyncio').setLevel(self.logging.ERROR)
                 self.logging.getLogger('asyncio.coroutines').setLevel(self.logging.ERROR)
                 self.logging.getLogger('websockets.server').setLevel(self.logging.ERROR)
                 self.logging.getLogger('websockets.protocol').setLevel(self.logging.ERROR)
-            
+
             # Start server
             self.asyncio.run(self.__run__(ip, port))
 
@@ -182,7 +182,6 @@ class server:
     # Event binder for invalid command events with specific shemas/exception types
     def on_disabled_command(self, schema):
         def bind_event(func):
-
             # Create disabled command event manager
             if schema not in self.disabled_commands_handlers:
                 self.logger.info(f"Creating disabled command event manager {schema.__qualname__}")
@@ -196,7 +195,6 @@ class server:
 
     def on_protocol_identified(self, schema):
         def bind_event(func):
-
             # Create protocol identified event manager
             if schema not in self.protocol_identified_events:
                 self.logger.info(f"Creating protocol identified event manager {schema.__qualname__}")
@@ -256,7 +254,8 @@ class server:
 
         # Check if the command isn't already disabled
         if cmd in self.disabled_commands[schema]:
-            raise ValueError(f"The command {cmd} is already disabled in protocol {schema.__qualname__}, or was enabled beforehand.")
+            raise ValueError(
+                f"The command {cmd} is already disabled in protocol {schema.__qualname__}, or was enabled beforehand.")
 
         # Disable the command
         self.disabled_commands[schema].add(cmd)
@@ -270,7 +269,8 @@ class server:
 
         # Check if the command is disabled
         if cmd not in self.disabled_commands[schema]:
-            raise ValueError(f"The command {cmd} is already enabled in protocol {schema.__qualname__}, or wasn't disabled beforehand.")
+            raise ValueError(
+                f"The command {cmd} is already enabled in protocol {schema.__qualname__}, or wasn't disabled beforehand.")
 
         # Enable the command
         self.disabled_commands[schema].remove(cmd)
@@ -282,11 +282,11 @@ class server:
 
     # Message processor
     async def message_processor(self, client, message):
-        
+
         # Empty packet
         if not len(message):
             self.logger.debug(f"Client {client.snowflake} sent empty message ")
-        
+
             # Fire on_error events
             asyncio.create_task(self.execute_on_error_events(client, self.exceptions.EmptyMessage))
 
@@ -307,14 +307,14 @@ class server:
 
             # End message_processor coroutine
             return
-            
+
         # Parse JSON in message and convert to dict
         try:
             message = self.ujson.loads(message)
-        
+
         except Exception as error:
             self.logger.debug(f"Client {client.snowflake} sent invalid JSON: {error}")
-            
+
             # Fire on_error events
             self.asyncio.create_task(self.execute_on_error_events(client, error))
 
@@ -344,10 +344,10 @@ class server:
         # Client protocol is unknown
         if not client.protocol:
             self.logger.debug(f"Trying to identify client {client.snowflake}'s protocol")
-            
+
             # Identify protocol
             errorlist = list()
-            
+
             for schema in self.command_handlers:
                 if self.validator(message, schema.default):
                     valid = True
@@ -380,7 +380,8 @@ class server:
             self.asyncio.create_task(self.execute_protocol_identified_events(client, selected_protocol))
 
         else:
-            self.logger.debug(f"Validating message from {client.snowflake} using protocol {client.protocol.__qualname__}")
+            self.logger.debug(
+                f"Validating message from {client.snowflake} using protocol {client.protocol.__qualname__}")
 
             # Validate message using known protocol
             selected_protocol = client.protocol
@@ -412,7 +413,8 @@ class server:
         if message[selected_protocol.command_key] not in self.command_handlers[selected_protocol]:
 
             # Log invalid command
-            self.logger.debug(f"Client {client.snowflake} sent an invalid command \"{message[selected_protocol.command_key]}\" in protocol {selected_protocol.__qualname__}")
+            self.logger.debug(
+                f"Client {client.snowflake} sent an invalid command \"{message[selected_protocol.command_key]}\" in protocol {selected_protocol.__qualname__}")
 
             # Fire on_error events
             self.asyncio.create_task(self.execute_on_error_events(client, "Invalid command"))
@@ -434,7 +436,8 @@ class server:
         # Check if the command is disabled
         if selected_protocol in self.disabled_commands:
             if message[selected_protocol.command_key] in self.disabled_commands[selected_protocol]:
-                self.logger.debug(f"Client {client.snowflake} sent a disabled command \"{message[selected_protocol.command_key]}\" in protocol {selected_protocol.__qualname__}")
+                self.logger.debug(
+                    f"Client {client.snowflake} sent a disabled command \"{message[selected_protocol.command_key]}\" in protocol {selected_protocol.__qualname__}")
 
                 # Fire disabled command event
                 self.asyncio.create_task(
@@ -467,7 +470,7 @@ class server:
 
     # Connection handler
     async def connection_handler(self, client):
-        
+
         # Limit the amount of clients connected
         if self.max_clients != -1:
             if len(self.clients_manager) >= self.max_clients:
@@ -475,7 +478,7 @@ class server:
                 self.send_packet(client, "Server is full!")
                 self.close_connection(client, reason="Server is full!")
                 return
-        
+
         # Startup client attributes
         client.snowflake = str(next(self.gen))
         client.protocol = None
@@ -492,12 +495,12 @@ class server:
 
         # Fire on_connect events
         self.asyncio.create_task(self.execute_on_connect_events(client))
-        
+
         self.logger.debug(f"Client {client.snowflake} connected")
-        
+
         # Run connection loop
         await self.connection_loop(client)
-        
+
         # Remove from clients manager
         self.clients_manager.remove(client)
 
@@ -508,8 +511,9 @@ class server:
         async for room_id in self.async_iterable(self.copy(client.rooms)):
             self.rooms_manager.unsubscribe(client, room_id)
 
-        self.logger.debug(f"Client {client.snowflake} disconnected: Total lifespan of {time.monotonic() - client.birth_time} seconds.")
-    
+        self.logger.debug(
+            f"Client {client.snowflake} disconnected: Total lifespan of {time.monotonic() - client.birth_time} seconds.")
+
     # Connection loop - Redefine for use with another outside library
     async def connection_loop(self, client):
         # Primary asyncio loop for the lifespan of the websocket connection
@@ -523,7 +527,8 @@ class server:
                 await self.message_processor(client, message)
 
                 # Log processing time
-                self.logger.debug(f"Done processing message from client {client.snowflake}. Processing took {time.perf_counter() - start} seconds.")
+                self.logger.debug(
+                    f"Done processing message from client {client.snowflake}. Processing took {time.perf_counter() - start} seconds.")
 
         # Handle unexpected disconnects
         except self.ws.exceptions.ConnectionClosedError:
@@ -550,7 +555,7 @@ class server:
                         details=f"Unexpected exception was raised: {e}"
                     )
                 )
-    
+
     # WebSocket-specific server loop
     async def __run__(self, ip, port):
         if self.ssl_enabled:
@@ -563,7 +568,7 @@ class server:
                 await self.asyncio.Future()
 
     # Asyncio event-handling coroutines
-    
+
     async def execute_on_disconnect_events(self, client):
         async for event in self.on_disconnect_events:
             await event(client)
@@ -583,14 +588,14 @@ class server:
     async def execute_on_error_events(self, client, errors):
         async for event in self.on_error_events:
             await event(client, errors)
-    
+
     async def execute_exception_handlers(self, client, exception_type, schema, details):
         # Guard clauses
         if schema not in self.exception_handlers:
             return
         if exception_type not in self.exception_handlers[schema]:
             return
-        
+
         # Fire events
         async for event in self.exception_handlers[schema][exception_type]:
             await event(client, details)
@@ -612,19 +617,19 @@ class server:
         # Fire events
         async for event in self.protocol_identified_events[schema]:
             await event(client)
-    
+
     # WebSocket-specific coroutines
-    
+
     async def execute_unicast(self, client, message):
-    
+
         # Guard clause
         if type(message) not in [dict, str]:
             raise TypeError(f"Supported datatypes for messages are dicts and strings, got type {type(message)}.")
-        
+
         # Convert dict to JSON
         if type(message) == dict:
             message = self.ujson.dumps(message)
-        
+
         # Attempt to send the packet
         try:
             await client.send(message)
@@ -632,17 +637,17 @@ class server:
             self.logger.critical(
                 f"Unexpected exception was raised while unicasting message to client {client.snowflake}: {e}"
             )
-    
+
     async def execute_multicast(self, clients, message):
-        
+
         # Guard clause
         if type(message) not in [dict, str]:
             raise TypeError(f"Supported datatypes for messages are dicts and strings, got type {type(message)}.")
-        
+
         # Convert dict to JSON
         if type(message) == dict:
             message = self.ujson.dumps(message)
-        
+
         # Attempt to broadcast the packet
         async for client in self.async_iterable(clients):
             try:
@@ -651,7 +656,7 @@ class server:
                 self.logger.critical(
                     f"Unexpected exception was raised while multicasting message to client {client.snowflake}: {e}"
                 )
-    
+
     async def execute_close_single(self, client, code=1000, reason=""):
         try:
             await client.close(code, reason)
