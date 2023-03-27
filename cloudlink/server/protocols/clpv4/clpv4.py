@@ -160,54 +160,32 @@ class clpv4:
         # Expose rooms gatherer for extension usage
         self.gather_rooms = gather_rooms
 
-        # Exception handlers
+        # Generate a user object
+        def generate_user_object(obj):
+            # Username set
+            if obj.username_set:
+                return {
+                    "id": obj.snowflake,
+                    "username": obj.username,
+                    "uuid": str(obj.id)
+                }
 
-        @server.on_exception(exception_type=server.exceptions.ValidationError, schema=cl4_protocol)
-        async def validation_failure(client, details):
-            send_statuscode(client, statuscodes.syntax, details=dict(details))
+            # Username not set
+            return {
+                "id": obj.snowflake,
+                "uuid": str(obj.id)
+            }
 
-        @server.on_exception(exception_type=server.exceptions.InvalidCommand, schema=cl4_protocol)
-        async def invalid_command(client, details):
-            send_statuscode(
-                client,
-                statuscodes.invalid_command,
-                details=f"{details} is an invalid command."
-            )
+        # Expose username object generator function for extension usage
+        self.generate_user_object = generate_user_object
 
-        @server.on_disabled_command(schema=cl4_protocol)
-        async def disabled_command(client, details):
-            send_statuscode(
-                client,
-                statuscodes.disabled_command,
-                details=f"{details} is a disabled command."
-            )
+        # If the client has not explicitly used the handshake command, send them the handshake data
+        async def automatic_notify_handshake(client):
+            # Don't execute this if handshake was already done
+            if client.handshake:
+                return
+            client.handshake = True
 
-        @server.on_exception(exception_type=server.exceptions.JSONError, schema=cl4_protocol)
-        async def json_exception(client, details):
-            send_statuscode(
-                client,
-                statuscodes.json_error,
-                details=f"A JSON error was raised: {details}"
-            )
-
-        @server.on_exception(exception_type=server.exceptions.EmptyMessage, schema=cl4_protocol)
-        async def empty_message(client, details):
-            send_statuscode(
-                client,
-                statuscodes.empty_packet,
-                details="Your client has sent an empty message."
-            )
-
-        # Protocol identified event
-        @server.on_protocol_identified(schema=cl4_protocol)
-        async def protocol_identified(client):
-            server.logger.debug(f"Adding client {client.snowflake} to default room.")
-            server.rooms_manager.subscribe(client, "default")
-
-        # The CLPv4 command set
-
-        @server.on_command(cmd="handshake", schema=cl4_protocol)
-        async def on_handshake(client, message):
             # Send client IP address
             server.send_packet(client, {
                 "cmd": "client_ip",
@@ -229,19 +207,102 @@ class clpv4:
 
             # Send client's Snowflake ID
             server.send_packet(client, {
-                "cmd": "client_id",
-                "val": client.snowflake
+                "cmd": "client_obj",
+                "val": generate_user_object(client)
             })
 
-            # Send userlists of any rooms
+            # Send userlists of rooms
             async for room in server.async_iterable(client.rooms):
                 server.send_packet(client, {
                     "cmd": "ulist",
                     "val": {
                         "mode": "set",
                         "val": server.rooms_manager.generate_userlist(room, cl4_protocol)
-                    }
+                    },
+                    "room": room
                 })
+
+        # Expose for extension usage
+        self.automatic_notify_handshake = automatic_notify_handshake
+
+        # Exception handlers
+
+        @server.on_exception(exception_type=server.exceptions.ValidationError, schema=cl4_protocol)
+        async def validation_failure(client, details):
+            await automatic_notify_handshake(client)
+            send_statuscode(client, statuscodes.syntax, details=dict(details))
+
+        @server.on_exception(exception_type=server.exceptions.InvalidCommand, schema=cl4_protocol)
+        async def invalid_command(client, details):
+            await automatic_notify_handshake(client)
+            send_statuscode(
+                client,
+                statuscodes.invalid_command,
+                details=f"{details} is an invalid command."
+            )
+
+        @server.on_disabled_command(schema=cl4_protocol)
+        async def disabled_command(client, details):
+            await automatic_notify_handshake(client)
+            send_statuscode(
+                client,
+                statuscodes.disabled_command,
+                details=f"{details} is a disabled command."
+            )
+
+        @server.on_exception(exception_type=server.exceptions.JSONError, schema=cl4_protocol)
+        async def json_exception(client, details):
+            await automatic_notify_handshake(client)
+            send_statuscode(
+                client,
+                statuscodes.json_error,
+                details=f"A JSON error was raised: {details}"
+            )
+
+        @server.on_exception(exception_type=server.exceptions.EmptyMessage, schema=cl4_protocol)
+        async def empty_message(client):
+            await automatic_notify_handshake(client)
+            send_statuscode(
+                client,
+                statuscodes.empty_packet,
+                details="Your client has sent an empty message."
+            )
+
+        # Protocol identified event
+        @server.on_protocol_identified(schema=cl4_protocol)
+        async def protocol_identified(client):
+            server.logger.debug(f"Adding client {client.snowflake} to default room.")
+            server.rooms_manager.subscribe(client, "default")
+
+        @server.on_protocol_disconnect(schema=cl4_protocol)
+        async def protocol_disconnect(client):
+            server.logger.debug(f"Removing client {client.snowflake} from rooms...")
+
+            # Unsubscribe from all rooms
+            async for room_id in server.async_iterable(server.copy(client.rooms)):
+                server.rooms_manager.unsubscribe(client, room_id)
+
+                # Don't bother with notifying if client username wasn't set
+                if not client.username_set:
+                    continue
+
+                # Notify rooms of removed client
+                clients = await server.rooms_manager.get_all_in_rooms(room_id, cl4_protocol)
+                clients = server.copy(clients)
+                server.send_packet(clients, {
+                    "cmd": "ulist",
+                    "val": {
+                        "mode": "remove",
+                        "val": generate_user_object(client)
+                    },
+                    "room": room_id
+                })
+
+        # The CLPv4 command set
+
+        @server.on_command(cmd="handshake", schema=cl4_protocol)
+        async def on_handshake(client, message):
+            await automatic_notify_handshake(client)
 
             # Attach listener
             if "listener" in message:
@@ -251,6 +312,8 @@ class clpv4:
 
         @server.on_command(cmd="ping", schema=cl4_protocol)
         async def on_ping(client, message):
+            await automatic_notify_handshake(client)
+
             if "listener" in message:
                 send_statuscode(client, statuscodes.ok, listener=message["listener"])
             else:
@@ -258,6 +321,8 @@ class clpv4:
 
         @server.on_command(cmd="gmsg", schema=cl4_protocol)
         async def on_gmsg(client, message):
+            await automatic_notify_handshake(client)
+
             # Validate schema
             if not valid(client, message, cl4_protocol.gmsg):
                 return
@@ -329,6 +394,8 @@ class clpv4:
 
         @server.on_command(cmd="pmsg", schema=cl4_protocol)
         async def on_pmsg(client, message):
+            await automatic_notify_handshake(client)
+
             # Validate schema
             if not valid(client, message, cl4_protocol.pmsg):
                 return
@@ -399,11 +466,7 @@ class clpv4:
                 tmp_message = {
                     "cmd": "pmsg",
                     "val": message["val"],
-                    "origin": {
-                        "id": client.snowflake,
-                        "username": client.username,
-                        "uuid": str(client.id)
-                    },
+                    "origin": generate_user_object(client),
                     "room": room
                 }
                 server.send_packet(clients, tmp_message)
@@ -442,6 +505,7 @@ class clpv4:
 
         @server.on_command(cmd="gvar", schema=cl4_protocol)
         async def on_gvar(client, message):
+            await automatic_notify_handshake(client)
 
             # Validate schema
             if not valid(client, message, cl4_protocol.gvar):
@@ -495,6 +559,8 @@ class clpv4:
 
         @server.on_command(cmd="pvar", schema=cl4_protocol)
         async def on_pvar(client, message):
+            await automatic_notify_handshake(client)
+
             # Validate schema
             if not valid(client, message, cl4_protocol.pvar):
                 return
@@ -566,11 +632,7 @@ class clpv4:
                     "cmd": "pvar",
                     "name": message["name"],
                     "val": message["val"],
-                    "origin": {
-                        "id": client.snowflake,
-                        "username": client.username,
-                        "uuid": str(client.id)
-                    },
+                    "origin": generate_user_object(client),
                     "room": room
                 }
                 server.send_packet(clients, tmp_message)
@@ -609,6 +671,8 @@ class clpv4:
 
         @server.on_command(cmd="setid", schema=cl4_protocol)
         async def on_setid(client, message):
+            await automatic_notify_handshake(client)
+
             # Validate schema
             if not valid(client, message, cl4_protocol.setid):
                 return
@@ -620,22 +684,14 @@ class clpv4:
                     send_statuscode(
                         client,
                         statuscodes.id_already_set,
-                        val={
-                            "id": client.snowflake,
-                            "username": client.username,
-                            "uuid": str(client.id)
-                        },
+                        val=generate_user_object(client),
                         listener=message["listener"]
                     )
                 else:
                     send_statuscode(
                         client,
                         statuscodes.id_already_set,
-                        val={
-                            "id": client.snowflake,
-                            "username": client.username,
-                            "uuid": str(client.id)
-                        }
+                        val=generate_user_object(client)
                     )
 
                 # Exit setid command
@@ -644,51 +700,56 @@ class clpv4:
             # Gather rooms
             rooms = server.copy(client.rooms)
 
-            # Leave all rooms
-            async for room in server.async_iterable(rooms):
-                server.rooms_manager.unsubscribe(client, room)
+            # Leave default room
+            server.rooms_manager.unsubscribe(client, "default")
 
             # Set the username
             server.clients_manager.set_username(client, message['val'])
 
-            # Re-join rooms
-            async for room in server.async_iterable(rooms):
-                server.rooms_manager.subscribe(client, room)
+            # Re-join default room
+            server.rooms_manager.subscribe(client, "default")
 
-                # Broadcast userlist state
-                clients = await server.rooms_manager.get_all_in_rooms(room, cl4_protocol)
-                server.send_packet(clients, {
-                    "cmd": "ulist",
-                    "val": {
-                        "mode": "add",
-                        "val": server.clients_manager.generate_user_object(client)
-                    }
-                })
+            # Broadcast userlist state to existing members
+            clients = await server.rooms_manager.get_all_in_rooms("default", cl4_protocol)
+            clients = server.copy(clients)
+            clients.remove(client)
+            server.send_packet(clients, {
+                "cmd": "ulist",
+                "val": {
+                    "mode": "add",
+                    "val": generate_user_object(client)
+                },
+                "room": "default"
+            })
+
+            # Notify client of current room state
+            server.send_packet(client, {
+                "cmd": "ulist",
+                "val": {
+                    "mode": "set",
+                    "val": server.rooms_manager.generate_userlist("default", cl4_protocol)
+                },
+                "room": "default"
+            })
 
             # Attach listener (if present) and broadcast
             if "listener" in message:
                 send_statuscode(
                     client,
                     statuscodes.ok,
-                    val={
-                        "id": client.snowflake,
-                        "username": client.username,
-                        "uuid": str(client.id)
-                    },
+                    val=generate_user_object(client),
                     listener=message["listener"])
             else:
                 send_statuscode(
                     client,
                     statuscodes.ok,
-                    val={
-                        "id": client.snowflake,
-                        "username": client.username,
-                        "uuid": str(client.id)
-                    },
+                    val=generate_user_object(client),
                 )
 
         @server.on_command(cmd="link", schema=cl4_protocol)
         async def on_link(client, message):
+            await automatic_notify_handshake(client)
+
             # Validate schema
             if not valid(client, message, cl4_protocol.linking):
                 return
@@ -711,8 +772,45 @@ class clpv4:
             async for room in server.async_iterable(message["val"]):
                 server.rooms_manager.subscribe(client, room)
 
+                # Broadcast userlist state to existing members
+                clients = await server.rooms_manager.get_all_in_rooms(room, cl4_protocol)
+                clients = server.copy(clients)
+                clients.remove(client)
+                server.send_packet(clients, {
+                    "cmd": "ulist",
+                    "val": {
+                        "mode": "add",
+                        "val": generate_user_object(client)
+                    },
+                    "room": room
+                })
+
+                # Notify client of current room state
+                server.send_packet(client, {
+                    "cmd": "ulist",
+                    "val": {
+                        "mode": "set",
+                        "val": server.rooms_manager.generate_userlist(room, cl4_protocol)
+                    },
+                    "room": room
+                })
+
+            # Attach listener (if present) and broadcast
+            if "listener" in message:
+                send_statuscode(
+                    client,
+                    statuscodes.ok,
+                    listener=message["listener"])
+            else:
+                send_statuscode(
+                    client,
+                    statuscodes.ok
+                )
+
         @server.on_command(cmd="unlink", schema=cl4_protocol)
         async def on_unlink(client, message):
+            await automatic_notify_handshake(client)
+
             # Validate schema
             if not valid(client, message, cl4_protocol.linking):
                 return
@@ -731,18 +829,68 @@ class clpv4:
             async for room in server.async_iterable(message["val"]):
                 server.rooms_manager.unsubscribe(client, room)
 
+                # Broadcast userlist state to existing members
+                clients = await server.rooms_manager.get_all_in_rooms(room, cl4_protocol)
+                clients = server.copy(clients)
+                clients.remove(client)
+                server.send_packet(clients, {
+                    "cmd": "ulist",
+                    "val": {
+                        "mode": "remove",
+                        "val": generate_user_object(client)
+                    },
+                    "room": room
+                })
+
             # Re-link to default room if no rooms are joined
             if not len(client.rooms):
                 server.rooms_manager.subscribe(client, "default")
 
+                # Broadcast userlist state to existing members
+                clients = await server.rooms_manager.get_all_in_rooms("default", cl4_protocol)
+                clients = server.copy(clients)
+                clients.remove(client)
+                server.send_packet(clients, {
+                    "cmd": "ulist",
+                    "val": {
+                        "mode": "add",
+                        "val": generate_user_object(client)
+                    },
+                    "room": "default"
+                })
+
+                # Notify client of current room state
+                server.send_packet(client, {
+                    "cmd": "ulist",
+                    "val": {
+                        "mode": "set",
+                        "val": server.rooms_manager.generate_userlist("default", cl4_protocol)
+                    },
+                    "room": "default"
+                })
+
+            # Attach listener (if present) and broadcast
+            if "listener" in message:
+                send_statuscode(
+                    client,
+                    statuscodes.ok,
+                    listener=message["listener"])
+            else:
+                send_statuscode(
+                    client,
+                    statuscodes.ok
+                )
+
         @server.on_command(cmd="direct", schema=cl4_protocol)
         async def on_direct(client, message):
+            await automatic_notify_handshake(client)
+
             # Validate schema
             if not valid(client, message, cl4_protocol.direct):
                 return
 
             try:
-                client = server.clients_manager.find_obj(message["id"])
+                tmp_client = server.clients_manager.find_obj(message["id"])
 
                 tmp_msg = {
                     "cmd": "direct",
@@ -750,11 +898,7 @@ class clpv4:
                 }
 
                 if client.username_set:
-                    tmp_msg["origin"] = {
-                        "id": client.snowflake,
-                        "username": client.username,
-                        "uuid": str(client.id)
-                    }
+                    tmp_msg["origin"] = generate_user_object(client)
 
                 else:
                     tmp_msg["origin"] = {
@@ -765,7 +909,7 @@ class clpv4:
                 if "listener" in message:
                     tmp_msg["listener"] = message["listener"]
 
-                server.send_packet_unicast(client, tmp_msg)
+                server.send_packet_unicast(tmp_client, tmp_msg)
 
             except server.clients_manager.exceptions.NoResultsFound:
                 # Attach listener
@@ -783,7 +927,3 @@ class clpv4:
 
                 # Stop direct command
                 return
-
-        @server.on_command(cmd="bridge", schema=cl4_protocol)
-        async def on_bridge(client, message):
-            pass

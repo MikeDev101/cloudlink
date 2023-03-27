@@ -108,13 +108,6 @@ class clients_manager:
             if not len(self.usernames[obj.username]):
                 del self.usernames[obj.username]
 
-    def generate_user_object(self, obj):
-        return {
-            "id": obj.snowflake,
-            "username": obj.username,
-            "uuid": str(obj.id)
-        }
-
     def set_username(self, obj, username):
         if not self.exists(obj):
             raise self.exceptions.ClientDoesNotExist

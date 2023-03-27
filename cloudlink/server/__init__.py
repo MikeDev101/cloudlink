@@ -10,11 +10,13 @@ from snowflake import SnowflakeGenerator
 import websockets
 import ssl
 
-# Import CloudLink modules
-from cloudlink.modules.async_event_manager import async_event_manager
-from cloudlink.modules.async_iterables import async_iterable
-from cloudlink.modules.clients_manager import clients_manager
-from cloudlink.modules.rooms_manager import rooms_manager
+# Import shared modules
+from cloudlink.shared_modules.async_event_manager import async_event_manager
+from cloudlink.shared_modules.async_iterables import async_iterable
+
+# Import server-specific modules
+from cloudlink.server.modules.clients_manager import clients_manager
+from cloudlink.server.modules.rooms_manager import rooms_manager
 
 # Import JSON library - Prefer UltraJSON but use native JSON if failed
 try:
@@ -87,6 +89,7 @@ class server:
         self.exception_handlers = dict()
         self.disabled_commands_handlers = dict()
         self.protocol_identified_events = dict()
+        self.protocol_disconnect_events = dict()
 
         # Create method handlers
         self.command_handlers = dict()
@@ -204,6 +207,19 @@ class server:
             self.protocol_identified_events[schema].bind(func)
 
         # End on_protocol_identified binder
+        return bind_event
+
+    def on_protocol_disconnect(self, schema):
+        def bind_event(func):
+            # Create protocol disconnect event manager
+            if schema not in self.protocol_disconnect_events:
+                self.logger.info(f"Creating protocol disconnect event manager {schema.__qualname__}")
+                self.protocol_disconnect_events[schema] = async_event_manager(self)
+
+            # Add function to the protocol disconnect event manager
+            self.protocol_disconnect_events[schema].bind(func)
+
+        # End on_protocol_disconnect binder
         return bind_event
 
     # Event binder for on_message events
@@ -486,6 +502,7 @@ class server:
         client.rooms = set()
         client.username_set = False
         client.username = str()
+        client.handshake = False
 
         # Begin tracking the lifetime of the client
         client.birth_time = time.monotonic()
@@ -507,9 +524,11 @@ class server:
         # Fire on_disconnect events
         self.asyncio.create_task(self.execute_on_disconnect_events(client))
 
-        # Unsubscribe from all rooms
-        async for room_id in self.async_iterable(self.copy(client.rooms)):
-            self.rooms_manager.unsubscribe(client, room_id)
+        # Execute all protocol-specific disconnect events
+        if client.protocol_set:
+            self.asyncio.create_task(
+                self.execute_protocol_disconnect_events(client, client.protocol)
+            )
 
         self.logger.debug(
             f"Client {client.snowflake} disconnected: Total lifespan of {time.monotonic() - client.birth_time} seconds.")
@@ -616,6 +635,15 @@ class server:
 
         # Fire events
         async for event in self.protocol_identified_events[schema]:
+            await event(client)
+
+    async def execute_protocol_disconnect_events(self, client, schema):
+        # Guard clauses
+        if schema not in self.protocol_disconnect_events:
+            return
+
+        # Fire events
+        async for event in self.protocol_disconnect_events[schema]:
             await event(client)
 
     # WebSocket-specific coroutines

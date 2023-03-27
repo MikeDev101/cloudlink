@@ -31,8 +31,21 @@ class scratch:
                 server.close_connection(client, code=statuscodes.connection_error, reason=f"Validation failed")
                 return False
 
+        @server.on_protocol_disconnect(schema=scratch_protocol)
+        async def protocol_disconnect(client):
+            server.logger.debug(f"Removing client {client.snowflake} from rooms...")
+
+            # Unsubscribe from all rooms
+            async for room_id in server.async_iterable(server.copy(client.rooms)):
+                server.rooms_manager.unsubscribe(client, room_id)
+
         @server.on_command(cmd="handshake", schema=scratch_protocol)
         async def handshake(client, message):
+
+            # Don't execute this command if handshake was already done
+            if client.handshake:
+                return
+            client.handshake = True
 
             # Safety first
             if ("scratchsessionsid" in client.request_headers) or ("scratchsessionsid" in client.response_headers):
@@ -77,6 +90,10 @@ class scratch:
         @server.on_command(cmd="create", schema=scratch_protocol)
         async def create_variable(client, message):
 
+            # Don't execute this command if handshake wasn't already done
+            if not client.handshake:
+                return
+
             # Validate schema
             if not valid(client, message, scratch_protocol.method):
                 return
@@ -105,6 +122,10 @@ class scratch:
 
         @server.on_command(cmd="rename", schema=scratch_protocol)
         async def rename_variable(client, message):
+
+            # Don't execute this command if handshake wasn't already done
+            if not client.handshake:
+                return
 
             # Validate schema
             if not valid(client, message, scratch_protocol.method):
@@ -146,6 +167,10 @@ class scratch:
         @server.on_command(cmd="delete", schema=scratch_protocol)
         async def create_variable(client, message):
 
+            # Don't execute this command if handshake wasn't already done
+            if not client.handshake:
+                return
+
             # Validate schema
             if not valid(client, message, scratch_protocol.method):
                 return
@@ -177,6 +202,10 @@ class scratch:
 
         @server.on_command(cmd="set", schema=scratch_protocol)
         async def set_value(client, message):
+
+            # Don't execute this command if handshake wasn't already done
+            if not client.handshake:
+                return
 
             # Validate schema
             if not valid(client, message, scratch_protocol.method):

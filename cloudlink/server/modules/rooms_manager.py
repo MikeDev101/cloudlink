@@ -67,6 +67,9 @@ class rooms_manager:
             "private_vars": dict()
         }
 
+        # Log creation
+        self.parent.logger.debug(f"Created room {room_id}")
+
     def delete(self, room_id):
         # Rooms may only have string names
         if type(room_id) != str:
@@ -166,7 +169,7 @@ class rooms_manager:
         room = self.rooms[room_id]["clients"]
 
         # Clean up room protocol categories
-        if not len(room[obj.protocol]):
+        if not len(room[obj.protocol]["all"]):
             room.pop(obj.protocol)
 
         # Remove room from client object
@@ -205,7 +208,7 @@ class rooms_manager:
             raise self.exceptions.NoResultsFound
 
     def generate_userlist(self, room_id, protocol):
-        userlist = set()
+        userlist = list()
 
         room = self.get(room_id)["clients"][protocol]["all"]
 
@@ -213,13 +216,13 @@ class rooms_manager:
             if not obj.username_set:
                 continue
 
-            userlist.add({
+            userlist.append({
                 "id": obj.snowflake,
                 "username": obj.username,
                 "uuid": str(obj.id)
             })
 
-        return list(userlist)
+        return userlist
 
     def get_snowflakes(self, room):
         return set(obj for obj in room["snowflakes"])
