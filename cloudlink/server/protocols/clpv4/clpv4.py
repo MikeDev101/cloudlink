@@ -234,11 +234,9 @@ class clpv4:
             async for room in server.async_iterable(client.rooms):
                 server.send_packet(client, {
                     "cmd": "ulist",
-                    "val": {
-                        "mode": "set",
-                        "val": server.rooms_manager.generate_userlist(room, cl4_protocol)
-                    },
-                    "room": room
+                    "mode": "set",
+                    "val": server.rooms_manager.generate_userlist(room, cl4_protocol)
+                    "rooms": room
                 })
 
         # Expose for extension usage
@@ -310,11 +308,9 @@ class clpv4:
                 clients = server.copy(clients)
                 server.send_packet(clients, {
                     "cmd": "ulist",
-                    "val": {
-                        "mode": "remove",
-                        "val": generate_user_object(client)
-                    },
-                    "room": room_id
+                    "mode": "remove",
+                    "val": generate_user_object(client),
+                    "rooms": room_id
                 })
 
         # The CLPv4 command set
@@ -378,7 +374,7 @@ class clpv4:
                         "cmd": "gmsg",
                         "val": message["val"],
                         "listener": message["listener"],
-                        "room": room
+                        "rooms": room
                     }
 
                     # Unicast message
@@ -388,7 +384,7 @@ class clpv4:
                     server.send_packet(clients, {
                         "cmd": "gmsg",
                         "val": message["val"],
-                        "room": room
+                        "rooms": room
                     })
 
         @server.on_command(cmd="pmsg", schema=cl4_protocol)
@@ -449,7 +445,7 @@ class clpv4:
                     "cmd": "pmsg",
                     "val": message["val"],
                     "origin": generate_user_object(client),
-                    "room": room
+                    "rooms": room
                 }
                 server.send_packet(clients, tmp_message)
 
@@ -505,7 +501,7 @@ class clpv4:
                     "cmd": "gvar",
                     "name": message["name"],
                     "val": message["val"],
-                    "room": room
+                    "rooms": room
                 }
 
                 # Attach listener (if present) and broadcast
@@ -577,7 +573,7 @@ class clpv4:
                     "name": message["name"],
                     "val": message["val"],
                     "origin": generate_user_object(client),
-                    "room": room
+                    "rooms": room
                 }
                 server.send_packet(clients, tmp_message)
 
@@ -635,21 +631,17 @@ class clpv4:
             clients.remove(client)
             server.send_packet(clients, {
                 "cmd": "ulist",
-                "val": {
-                    "mode": "add",
-                    "val": generate_user_object(client)
-                },
-                "room": "default"
+                "mode": "add",
+                "val": generate_user_object(client),
+                "rooms": "default"
             })
 
             # Notify client of current room state
             server.send_packet(client, {
                 "cmd": "ulist",
-                "val": {
-                    "mode": "set",
-                    "val": server.rooms_manager.generate_userlist("default", cl4_protocol)
-                },
-                "room": "default"
+                "mode": "set",
+                "val": server.rooms_manager.generate_userlist("default", cl4_protocol),
+                "rooms": "default"
             })
 
             # Attach listener (if present) and broadcast
@@ -696,17 +688,15 @@ class clpv4:
                         "mode": "add",
                         "val": generate_user_object(client)
                     },
-                    "room": room
+                    "rooms": room
                 })
 
                 # Notify client of current room state
                 server.send_packet(client, {
                     "cmd": "ulist",
-                    "val": {
-                        "mode": "set",
-                        "val": server.rooms_manager.generate_userlist(room, cl4_protocol)
-                    },
-                    "room": room
+                    "mode": "set",
+                    "val": server.rooms_manager.generate_userlist(room, cl4_protocol),
+                    "rooms": room
                 })
 
             # Attach listener (if present) and broadcast
@@ -744,11 +734,9 @@ class clpv4:
                 clients.remove(client)
                 server.send_packet(clients, {
                     "cmd": "ulist",
-                    "val": {
-                        "mode": "remove",
-                        "val": generate_user_object(client)
-                    },
-                    "room": room
+                    "mode": "remove",
+                    "val": generate_user_object(client),
+                    "rooms": room
                 })
 
             # Re-link to default room if no rooms are joined
@@ -761,21 +749,17 @@ class clpv4:
                 clients.remove(client)
                 server.send_packet(clients, {
                     "cmd": "ulist",
-                    "val": {
-                        "mode": "add",
-                        "val": generate_user_object(client)
-                    },
-                    "room": "default"
+                    "mode": "add",
+                    "val": generate_user_object(client),
+                    "rooms": "default"
                 })
 
                 # Notify client of current room state
                 server.send_packet(client, {
                     "cmd": "ulist",
-                    "val": {
-                        "mode": "set",
-                        "val": server.rooms_manager.generate_userlist("default", cl4_protocol)
-                    },
-                    "room": "default"
+                    "mode": "set",
+                    "val": server.rooms_manager.generate_userlist("default", cl4_protocol),
+                    "rooms": "default"
                 })
 
             # Attach listener (if present) and broadcast
