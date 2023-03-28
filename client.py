@@ -13,8 +13,10 @@ if __name__ == "__main__":
     # Load protocols
     clpv4 = clpv4(client)
 
-    # Initialize SSL support
-    client.enable_ssl(certfile="cert.pem")
+    @client.on_connect
+    async def on_connect():
+        client.send_packet({"cmd": "handshake"})
+        print("Connected")
     
     # Start the server
-    client.run(host="wss://cloudlink.ddns.net:3000/")
+    client.run(host="ws://127.0.0.1:3000/")

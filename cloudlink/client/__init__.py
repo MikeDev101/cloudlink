@@ -63,6 +63,7 @@ class client:
 
         # Configure websocket framework
         self.ws = websockets
+        self.client = None
 
         # Components
         self.ujson = ujson
@@ -175,9 +176,9 @@ class client:
         self.on_error_events.bind(func)
 
     # Send message
-    def send_packet(self, client, message):
+    def send_packet(self, message):
         # Create unicast task
-        self.asyncio.create_task(self.execute_send(client, message))
+        self.asyncio.create_task(self.execute_send(message))
 
     # Close the connection to client(s)
     def close_connection(self, obj, code=1000, reason=""):
@@ -225,25 +226,19 @@ class client:
 
         # Empty packet
         if not len(message):
-            self.logger.debug(f"Client {client.snowflake} sent empty message ")
+            self.logger.debug(f"Server sent empty message ")
 
             # Fire on_error events
-            asyncio.create_task(self.execute_on_error_events(client, self.exceptions.EmptyMessage))
+            asyncio.create_task(self.execute_on_error_events(self.exceptions.EmptyMessage))
 
             # Fire exception handling events
-            if client.protocol_set:
-                self.asyncio.create_task(
-                    self.execute_exception_handlers(
-                        client=client,
-                        exception_type=self.exceptions.EmptyMessage,
-                        schema=client.protocol,
-                        details="Empty message"
-                    )
+            self.asyncio.create_task(
+                self.execute_exception_handlers(
+                    exception_type=self.exceptions.EmptyMessage,
+                    schema=client.protocol,
+                    details="Empty message"
                 )
-            else:
-                # Close the connection
-                self.send_packet(client, "Empty message")
-                self.close_connection(client, reason="Empty message")
+            )
 
             # End message_processor coroutine
             return
@@ -253,16 +248,15 @@ class client:
             message = self.ujson.loads(message)
 
         except Exception as error:
-            self.logger.debug(f"Client {client.snowflake} sent invalid JSON: {error}")
+            self.logger.debug(f"Server sent invalid JSON: {error}")
 
             # Fire on_error events
-            self.asyncio.create_task(self.execute_on_error_events(client, error))
+            self.asyncio.create_task(self.execute_on_error_events(error))
 
             # Fire exception handling events
             if client.protocol_set:
                 self.asyncio.create_task(
                     self.execute_exception_handlers(
-                        client=client,
                         exception_type=self.exceptions.JSONError,
                         schema=client.protocol,
                         details=error
@@ -271,7 +265,7 @@ class client:
 
             else:
                 # Close the connection
-                self.send_packet(client, "Invalid JSON")
+                self.send_packet("Invalid JSON")
                 self.close_connection(client, reason="Invalid JSON")
 
             # End message_processor coroutine
@@ -283,7 +277,7 @@ class client:
 
         # Client protocol is unknown
         if not client.protocol:
-            self.logger.debug(f"Trying to identify client {client.snowflake}'s protocol")
+            self.logger.debug(f"Trying to identify server's protocol")
 
             # Identify protocol
             errorlist = list()
@@ -298,30 +292,24 @@ class client:
 
             if not valid:
                 # Log failed identification
-                self.logger.debug(f"Could not identify protocol used by client {client.snowflake}: {errorlist}")
+                self.logger.debug(f"Could not identify protocol used by server: {errorlist}")
 
                 # Fire on_error events
-                self.asyncio.create_task(self.execute_on_error_events(client, "Unable to identify protocol"))
+                self.asyncio.create_task(self.execute_on_error_events("Unable to identify protocol"))
 
                 # Close the connection
-                self.send_packet(client, "Unable to identify protocol")
+                self.send_packet("Unable to identify protocol")
                 self.close_connection(client, reason="Unable to identify protocol")
 
                 # End message_processor coroutine
                 return
 
             # Log known protocol
-            self.logger.debug(f"Client {client.snowflake} is using protocol {selected_protocol.__qualname__}")
-
-            # Make the client's protocol known
-            self.clients_manager.set_protocol(client, selected_protocol)
-
-            # Fire protocol identified events
-            self.asyncio.create_task(self.execute_protocol_identified_events(client, selected_protocol))
+            self.logger.debug(f"Server is using protocol {selected_protocol.__qualname__}")
 
         else:
             self.logger.debug(
-                f"Validating message from {client.snowflake} using protocol {client.protocol.__qualname__}")
+                f"Validating message from server using protocol {client.protocol.__qualname__}")
 
             # Validate message using known protocol
             selected_protocol = client.protocol
@@ -330,16 +318,15 @@ class client:
                 errors = self.validator.errors
 
                 # Log failed validation
-                self.logger.debug(f"Client {client.snowflake} sent message that failed validation: {errors}")
+                self.logger.debug(f"Server sent message that failed validation: {errors}")
 
                 # Fire on_error events
-                self.asyncio.create_task(self.execute_on_error_events(client, errors))
+                self.asyncio.create_task(self.execute_on_error_events(errors))
 
                 # Fire exception handling events
                 if client.protocol_set:
                     self.asyncio.create_task(
                         self.execute_exception_handlers(
-                            client=client,
                             exception_type=self.exceptions.ValidationError,
                             schema=client.protocol,
                             details=errors
@@ -354,16 +341,15 @@ class client:
 
             # Log invalid command
             self.logger.debug(
-                f"Client {client.snowflake} sent an invalid command \"{message[selected_protocol.command_key]}\" in protocol {selected_protocol.__qualname__}")
+                f"Server sent an invalid command \"{message[selected_protocol.command_key]}\" in protocol {selected_protocol.__qualname__}")
 
             # Fire on_error events
-            self.asyncio.create_task(self.execute_on_error_events(client, "Invalid command"))
+            self.asyncio.create_task(self.execute_on_error_events("Invalid command"))
 
             # Fire exception handling events
             if client.protocol_set:
                 self.asyncio.create_task(
                     self.execute_exception_handlers(
-                        client=client,
                         exception_type=self.exceptions.InvalidCommand,
                         schema=client.protocol,
                         details=message[selected_protocol.command_key]
@@ -373,28 +359,9 @@ class client:
             # End message_processor coroutine
             return
 
-        # Check if the command is disabled
-        if selected_protocol in self.disabled_commands:
-            if message[selected_protocol.command_key] in self.disabled_commands[selected_protocol]:
-                self.logger.debug(
-                    f"Client {client.snowflake} sent a disabled command \"{message[selected_protocol.command_key]}\" in protocol {selected_protocol.__qualname__}")
-
-                # Fire disabled command event
-                self.asyncio.create_task(
-                    self.execute_disabled_command_events(
-                        client,
-                        selected_protocol,
-                        message[selected_protocol.command_key]
-                    )
-                )
-
-                # End message_processor coroutine
-                return
-
         # Fire on_command events
         self.asyncio.create_task(
             self.execute_on_command_events(
-                client,
                 message,
                 selected_protocol
             )
@@ -403,7 +370,6 @@ class client:
         # Fire on_message events
         self.asyncio.create_task(
             self.execute_on_message_events(
-                client,
                 message
             )
         )
@@ -423,31 +389,19 @@ class client:
         # Begin tracking the lifetime of the client
         client.birth_time = time.monotonic()
 
-        # Add to clients manager
-        self.clients_manager.add(client)
-
         # Fire on_connect events
-        self.asyncio.create_task(self.execute_on_connect_events(client))
+        self.asyncio.create_task(self.execute_on_connect_events())
 
-        self.logger.debug(f"Client {client.snowflake} connected")
+        self.logger.debug(f"Client connected")
 
         # Run connection loop
         await self.connection_loop(client)
 
-        # Remove from clients manager
-        self.clients_manager.remove(client)
-
         # Fire on_disconnect events
-        self.asyncio.create_task(self.execute_on_disconnect_events(client))
-
-        # Execute all protocol-specific disconnect events
-        if client.protocol_set:
-            self.asyncio.create_task(
-                self.execute_protocol_disconnect_events(client, client.protocol)
-            )
+        self.asyncio.create_task(self.execute_on_disconnect_events())
 
         self.logger.debug(
-            f"Client {client.snowflake} disconnected: Total lifespan of {time.monotonic() - client.birth_time} seconds.")
+            f"Client disconnected: Total lifespan of {time.monotonic() - client.birth_time} seconds.")
 
     # Connection loop - Redefine for use with another outside library
     async def connection_loop(self, client):
@@ -456,14 +410,14 @@ class client:
             async for message in client:
                 # Start keeping track of processing time
                 start = time.perf_counter()
-                self.logger.debug(f"Now processing message from client {client.snowflake}...")
+                self.logger.debug(f"Now processing message from server...")
 
                 # Process the message
                 await self.message_processor(client, message)
 
                 # Log processing time
                 self.logger.debug(
-                    f"Done processing message from client {client.snowflake}. Processing took {time.perf_counter() - start} seconds.")
+                    f"Done processing message from server. Processing took {time.perf_counter() - start} seconds.")
 
         # Handle unexpected disconnects
         except self.ws.exceptions.ConnectionClosedError:
@@ -478,48 +432,45 @@ class client:
             self.logger.critical(f"Unexpected exception was raised: {e}")
 
             # Fire on_error events
-            self.asyncio.create_task(self.execute_on_error_events(client, f"Unexpected exception was raised: {e}"))
+            self.asyncio.create_task(self.execute_on_error_events(f"Unexpected exception was raised: {e}"))
 
             # Fire exception handling events
-            if client.protocol_set:
-                self.asyncio.create_task(
-                    self.execute_exception_handlers(
-                        client=client,
-                        exception_type=self.exceptions.InternalError,
-                        schema=client.protocol,
-                        details=f"Unexpected exception was raised: {e}"
-                    )
+            self.asyncio.create_task(
+                self.execute_exception_handlers(
+                    exception_type=self.exceptions.InternalError,
+                    schema=client.protocol,
+                    details=f"Unexpected exception was raised: {e}"
                 )
+            )
 
     # WebSocket-specific server loop
     async def __run__(self, host):
-        async with self.ws.connect(host) as client:
-            message = await client.recv()
-            print(message)
+        async with self.ws.connect(host) as self.client:
+            await self.connection_handler(self.client)
 
     # Asyncio event-handling coroutines
 
-    async def execute_on_disconnect_events(self, client):
+    async def execute_on_disconnect_events(self):
         async for event in self.on_disconnect_events:
-            await event(client)
+            await event()
 
-    async def execute_on_connect_events(self, client):
+    async def execute_on_connect_events(self):
         async for event in self.on_connect_events:
-            await event(client)
+            await event()
 
-    async def execute_on_message_events(self, client, message):
+    async def execute_on_message_events(self, message):
         async for event in self.on_message_events:
-            await event(client, message)
+            await event(message)
 
-    async def execute_on_command_events(self, client, message, schema):
+    async def execute_on_command_events(self, message, schema):
         async for event in self.command_handlers[schema][message[schema.command_key]]:
-            await event(client, message)
+            await event(message)
 
-    async def execute_on_error_events(self, client, errors):
+    async def execute_on_error_events(self, errors):
         async for event in self.on_error_events:
-            await event(client, errors)
+            await event(errors)
 
-    async def execute_exception_handlers(self, client, exception_type, schema, details):
+    async def execute_exception_handlers(self, exception_type, schema, details):
         # Guard clauses
         if schema not in self.exception_handlers:
             return
@@ -528,15 +479,13 @@ class client:
 
         # Fire events
         async for event in self.exception_handlers[schema][exception_type]:
-            await event(client, details)
+            await event(details)
 
 
     # WebSocket-specific coroutines
 
-    async def execute_send(self, client, message):
-
+    async def execute_send(self, message):
         # Convert dict to JSON
         if type(message) == dict:
             message = self.ujson.dumps(message)
-
-        await client.send(message)
+        await self.client.send(message)
