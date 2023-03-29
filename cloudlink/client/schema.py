@@ -1,5 +1,5 @@
 # Schema for interpreting the Cloudlink protocol v4.0 (CLPv4) command set
-class cl4_protocol:
+class schema:
 
     # Required - Defines the keyword to use to define the command
     command_key = "cmd"
@@ -22,6 +22,18 @@ class cl4_protocol:
                 "set",
             ],
             "required": False,
+        },
+        "mode": {
+            "type": "string",
+            "required": False
+        },
+        "code": {
+            "type": "string",
+            "required": False
+        },
+        "code_id": {
+            "type": "integer",
+            "required": False
         },
         "name": {
             "type": "string",

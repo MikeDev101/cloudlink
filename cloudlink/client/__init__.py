@@ -1,11 +1,9 @@
 # Core components of the CloudLink client
 import asyncio
 import ssl
-
 import cerberus
 import logging
 import time
-from copy import copy
 
 # Import websockets and SSL support
 import websockets
@@ -21,31 +19,30 @@ except ImportError:
     print("Server failed to import UltraJSON, failing back to native JSON library.")
     import json as ujson
 
+# Import required CL4 client protocol
+from cloudlink.client import protocol, schema
+
 
 # Define server exceptions
 class exceptions:
     class EmptyMessage(Exception):
-        """This exception is raised when a client sends an empty packet."""
+        """This exception is raised when a client receives an empty packet."""
         pass
 
-    class InvalidCommand(Exception):
-        """This exception is raised when a client sends an invalid command for it's determined protocol."""
+    class UnknownCommand(Exception):
+        """This exception is raised when the server sends a command that the client does not recognize."""
         pass
 
     class JSONError(Exception):
-        """This exception is raised when the server fails to parse a message's JSON."""
+        """This exception is raised when the client fails to parse the server message's JSON."""
         pass
 
     class ValidationError(Exception):
-        """This exception is raised when a client with a known protocol sends a message that fails validation before commands can execute."""
+        """This exception is raised when the server sends a message that fails validation before execution."""
         pass
 
     class InternalError(Exception):
         """This exception is raised when an unexpected and/or unhandled exception is raised."""
-        pass
-
-    class Overloaded(Exception):
-        """This exception is raised when the server believes it is overloaded."""
         pass
 
 
@@ -69,18 +66,18 @@ class client:
         self.ujson = ujson
         self.validator = cerberus.Validator()
         self.async_iterable = async_iterable
-        self.copy = copy
-        self.exceptions = exceptions()
-
-        # Dictionary containing protocols as keys and sets of commands as values
-        self.disabled_commands = dict()
+        self.exceptions = exceptions
 
         # Create event managers
-        self.on_connect_events = async_event_manager(self)
+        self.on_initial_connect_events = async_event_manager(self)
+        self.on_full_connect_events = async_event_manager(self)
         self.on_message_events = async_event_manager(self)
         self.on_disconnect_events = async_event_manager(self)
         self.on_error_events = async_event_manager(self)
         self.exception_handlers = dict()
+        self.listener_events_await_specific = dict()
+        self.listener_events_decorator_specific = dict()
+
 
         # Create method handlers
         self.command_handlers = dict()
@@ -91,6 +88,10 @@ class client:
         # Configure SSL support
         self.ssl_enabled = False
         self.ssl_context = None
+
+        # Load built-in protocol
+        self.schema = schema.schema
+        self.protocol = protocol.clpv4(self)
 
     # Enables SSL support
     def enable_ssl(self, certfile):
@@ -115,46 +116,72 @@ class client:
                 self.logging.getLogger('websockets.client').setLevel(self.logging.ERROR)
                 self.logging.getLogger('websockets.protocol').setLevel(self.logging.ERROR)
 
-            # Start server
+            # Start client
             self.asyncio.run(self.__run__(host))
 
         except KeyboardInterrupt:
             pass
 
     # Event binder for on_command events
-    def on_command(self, cmd, schema):
+    def on_command(self, cmd):
         def bind_event(func):
 
-            # Create schema category for command event manager
-            if schema not in self.command_handlers:
-                self.logger.info(f"Creating protocol {schema.__qualname__} command event manager")
-                self.command_handlers[schema] = dict()
-
             # Create command event handler
-            if cmd not in self.command_handlers[schema]:
-                self.command_handlers[schema][cmd] = async_event_manager(self)
+            if cmd not in self.command_handlers:
+                self.command_handlers[cmd] = async_event_manager(self)
 
             # Add function to the command handler
-            self.command_handlers[schema][cmd].bind(func)
+            self.command_handlers[cmd].bind(func)
 
         # End on_command binder
         return bind_event
 
-    # Event binder for on_error events with specific shemas/exception types
-    def on_exception(self, exception_type, schema):
+    # Credit to @ShowierData9978 for this: Listen for messages containing specific "listener" keys
+    async def wait_for_listener(self, listener_id):
+        # Create a new event object.
+        event = self.asyncio.Event()
+
+        # Register the event so that the client can continue listening for messages.
+        self.listener_events_await_specific[listener_id] = event
+
+        # Create the waiter task.
+        task = self.asyncio.create_task(
+            self.listener_waiter(
+                listener_id,
+                event
+            )
+        )
+
+        # Wait for the waiter task to finish.
+        await task
+
+        # Remove from the listener events dict.
+        self.listener_events_await_specific.pop(listener_id)
+
+    # Version of the wait for listener tool for decorator usage.
+    def on_listener(self, listener_id):
         def bind_event(func):
 
-            # Create schema category for error event manager
-            if schema not in self.exception_handlers:
-                self.logger.info(f"Creating protocol {schema.__qualname__} exception event manager")
-                self.exception_handlers[schema] = dict()
+            # Create listener event handler
+            if listener_id not in self.listener_events_decorator_specific:
+                self.listener_events_decorator_specific[listener_id] = async_event_manager(self)
+
+            # Add function to the listener handler
+            self.listener_events_decorator_specific[listener_id].bind(func)
+
+        # End on_listener binder
+        return bind_event
+
+    # Event binder for on_error events with specific schemas/exception types
+    def on_exception(self, exception_type):
+        def bind_event(func):
 
             # Create error event handler
-            if exception_type not in self.exception_handlers[schema]:
-                self.exception_handlers[schema][exception_type] = async_event_manager(self)
+            if exception_type not in self.exception_handlers:
+                self.exception_handlers[exception_type] = async_event_manager(self)
 
             # Add function to the error command handler
-            self.exception_handlers[schema][exception_type].bind(func)
+            self.exception_handlers[exception_type].bind(func)
 
         # End on_error_specific binder
         return bind_event
@@ -163,9 +190,13 @@ class client:
     def on_message(self, func):
         self.on_message_events.bind(func)
 
+    # Event binder for starting up the client.
+    def on_initial_connect(self, func):
+        self.on_initial_connect_events.bind(func)
+
     # Event binder for on_connect events.
     def on_connect(self, func):
-        self.on_connect_events.bind(func)
+        self.on_full_connect_events.bind(func)
 
     # Event binder for on_disconnect events.
     def on_disconnect(self, func):
@@ -177,52 +208,20 @@ class client:
 
     # Send message
     def send_packet(self, message):
-        # Create unicast task
         self.asyncio.create_task(self.execute_send(message))
 
-    # Close the connection to client(s)
-    def close_connection(self, obj, code=1000, reason=""):
-        if type(obj) in [list, set]:
-            self.asyncio.create_task(self.execute_close_multi(obj, code, reason))
-        else:
-            self.asyncio.create_task(self.execute_close_single(obj, code, reason))
+    # Send message and wait for a response
+    async def send_packet_and_wait(self, message):
+        self.logger.debug(f"Sending message containing listener {message['listener']}...")
+        await self.execute_send(message)
+        await self.wait_for_listener(message["listener"])
 
-    # Command disabler
-    def disable_command(self, cmd, schema):
-        # Check if the schema has no disabled commands
-        if schema not in self.disabled_commands:
-            self.disabled_commands[schema] = set()
-
-        # Check if the command isn't already disabled
-        if cmd in self.disabled_commands[schema]:
-            raise ValueError(
-                f"The command {cmd} is already disabled in protocol {schema.__qualname__}, or was enabled beforehand.")
-
-        # Disable the command
-        self.disabled_commands[schema].add(cmd)
-        self.logger.debug(f"Disabled command {cmd} in protocol {schema.__qualname__}")
-
-    # Command enabler
-    def enable_command(self, cmd, schema):
-        # Check if the schema has disabled commands
-        if schema not in self.disabled_commands:
-            raise ValueError(f"There are no commands to disable in protocol {schema.__qualname__}.")
-
-        # Check if the command is disabled
-        if cmd not in self.disabled_commands[schema]:
-            raise ValueError(
-                f"The command {cmd} is already enabled in protocol {schema.__qualname__}, or wasn't disabled beforehand.")
-
-        # Enable the command
-        self.disabled_commands[schema].remove(cmd)
-        self.logger.debug(f"Enabled command {cmd} in protocol {schema.__qualname__}")
-
-        # Free up unused disablers
-        if not len(self.disabled_commands[schema]):
-            self.disabled_commands.pop(schema)
+    # Close the connection
+    def close_connection(self, code=1000, reason=""):
+        self.asyncio.create_task(self.execute_disconnect(code, reason))
 
     # Message processor
-    async def message_processor(self, client, message):
+    async def message_processor(self, message):
 
         # Empty packet
         if not len(message):
@@ -235,7 +234,6 @@ class client:
             self.asyncio.create_task(
                 self.execute_exception_handlers(
                     exception_type=self.exceptions.EmptyMessage,
-                    schema=client.protocol,
                     details="Empty message"
                 )
             )
@@ -254,11 +252,10 @@ class client:
             self.asyncio.create_task(self.execute_on_error_events(error))
 
             # Fire exception handling events
-            if client.protocol_set:
+            if self.client.protocol_set:
                 self.asyncio.create_task(
                     self.execute_exception_handlers(
                         exception_type=self.exceptions.JSONError,
-                        schema=client.protocol,
                         details=error
                     )
                 )
@@ -266,104 +263,73 @@ class client:
             else:
                 # Close the connection
                 self.send_packet("Invalid JSON")
-                self.close_connection(client, reason="Invalid JSON")
+                self.close_connection(reason="Invalid JSON")
 
             # End message_processor coroutine
             return
 
         # Begin validation
-        valid = False
-        selected_protocol = None
+        if not self.validator(message, self.schema.default):
+            errors = self.validator.errors
 
-        # Client protocol is unknown
-        if not client.protocol:
-            self.logger.debug(f"Trying to identify server's protocol")
-
-            # Identify protocol
-            errorlist = list()
-
-            for schema in self.command_handlers:
-                if self.validator(message, schema.default):
-                    valid = True
-                    selected_protocol = schema
-                    break
-                else:
-                    errorlist.append(self.validator.errors)
-
-            if not valid:
-                # Log failed identification
-                self.logger.debug(f"Could not identify protocol used by server: {errorlist}")
-
-                # Fire on_error events
-                self.asyncio.create_task(self.execute_on_error_events("Unable to identify protocol"))
-
-                # Close the connection
-                self.send_packet("Unable to identify protocol")
-                self.close_connection(client, reason="Unable to identify protocol")
-
-                # End message_processor coroutine
-                return
-
-            # Log known protocol
-            self.logger.debug(f"Server is using protocol {selected_protocol.__qualname__}")
-
-        else:
-            self.logger.debug(
-                f"Validating message from server using protocol {client.protocol.__qualname__}")
-
-            # Validate message using known protocol
-            selected_protocol = client.protocol
-
-            if not self.validator(message, selected_protocol.default):
-                errors = self.validator.errors
-
-                # Log failed validation
-                self.logger.debug(f"Server sent message that failed validation: {errors}")
-
-                # Fire on_error events
-                self.asyncio.create_task(self.execute_on_error_events(errors))
-
-                # Fire exception handling events
-                if client.protocol_set:
-                    self.asyncio.create_task(
-                        self.execute_exception_handlers(
-                            exception_type=self.exceptions.ValidationError,
-                            schema=client.protocol,
-                            details=errors
-                        )
-                    )
-
-                # End message_processor coroutine
-                return
-
-        # Check if command exists
-        if message[selected_protocol.command_key] not in self.command_handlers[selected_protocol]:
-
-            # Log invalid command
-            self.logger.debug(
-                f"Server sent an invalid command \"{message[selected_protocol.command_key]}\" in protocol {selected_protocol.__qualname__}")
+            # Log failed validation
+            self.logger.debug(f"Server sent message that failed validation: {errors}")
 
             # Fire on_error events
-            self.asyncio.create_task(self.execute_on_error_events("Invalid command"))
+            self.asyncio.create_task(self.execute_on_error_events(errors))
 
             # Fire exception handling events
-            if client.protocol_set:
+            if self.client.protocol_set:
                 self.asyncio.create_task(
                     self.execute_exception_handlers(
-                        exception_type=self.exceptions.InvalidCommand,
-                        schema=client.protocol,
-                        details=message[selected_protocol.command_key]
+                        exception_type=self.exceptions.ValidationError,
+                        details=errors
                     )
                 )
 
             # End message_processor coroutine
             return
 
+        # Check if command exists
+        if message["cmd"] not in self.command_handlers:
+
+            # Log invalid command
+            self.logger.debug(f"Server sent an unknown command \"{message['cmd']}\"")
+
+            # Fire on_error events
+            self.asyncio.create_task(self.execute_on_error_events("Unknown command"))
+
+            # Fire exception handling events
+            if self.client.protocol_set:
+                self.asyncio.create_task(
+                    self.execute_exception_handlers(
+                        exception_type=self.exceptions.InvalidCommand,
+                        details=message["cmd"]
+                    )
+                )
+
+            # End message_processor coroutine
+            return
+
+        # Check if the message contains listeners
+        if "listener" in message:
+            if message["listener"] in self.listener_events_await_specific:
+                # Fire awaiting listeners
+                self.logger.debug(f"Received message containing listener {message['listener']}!")
+                self.listener_events_await_specific[message["listener"]].set()
+
+            elif message["listener"] in self.listener_events_decorator_specific:
+                # Fire all decorator-based listeners
+                self.asyncio.create_task(
+                    self.execute_on_listener_events(
+                        message
+                    )
+                )
+
         # Fire on_command events
         self.asyncio.create_task(
             self.execute_on_command_events(
-                message,
-                selected_protocol
+                message
             )
         )
 
@@ -375,45 +341,45 @@ class client:
         )
 
     # Connection handler
-    async def connection_handler(self, client):
+    async def connection_handler(self):
 
         # Startup client attributes
-        client.snowflake = str()
-        client.protocol = None
-        client.protocol_set = False
-        client.rooms = set()
-        client.username_set = False
-        client.username = str()
-        client.handshake = False
+        self.client.snowflake = str()
+        self.client.protocol = None
+        self.client.protocol_set = False
+        self.client.rooms = set()
+        self.client.username_set = False
+        self.client.username = str()
+        self.client.handshake = False
 
         # Begin tracking the lifetime of the client
-        client.birth_time = time.monotonic()
+        self.client.birth_time = time.monotonic()
 
         # Fire on_connect events
-        self.asyncio.create_task(self.execute_on_connect_events())
+        self.asyncio.create_task(self.execute_on_initial_connect_events())
 
         self.logger.debug(f"Client connected")
 
         # Run connection loop
-        await self.connection_loop(client)
+        await self.connection_loop()
 
         # Fire on_disconnect events
         self.asyncio.create_task(self.execute_on_disconnect_events())
 
         self.logger.debug(
-            f"Client disconnected: Total lifespan of {time.monotonic() - client.birth_time} seconds.")
+            f"Client disconnected: Total lifespan of {time.monotonic() - self.client.birth_time} seconds.")
 
     # Connection loop - Redefine for use with another outside library
-    async def connection_loop(self, client):
+    async def connection_loop(self):
         # Primary asyncio loop for the lifespan of the websocket connection
         try:
-            async for message in client:
+            async for message in self.client:
                 # Start keeping track of processing time
                 start = time.perf_counter()
                 self.logger.debug(f"Now processing message from server...")
 
                 # Process the message
-                await self.message_processor(client, message)
+                await self.message_processor(message)
 
                 # Log processing time
                 self.logger.debug(
@@ -438,7 +404,6 @@ class client:
             self.asyncio.create_task(
                 self.execute_exception_handlers(
                     exception_type=self.exceptions.InternalError,
-                    schema=client.protocol,
                     details=f"Unexpected exception was raised: {e}"
                 )
             )
@@ -446,7 +411,7 @@ class client:
     # WebSocket-specific server loop
     async def __run__(self, host):
         async with self.ws.connect(host) as self.client:
-            await self.connection_handler(self.client)
+            await self.connection_handler()
 
     # Asyncio event-handling coroutines
 
@@ -454,35 +419,46 @@ class client:
         async for event in self.on_disconnect_events:
             await event()
 
-    async def execute_on_connect_events(self):
-        async for event in self.on_connect_events:
+    async def execute_on_initial_connect_events(self):
+        async for event in self.on_initial_connect_events:
+            await event()
+
+    async def execute_on_full_connect_events(self):
+        async for event in self.on_full_connect_events:
             await event()
 
     async def execute_on_message_events(self, message):
         async for event in self.on_message_events:
             await event(message)
 
-    async def execute_on_command_events(self, message, schema):
-        async for event in self.command_handlers[schema][message[schema.command_key]]:
+    async def execute_on_command_events(self, message):
+        async for event in self.command_handlers[message["cmd"]]:
+            await event(message)
+
+    async def execute_on_listener_events(self, message):
+        async for event in self.listener_events_decorator_specific[message["listener"]]:
             await event(message)
 
     async def execute_on_error_events(self, errors):
         async for event in self.on_error_events:
             await event(errors)
 
-    async def execute_exception_handlers(self, exception_type, schema, details):
+    async def execute_exception_handlers(self, exception_type, details):
         # Guard clauses
-        if schema not in self.exception_handlers:
-            return
-        if exception_type not in self.exception_handlers[schema]:
+        if exception_type not in self.exception_handlers:
             return
 
         # Fire events
-        async for event in self.exception_handlers[schema][exception_type]:
+        async for event in self.exception_handlers[exception_type]:
             await event(details)
 
+    async def listener_waiter(self, listener_id, event):
+        await event.wait()
 
     # WebSocket-specific coroutines
+
+    async def execute_disconnect(self, code=1000, reason=""):
+        await self.client.close(code, reason)
 
     async def execute_send(self, message):
         # Convert dict to JSON

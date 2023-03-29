@@ -1,5 +1,4 @@
 from cloudlink import client
-from cloudlink.client.protocols import clpv4
 
 if __name__ == "__main__":
     # Initialize the client
@@ -10,12 +9,9 @@ if __name__ == "__main__":
         level=client.logging.DEBUG
     )
 
-    # Load protocols
-    clpv4 = clpv4(client)
-
+    # Example of events
     @client.on_connect
     async def on_connect():
-        client.send_packet({"cmd": "handshake"})
         print("Connected")
     
     # Start the server
