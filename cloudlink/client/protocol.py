@@ -63,18 +63,28 @@ class clpv4:
             parent.logger.debug("Performing handshake with the server...")
 
             # Send the handshake request with a listener and wait for a response
-            await parent.send_packet_and_wait({
+            response = await parent.send_packet_and_wait({
                 "cmd": "handshake",
                 "listener": "init_handshake"
             })
 
-            # Log the successful connection
-            parent.logger.info("Successfully connected to the server.")
+            if response["code_id"] == statuscodes.ok[1]:
+                # Log the successful connection
+                parent.logger.info("Successfully connected to the server.")
 
-            # Fire all on_connect events
-            parent.asyncio.create_task(
-                parent.execute_on_full_connect_events()
-            )
+                # Fire all on_connect events
+                parent.asyncio.create_task(
+                    parent.execute_on_full_connect_events()
+                )
+
+            else:
+                # Log the connection error
+                parent.logger.error(f"Failed to connect to the server. Got response code: {message['code']}")
+
+                # Disconnect
+                parent.asyncio.create_task(
+                    parent.disconnect()
+                )
 
         @parent.on_command(cmd="ping")
         async def on_ping(message):

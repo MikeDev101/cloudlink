@@ -21,8 +21,8 @@ from cloudlink.server.modules.rooms_manager import rooms_manager
 # Import JSON library - Prefer UltraJSON but use native JSON if failed
 try:
     import ujson
-except ImportError:
-    print("Server failed to import UltraJSON, failing back to native JSON library.")
+except Exception as e:
+    print(f"Server failed to import UltraJSON, failing back to native JSON library. Exception code: {e}")
     import json as ujson
 
 

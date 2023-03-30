@@ -4,6 +4,7 @@ import ssl
 import cerberus
 import logging
 import time
+from copy import copy
 
 # Import websockets and SSL support
 import websockets
@@ -15,8 +16,8 @@ from cloudlink.shared_modules.async_iterables import async_iterable
 # Import JSON library - Prefer UltraJSON but use native JSON if failed
 try:
     import ujson
-except ImportError:
-    print("Server failed to import UltraJSON, failing back to native JSON library.")
+except Exception as e:
+    print(f"Client failed to import UltraJSON, failing back to native JSON library. Exception code: {e}")
     import json as ujson
 
 # Import required CL4 client protocol
@@ -45,6 +46,10 @@ class exceptions:
         """This exception is raised when an unexpected and/or unhandled exception is raised."""
         pass
 
+    class ListenerExists(Exception):
+        """This exception is raised when attempting to process a listener that already has an existing listener instance."""
+        pass
+
 
 # Main server
 class client:
@@ -67,6 +72,7 @@ class client:
         self.validator = cerberus.Validator()
         self.async_iterable = async_iterable
         self.exceptions = exceptions
+        self.copy = copy
 
         # Create event managers
         self.on_initial_connect_events = async_event_manager(self)
@@ -77,7 +83,7 @@ class client:
         self.exception_handlers = dict()
         self.listener_events_await_specific = dict()
         self.listener_events_decorator_specific = dict()
-
+        self.listener_responses = dict()
 
         # Create method handlers
         self.command_handlers = dict()
@@ -138,6 +144,10 @@ class client:
 
     # Credit to @ShowierData9978 for this: Listen for messages containing specific "listener" keys
     async def wait_for_listener(self, listener_id):
+        # Prevent listener collision
+        if listener_id in self.listener_events_await_specific:
+            raise self.exceptions.ListenerExists(f"The listener {listener_id} is already being awaited. Please use a different listener ID.")
+
         # Create a new event object.
         event = self.asyncio.Event()
 
@@ -155,8 +165,17 @@ class client:
         # Wait for the waiter task to finish.
         await task
 
+        # Get the response
+        response = self.copy(self.listener_responses[listener_id])
+
         # Remove from the listener events dict.
         self.listener_events_await_specific.pop(listener_id)
+
+        # Free up listener responses
+        self.listener_responses.pop(listener_id)
+
+        # Return the response
+        return response
 
     # Version of the wait for listener tool for decorator usage.
     def on_listener(self, listener_id):
@@ -214,10 +233,11 @@ class client:
     async def send_packet_and_wait(self, message):
         self.logger.debug(f"Sending message containing listener {message['listener']}...")
         await self.execute_send(message)
-        await self.wait_for_listener(message["listener"])
+        response = await self.wait_for_listener(message["listener"])
+        return response
 
     # Close the connection
-    def close_connection(self, code=1000, reason=""):
+    def disconnect(self, code=1000, reason=""):
         self.asyncio.create_task(self.execute_disconnect(code, reason))
 
     # Message processor
@@ -316,6 +336,7 @@ class client:
             if message["listener"] in self.listener_events_await_specific:
                 # Fire awaiting listeners
                 self.logger.debug(f"Received message containing listener {message['listener']}!")
+                self.listener_responses[message["listener"]] = message
                 self.listener_events_await_specific[message["listener"]].set()
 
             elif message["listener"] in self.listener_events_decorator_specific:
