@@ -11,8 +11,7 @@ import websockets
 import ssl
 
 # Import shared modules
-from cloudlink.shared_modules.async_event_manager import async_event_manager
-from cloudlink.shared_modules.async_iterables import async_iterable
+from cloudlink.async_iterables import async_iterable
 
 # Import server-specific modules
 from cloudlink.server.modules.clients_manager import clients_manager
@@ -82,10 +81,10 @@ class server:
         self.disabled_commands = dict()
 
         # Create event managers
-        self.on_connect_events = async_event_manager(self)
-        self.on_message_events = async_event_manager(self)
-        self.on_disconnect_events = async_event_manager(self)
-        self.on_error_events = async_event_manager(self)
+        self.on_connect_events = set()
+        self.on_message_events = set()
+        self.on_disconnect_events = set()
+        self.on_error_events = set()
         self.exception_handlers = dict()
         self.disabled_commands_handlers = dict()
         self.protocol_identified_events = dict()
@@ -155,10 +154,10 @@ class server:
 
             # Create command event handler
             if cmd not in self.command_handlers[schema]:
-                self.command_handlers[schema][cmd] = async_event_manager(self)
+                self.command_handlers[schema][cmd] = set()
 
             # Add function to the command handler
-            self.command_handlers[schema][cmd].bind(func)
+            self.command_handlers[schema][cmd].add(func)
 
         # End on_command binder
         return bind_event
@@ -174,10 +173,10 @@ class server:
 
             # Create error event handler
             if exception_type not in self.exception_handlers[schema]:
-                self.exception_handlers[schema][exception_type] = async_event_manager(self)
+                self.exception_handlers[schema][exception_type] = set()
 
             # Add function to the error command handler
-            self.exception_handlers[schema][exception_type].bind(func)
+            self.exception_handlers[schema][exception_type].add(func)
 
         # End on_error_specific binder
         return bind_event
@@ -188,10 +187,10 @@ class server:
             # Create disabled command event manager
             if schema not in self.disabled_commands_handlers:
                 self.logger.info(f"Creating disabled command event manager {schema.__qualname__}")
-                self.disabled_commands_handlers[schema] = async_event_manager(self)
+                self.disabled_commands_handlers[schema] = set()
 
             # Add function to the error command handler
-            self.disabled_commands_handlers[schema].bind(func)
+            self.disabled_commands_handlers[schema].add(func)
 
         # End on_error_specific binder
         return bind_event
@@ -201,10 +200,10 @@ class server:
             # Create protocol identified event manager
             if schema not in self.protocol_identified_events:
                 self.logger.info(f"Creating protocol identified event manager {schema.__qualname__}")
-                self.protocol_identified_events[schema] = async_event_manager(self)
+                self.protocol_identified_events[schema] = set()
 
             # Add function to the protocol identified event manager
-            self.protocol_identified_events[schema].bind(func)
+            self.protocol_identified_events[schema].add(func)
 
         # End on_protocol_identified binder
         return bind_event
@@ -214,29 +213,29 @@ class server:
             # Create protocol disconnect event manager
             if schema not in self.protocol_disconnect_events:
                 self.logger.info(f"Creating protocol disconnect event manager {schema.__qualname__}")
-                self.protocol_disconnect_events[schema] = async_event_manager(self)
+                self.protocol_disconnect_events[schema] = set()
 
             # Add function to the protocol disconnect event manager
-            self.protocol_disconnect_events[schema].bind(func)
+            self.protocol_disconnect_events[schema].add(func)
 
         # End on_protocol_disconnect binder
         return bind_event
 
     # Event binder for on_message events
     def on_message(self, func):
-        self.on_message_events.bind(func)
+        self.on_message_events.add(func)
 
     # Event binder for on_connect events.
     def on_connect(self, func):
-        self.on_connect_events.bind(func)
+        self.on_connect_events.add(func)
 
     # Event binder for on_disconnect events.
     def on_disconnect(self, func):
-        self.on_disconnect_events.bind(func)
+        self.on_disconnect_events.add(func)
 
     # Event binder for on_error events.
     def on_error(self, func):
-        self.on_error_events.bind(func)
+        self.on_error_events.add(func)
 
     # Friendly version of send_packet_unicast / send_packet_multicast
     def send_packet(self, obj, message):
@@ -589,24 +588,29 @@ class server:
     # Asyncio event-handling coroutines
 
     async def execute_on_disconnect_events(self, client):
-        async for event in self.on_disconnect_events:
-            await event(client)
+        events = [event(client) for even in self.on_disconnect_events]
+        group = self.asyncio.gather(*events)
+        await group
 
     async def execute_on_connect_events(self, client):
-        async for event in self.on_connect_events:
-            await event(client)
+        events = [event(client) for event in self.on_connect_events]
+        group = self.asyncio.gather(*events)
+        await group
 
     async def execute_on_message_events(self, client, message):
-        async for event in self.on_message_events:
-            await event(client, message)
+        events = [event(client, message) for event in self.on_message_events]
+        group = self.asyncio.gather(*events)
+        await group
 
     async def execute_on_command_events(self, client, message, schema):
-        async for event in self.command_handlers[schema][message[schema.command_key]]:
-            await event(client, message)
+        events = [event(client, message) for event in self.command_handlers[schema][message[schema.command_key]]]
+        group = self.asyncio.gather(*events)
+        await group
 
     async def execute_on_error_events(self, client, errors):
-        async for event in self.on_error_events:
-            await event(client, errors)
+        events = [event(client, errors) for event in self.on_error_events]
+        group = self.asyncio.gather(*events)
+        await group
 
     async def execute_exception_handlers(self, client, exception_type, schema, details):
         # Guard clauses
@@ -634,8 +638,9 @@ class server:
             return
 
         # Fire events
-        async for event in self.protocol_identified_events[schema]:
-            await event(client)
+        events = [event(client) for event in self.protocol_identified_events[schema]]
+        group = self.asyncio.gather(*events)
+        await group
 
     async def execute_protocol_disconnect_events(self, client, schema):
         # Guard clauses
@@ -643,13 +648,13 @@ class server:
             return
 
         # Fire events
-        async for event in self.protocol_disconnect_events[schema]:
-            await event(client)
+        events = [event(client) for event in self.protocol_disconnect_events[schema]]
+        group = self.asyncio.gather(*events)
+        await group
 
     # WebSocket-specific coroutines
 
     async def execute_unicast(self, client, message):
-
         # Guard clause
         if type(message) not in [dict, str]:
             raise TypeError(f"Supported datatypes for messages are dicts and strings, got type {type(message)}.")
@@ -663,27 +668,14 @@ class server:
             await client.send(message)
         except Exception as e:
             self.logger.critical(
-                f"Unexpected exception was raised while unicasting message to client {client.snowflake}: {e}"
+                f"Unexpected exception was raised while sending message to client {client.snowflake}: {e}"
             )
 
     async def execute_multicast(self, clients, message):
-
-        # Guard clause
-        if type(message) not in [dict, str]:
-            raise TypeError(f"Supported datatypes for messages are dicts and strings, got type {type(message)}.")
-
-        # Convert dict to JSON
-        if type(message) == dict:
-            message = self.ujson.dumps(message)
-
-        # Attempt to broadcast the packet
-        async for client in self.async_iterable(clients):
-            try:
-                await self.execute_unicast(client, message)
-            except Exception as e:
-                self.logger.critical(
-                    f"Unexpected exception was raised while multicasting message to client {client.snowflake}: {e}"
-                )
+        # Multicast the message
+        events = [self.execute_unicast(client, message) for client in clients]
+        group = self.asyncio.gather(*events)
+        await group
 
     async def execute_close_single(self, client, code=1000, reason=""):
         try:
@@ -694,5 +686,6 @@ class server:
             )
 
     async def execute_close_multi(self, clients, code=1000, reason=""):
-        async for client in self.async_iterable(clients):
-            await self.execute_close_single(client, code, reason)
+        events = [self.execute_close_single(client, code, reason) for client in clients]
+        group = self.asyncio.gather(*events)
+        await group

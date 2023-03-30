@@ -9,9 +9,8 @@ from copy import copy
 # Import websockets and SSL support
 import websockets
 
-# Import shared modules
-from cloudlink.shared_modules.async_event_manager import async_event_manager
-from cloudlink.shared_modules.async_iterables import async_iterable
+# Import shared module
+from cloudlink.async_iterables import async_iterable
 
 # Import JSON library - Prefer UltraJSON but use native JSON if failed
 try:
@@ -75,11 +74,11 @@ class client:
         self.copy = copy
 
         # Create event managers
-        self.on_initial_connect_events = async_event_manager(self)
-        self.on_full_connect_events = async_event_manager(self)
-        self.on_message_events = async_event_manager(self)
-        self.on_disconnect_events = async_event_manager(self)
-        self.on_error_events = async_event_manager(self)
+        self.on_initial_connect_events = set()
+        self.on_full_connect_events = set()
+        self.on_message_events = set()
+        self.on_disconnect_events = set()
+        self.on_error_events = set()
         self.exception_handlers = dict()
         self.listener_events_await_specific = dict()
         self.listener_events_decorator_specific = dict()
@@ -134,10 +133,10 @@ class client:
 
             # Create command event handler
             if cmd not in self.command_handlers:
-                self.command_handlers[cmd] = async_event_manager(self)
+                self.command_handlers[cmd] = set()
 
             # Add function to the command handler
-            self.command_handlers[cmd].bind(func)
+            self.command_handlers[cmd].add(func)
 
         # End on_command binder
         return bind_event
@@ -183,10 +182,10 @@ class client:
 
             # Create listener event handler
             if listener_id not in self.listener_events_decorator_specific:
-                self.listener_events_decorator_specific[listener_id] = async_event_manager(self)
+                self.listener_events_decorator_specific[listener_id] = set()
 
             # Add function to the listener handler
-            self.listener_events_decorator_specific[listener_id].bind(func)
+            self.listener_events_decorator_specific[listener_id].add(func)
 
         # End on_listener binder
         return bind_event
@@ -197,33 +196,33 @@ class client:
 
             # Create error event handler
             if exception_type not in self.exception_handlers:
-                self.exception_handlers[exception_type] = async_event_manager(self)
+                self.exception_handlers[exception_type] = set()
 
             # Add function to the error command handler
-            self.exception_handlers[exception_type].bind(func)
+            self.exception_handlers[exception_type].add(func)
 
         # End on_error_specific binder
         return bind_event
 
     # Event binder for on_message events
     def on_message(self, func):
-        self.on_message_events.bind(func)
+        self.on_message_events.add(func)
 
     # Event binder for starting up the client.
     def on_initial_connect(self, func):
-        self.on_initial_connect_events.bind(func)
+        self.on_initial_connect_events.add(func)
 
     # Event binder for on_connect events.
     def on_connect(self, func):
-        self.on_full_connect_events.bind(func)
+        self.on_full_connect_events.add(func)
 
     # Event binder for on_disconnect events.
     def on_disconnect(self, func):
-        self.on_disconnect_events.bind(func)
+        self.on_disconnect_events.add(func)
 
     # Event binder for on_error events.
     def on_error(self, func):
-        self.on_error_events.bind(func)
+        self.on_error_events.add(func)
 
     # Send message
     def send_packet(self, message):
@@ -437,32 +436,39 @@ class client:
     # Asyncio event-handling coroutines
 
     async def execute_on_disconnect_events(self):
-        async for event in self.on_disconnect_events:
-            await event()
+        events = [event() for even in self.on_disconnect_events]
+        group = self.asyncio.gather(*events)
+        await group
 
     async def execute_on_initial_connect_events(self):
-        async for event in self.on_initial_connect_events:
-            await event()
+        events = [event() for event in self.on_initial_connect_events]
+        group = self.asyncio.gather(*events)
+        await group
 
     async def execute_on_full_connect_events(self):
-        async for event in self.on_full_connect_events:
-            await event()
+        events = [event() for event in self.on_full_connect_events]
+        group = self.asyncio.gather(*events)
+        await group
 
     async def execute_on_message_events(self, message):
-        async for event in self.on_message_events:
-            await event(message)
+        events = [event(message) for event in self.on_message_events]
+        group = self.asyncio.gather(*events)
+        await group
 
     async def execute_on_command_events(self, message):
-        async for event in self.command_handlers[message["cmd"]]:
-            await event(message)
+        events = [event(message) for event in self.command_handlers[message["cmd"]]]
+        group = self.asyncio.gather(*events)
+        await group
 
     async def execute_on_listener_events(self, message):
-        async for event in self.listener_events_decorator_specific[message["listener"]]:
-            await event(message)
+        events = [event(message) for event in self.listener_events_decorator_specific[message["listener"]]]
+        group = self.asyncio.gather(*events)
+        await group
 
     async def execute_on_error_events(self, errors):
-        async for event in self.on_error_events:
-            await event(errors)
+        events = [event(errors) for event in self.on_error_events]
+        group = self.asyncio.gather(*events)
+        await group
 
     async def execute_exception_handlers(self, exception_type, details):
         # Guard clauses
@@ -470,8 +476,9 @@ class client:
             return
 
         # Fire events
-        async for event in self.exception_handlers[exception_type]:
-            await event(details)
+        events = [event(details) for event in self.exception_handlers[exception_type]]
+        group = self.asyncio.gather(*events)
+        await group
 
     async def listener_waiter(self, listener_id, event):
         await event.wait()

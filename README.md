@@ -1,13 +1,12 @@
 ![CLOUDLINK 4 BANNER](https://user-images.githubusercontent.com/12957745/188282246-a221e66a-5d8a-4516-9ae2-79212b745d91.png)
 
-# Cloudlink v0.2.0
+# Cloudlink
 CloudLink is a free and open-source websocket solution optimized for Scratch.
-Originally created as a cloud variables alternative, it can function as a multi-purpose websocket framework for other projects.
-**THIS VERSION OF CLOUDLINK IS STILL UNDER DEVELOPMENT. DO NOT USE IN A PRODUCTION ENVIRONMENT.**
+Originally created as a cloud variables alternative, it can function as a multipurpose websocket framework for other projects.
 
 # 💡 Features 💡
 
-### 🪶 Fast and lightweight 
+### 🪶 Fast and lightweight
 CloudLink can run on minimal resources. At least 25MB of RAM and any reasonably capable CPU can run a CloudLink server.
 
 ### 🌐 Essential networking tools
@@ -41,7 +40,7 @@ from cloudlink import server
 # Import default protocol
 from cloudlink.server.protocols import clpv4
 
-# Instanciate the server object
+# Instantiate the server object
 server = server()
 
 # Set logging level
@@ -54,12 +53,12 @@ clpv4 = clpv4(server)
 
 # Define the functions your plugin executes
 class myplugin:
-	def __init__(self, server, protocol):
+    def __init__(self, server, protocol):
         
         # Example command - client sends { "cmd": "foo" } to the server, this function will execute
-		@server.on_command(cmd="foo", schema=protocol.schema)
-		async def foobar(client, message):
-			print("Foobar!")
+        @server.on_command(cmd="foo", schema=protocol.schema)
+        async def foobar(client, message):
+            print("Foobar!")
 
 # Load the plugin!
 myplugin(server, clpv4)
@@ -73,9 +72,9 @@ You can learn about the protocol using the original Scratch 3.0 client extension
 Feel free to test-drive the extension in any of these Scratch mods:
 
 - [TurboWarp](https://turbowarp.org/editor?extension=https://extensions.turbowarp.org/cloudlink.js)
-- [SheepTester's E 羊 icques](https://sheeptester.github.io/scratch-gui/?url=https://mikedev101.github.io/cloudlink/S4-0-nosuite.js)
+- [SheepTester's E羊icques](https://sheeptester.github.io/scratch-gui/?url=https://mikedev101.github.io/cloudlink/S4-0-nosuite.js)
 - [Ogadaki's Adacraft](https://adacraft.org/studio/)
 - [Ogadaki's Adacraft (Beta)](https://beta.adacraft.org/studio/)
 
 # 📃 The CloudLink Protocol 📃
-You can learn more about the CloudLink protocol on [CL's official HackMD documentation page.](https://hackmd.io/g6BogABhT6ux1GA2oqaOXA)
+Documentation of the CL4 protocol can be found in the Cloudlink Repository's Wiki page.
