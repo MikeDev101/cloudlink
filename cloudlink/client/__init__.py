@@ -68,7 +68,7 @@ class client:
 
         # Components
         self.ujson = ujson
-        self.validator = cerberus.Validator()
+        self.validator = cerberus.Validator
         self.async_iterable = async_iterable
         self.exceptions = exceptions
         self.copy = copy
@@ -288,8 +288,9 @@ class client:
             return
 
         # Begin validation
-        if not self.validator(message, self.schema.default):
-            errors = self.validator.errors
+        validator = self.validator(self.schema.default, allow_unknown=True)
+        if not validator.validate(message):
+            errors = validator.errors
 
             # Log failed validation
             self.logger.debug(f"Server sent message that failed validation: {errors}")

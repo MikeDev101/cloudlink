@@ -70,7 +70,7 @@ class server:
         # Components
         self.ujson = ujson
         self.gen = SnowflakeGenerator(42)
-        self.validator = cerberus.Validator()
+        self.validator = cerberus.Validator
         self.async_iterable = async_iterable
         self.copy = copy
         self.clients_manager = clients_manager(self)
@@ -362,14 +362,15 @@ class server:
 
             # Identify protocol
             errorlist = list()
-
+            
             for schema in self.command_handlers:
-                if self.validator(message, schema.default):
+                validator = self.validator(schema.default, allow_unknown=True)
+                if validator.validate(message):
                     valid = True
                     selected_protocol = schema
                     break
                 else:
-                    errorlist.append(self.validator.errors)
+                    errorlist.append(validator.errors)
 
             if not valid:
                 # Log failed identification
@@ -400,9 +401,12 @@ class server:
 
             # Validate message using known protocol
             selected_protocol = client.protocol
-
-            if not self.validator(message, selected_protocol.default):
-                errors = self.validator.errors
+            
+            validator = self.validator(selected_protocol.default, allow_unknown=True)
+            
+            
+            if not validator.validate(message):
+                errors = validator.errors
 
                 # Log failed validation
                 self.logger.debug(f"Client {client.snowflake} sent message that failed validation: {errors}")

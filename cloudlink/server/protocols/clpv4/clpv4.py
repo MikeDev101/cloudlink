@@ -93,12 +93,15 @@ class clpv4:
         self.get_client_ip = get_client_ip
 
         # valid(message, schema): Used to verify messages.
-        def valid(client, message, schema):
-            if server.validator(message, schema):
+        def valid(client, message, schema, allow_unknown=True):
+        
+            validator = server.validator(schema, allow_unknown=allow_unknown)
+            
+            if validator.validate(message):
                 return True
 
             # Alert the client that the schema was invalid
-            send_statuscode(client, statuscodes.syntax, details=dict(server.validator.errors))
+            send_statuscode(client, statuscodes.syntax, details=dict(validator.errors))
             return False
 
         # Expose validator function for extension usage
