@@ -21,11 +21,13 @@ class scratch:
         self.schema = scratch
 
         # valid(message, schema): Used to verify messages.
-        def valid(client, message, schema):
-            if server.validator(message, schema):
+        def valid(client, message, schema, allow_unknown=True):
+            validator = server.validator(schema, allow_unknown=allow_unknown)
+            
+            if validator.validate(message):
                 return True
             else:
-                errors = server.validator.errors
+                errors = validator.errors
                 server.logger.warning(f"Error: {errors}")
                 server.send_packet_unicast(client, f"Validation failed: {dict(errors)}")
                 server.close_connection(client, code=statuscodes.connection_error, reason=f"Validation failed")

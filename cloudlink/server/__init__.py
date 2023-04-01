@@ -157,7 +157,7 @@ class server:
 
             # Create schema category for command event manager
             if schema not in self.command_handlers:
-                self.logger.info(f"Creating protocol {schema.__qualname__} command event manager")
+                self.logger.debug(f"Creating protocol {schema.__qualname__} command event manager")
                 self.command_handlers[schema] = dict()
 
             # Create command event handler
@@ -177,7 +177,7 @@ class server:
 
             # Create schema category for error event manager
             if schema not in self.exception_handlers:
-                self.logger.info(f"Creating protocol {schema.__qualname__} exception event manager")
+                self.logger.debug(f"Creating protocol {schema.__qualname__} exception event manager")
                 self.exception_handlers[schema] = dict()
 
             # Create error event handler
@@ -185,7 +185,7 @@ class server:
                 self.exception_handlers[schema][exception_type] = set()
 
             # Add function to the error command handler
-            self.logger.debug(f"Binding function {func.__name__} to exception {exception_type} in {schema.__qualname__} exception event manager")
+            self.logger.debug(f"Binding function {func.__name__} to exception {exception_type.__name__} in {schema.__qualname__} exception event manager")
             self.exception_handlers[schema][exception_type].add(func)
 
         # End on_error_specific binder
@@ -196,7 +196,7 @@ class server:
         def bind_event(func):
             # Create disabled command event manager
             if schema not in self.disabled_commands_handlers:
-                self.logger.info(f"Creating disabled command event manager {schema.__qualname__}")
+                self.logger.debug(f"Creating disabled command event manager {schema.__qualname__}")
                 self.disabled_commands_handlers[schema] = set()
 
             # Add function to the error command handler
@@ -210,7 +210,7 @@ class server:
         def bind_event(func):
             # Create protocol identified event manager
             if schema not in self.protocol_identified_events:
-                self.logger.info(f"Creating protocol identified event manager {schema.__qualname__}")
+                self.logger.debug(f"Creating protocol identified event manager {schema.__qualname__}")
                 self.protocol_identified_events[schema] = set()
 
             # Add function to the protocol identified event manager
@@ -224,7 +224,7 @@ class server:
         def bind_event(func):
             # Create protocol disconnect event manager
             if schema not in self.protocol_disconnect_events:
-                self.logger.info(f"Creating protocol disconnect event manager {schema.__qualname__}")
+                self.logger.debug(f"Creating protocol disconnect event manager {schema.__qualname__}")
                 self.protocol_disconnect_events[schema] = set()
 
             # Add function to the protocol disconnect event manager
