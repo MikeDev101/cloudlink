@@ -592,7 +592,7 @@ class server:
     # Asyncio event-handling coroutines
 
     async def execute_on_disconnect_events(self, client):
-        events = [event(client) for even in self.on_disconnect_events]
+        events = [event(client) for event in self.on_disconnect_events]
         group = self.asyncio.gather(*events)
         await group
 
