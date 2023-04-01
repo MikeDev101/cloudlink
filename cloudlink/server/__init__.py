@@ -624,7 +624,7 @@ class server:
             return
 
         # Fire events
-        events = [event(client, details) for client in self.exception_handlers[schema][exception_type]]
+        events = [event(client, details) for event in self.exception_handlers[schema][exception_type]]
         group = self.asyncio.gather(*events)
         await group
 
@@ -634,7 +634,7 @@ class server:
             return
 
         # Fire events
-        events = [event(client, cmd) for client in self.disabled_commands_handlers[schema]]
+        events = [event(client, cmd) for event in self.disabled_commands_handlers[schema]]
         group = self.asyncio.gather(*events)
         await group
 
