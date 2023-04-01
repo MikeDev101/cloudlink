@@ -624,8 +624,9 @@ class server:
             return
 
         # Fire events
-        async for event in self.exception_handlers[schema][exception_type]:
-            await event(client, details)
+        events = [event(client, details) for client in self.exception_handlers[schema][exception_type]]
+        group = self.asyncio.gather(*events)
+        await group
 
     async def execute_disabled_command_events(self, client, schema, cmd):
         # Guard clauses
@@ -633,8 +634,9 @@ class server:
             return
 
         # Fire events
-        async for event in self.disabled_commands_handlers[schema]:
-            await event(client, cmd)
+        events = [event(client, cmd) for client in self.disabled_commands_handlers[schema]]
+        group = self.asyncio.gather(*events)
+        await group
 
     async def execute_protocol_identified_events(self, client, schema):
         # Guard clauses
