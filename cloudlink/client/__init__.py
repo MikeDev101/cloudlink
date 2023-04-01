@@ -49,6 +49,35 @@ class exceptions:
         """This exception is raised when attempting to process a listener that already has an existing listener instance."""
         pass
 
+def event(event_id):
+    def inner(func):
+        func.event_id = event_id
+        return func
+    return inner
+
+def command(name=None):
+    def inner(func):
+        """Decorator for command functions. This decorator is used to bind commands to command handlers."""
+        func.is_command = True
+        func.name = name or func.__name__
+        return func
+    return inner
+
+class plugin:
+    commands = dict()
+    events = set()
+
+    def __init__(self):
+        for attr_name in self.__dir__():
+            attr = getattr(self, attr_name)
+            if hasattr(attr, "is_command"):
+                self.commands[attr_name] = attr
+            elif hasattr(attr, "event_id"):
+                self.events.add(attr)
+
+
+            
+
 
 # Main server
 class client:
@@ -98,6 +127,36 @@ class client:
         self.schema = schema.schema
         self.protocol = protocol.clpv4(self)
 
+    def load_plugin(self, plugin):
+        self.logger.info(f"Loading plugin {plugin.__class__.__name__}")
+        
+        # Load plugin events
+        if not hasattr(plugin, "events"):
+            self.logger.error(f"Plugin {plugin.__class__.__name__} does not have a events attribute!")
+            return
+
+        # Load plugin methods
+        if not hasattr(plugin, "commands"):
+            self.logger.error(f"Plugin {plugin.__class__.__name__} does not have a methods attribute!")
+            return
+
+        for event in plugin.events:
+            match event.event_id:
+                case "connect":
+                    self.on_connect(event)
+                case "message":
+                    self.on_message(event)
+                case "disconnect":
+                    self.on_disconnect(event)
+                case "error":
+                    self.on_error(event)
+        
+        for command in plugin.commands.values():
+            self.on_command(command.name)(command)
+
+
+    
+        
     # Enables SSL support
     def enable_ssl(self, certfile):
         try:
