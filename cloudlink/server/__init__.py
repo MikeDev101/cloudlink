@@ -11,11 +11,11 @@ import websockets
 import ssl
 
 # Import shared modules
-from cloudlink.async_iterables import async_iterable
+from ..async_iterables import async_iterable
 
 # Import server-specific modules
-from cloudlink.server.modules.clients_manager import clients_manager
-from cloudlink.server.modules.rooms_manager import rooms_manager
+from .modules.clients_manager import clients_manager
+from .modules.rooms_manager import rooms_manager
 
 # Import JSON library - Prefer UltraJSON but use native JSON if failed
 try:

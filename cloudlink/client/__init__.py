@@ -10,7 +10,7 @@ from copy import copy
 import websockets
 
 # Import shared module
-from cloudlink.async_iterables import async_iterable
+from ..async_iterables import async_iterable
 
 # Import JSON library - Prefer UltraJSON but use native JSON if failed
 try:
@@ -20,7 +20,7 @@ except Exception as e:
     import json as ujson
 
 # Import required CL4 client protocol
-from cloudlink.client import protocol, schema
+from . import protocol, schema
 
 
 # Define server exceptions
