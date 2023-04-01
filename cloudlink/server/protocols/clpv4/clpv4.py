@@ -202,7 +202,7 @@ class clpv4:
         self.generate_user_object = generate_user_object
 
         # If the client has not explicitly used the handshake command, send them the handshake data
-        async def automatic_notify_handshake(client):
+        async def notify_handshake(client):
             # Don't execute this if handshake was already done
             if client.handshake:
                 return
@@ -242,19 +242,14 @@ class clpv4:
                     "rooms": room
                 })
 
-        # Expose for extension usage
-        self.automatic_notify_handshake = automatic_notify_handshake
-
         # Exception handlers
 
         @server.on_exception(exception_type=server.exceptions.ValidationError, schema=cl4_protocol)
         async def validation_failure(client, details):
-            await automatic_notify_handshake(client)
             send_statuscode(client, statuscodes.syntax, details=dict(details))
 
         @server.on_exception(exception_type=server.exceptions.InvalidCommand, schema=cl4_protocol)
         async def invalid_command(client, details):
-            await automatic_notify_handshake(client)
             send_statuscode(
                 client,
                 statuscodes.invalid_command,
@@ -263,7 +258,6 @@ class clpv4:
 
         @server.on_disabled_command(schema=cl4_protocol)
         async def disabled_command(client, details):
-            await automatic_notify_handshake(client)
             send_statuscode(
                 client,
                 statuscodes.disabled_command,
@@ -272,7 +266,6 @@ class clpv4:
 
         @server.on_exception(exception_type=server.exceptions.JSONError, schema=cl4_protocol)
         async def json_exception(client, details):
-            await automatic_notify_handshake(client)
             send_statuscode(
                 client,
                 statuscodes.json_error,
@@ -281,7 +274,6 @@ class clpv4:
 
         @server.on_exception(exception_type=server.exceptions.EmptyMessage, schema=cl4_protocol)
         async def empty_message(client):
-            await automatic_notify_handshake(client)
             send_statuscode(
                 client,
                 statuscodes.empty_packet,
@@ -320,18 +312,15 @@ class clpv4:
 
         @server.on_command(cmd="handshake", schema=cl4_protocol)
         async def on_handshake(client, message):
-            await automatic_notify_handshake(client)
+            await notify_handshake(client)
             send_statuscode(client, statuscodes.ok, message=message)
 
         @server.on_command(cmd="ping", schema=cl4_protocol)
         async def on_ping(client, message):
-            await automatic_notify_handshake(client)
             send_statuscode(client, statuscodes.ok, message=message)
 
         @server.on_command(cmd="gmsg", schema=cl4_protocol)
         async def on_gmsg(client, message):
-            await automatic_notify_handshake(client)
-
             # Validate schema
             if not valid(client, message, cl4_protocol.gmsg):
                 return
@@ -392,8 +381,6 @@ class clpv4:
 
         @server.on_command(cmd="pmsg", schema=cl4_protocol)
         async def on_pmsg(client, message):
-            await automatic_notify_handshake(client)
-
             # Validate schema
             if not valid(client, message, cl4_protocol.pmsg):
                 return
@@ -472,8 +459,6 @@ class clpv4:
 
         @server.on_command(cmd="gvar", schema=cl4_protocol)
         async def on_gvar(client, message):
-            await automatic_notify_handshake(client)
-
             # Validate schema
             if not valid(client, message, cl4_protocol.gvar):
                 return
@@ -518,8 +503,6 @@ class clpv4:
 
         @server.on_command(cmd="pvar", schema=cl4_protocol)
         async def on_pvar(client, message):
-            await automatic_notify_handshake(client)
-
             # Validate schema
             if not valid(client, message, cl4_protocol.pvar):
                 return
@@ -600,8 +583,6 @@ class clpv4:
 
         @server.on_command(cmd="setid", schema=cl4_protocol)
         async def on_setid(client, message):
-            await automatic_notify_handshake(client)
-
             # Validate schema
             if not valid(client, message, cl4_protocol.setid):
                 return
@@ -657,8 +638,6 @@ class clpv4:
 
         @server.on_command(cmd="link", schema=cl4_protocol)
         async def on_link(client, message):
-            await automatic_notify_handshake(client)
-
             # Validate schema
             if not valid(client, message, cl4_protocol.linking):
                 return
@@ -719,8 +698,6 @@ class clpv4:
 
         @server.on_command(cmd="unlink", schema=cl4_protocol)
         async def on_unlink(client, message):
-            await automatic_notify_handshake(client)
-
             # Validate schema
             if not valid(client, message, cl4_protocol.linking):
                 return
@@ -785,8 +762,6 @@ class clpv4:
 
         @server.on_command(cmd="direct", schema=cl4_protocol)
         async def on_direct(client, message):
-            await automatic_notify_handshake(client)
-
             # Validate schema
             if not valid(client, message, cl4_protocol.direct):
                 return

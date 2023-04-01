@@ -142,7 +142,15 @@ class server:
 
         except KeyboardInterrupt:
             pass
-
+    
+    def unbind_command(self, cmd, schema):
+        if schema not in self.command_handlers:
+            raise ValueError
+        if cmd not in self.command_handlers[schema]:
+            raise ValueError
+        self.logger.debug(f"Unbinding command {cmd} from {schema.__qualname__} command event manager")
+        self.command_handlers[schema].pop(cmd)
+    
     # Event binder for on_command events
     def on_command(self, cmd, schema):
         def bind_event(func):
@@ -157,6 +165,7 @@ class server:
                 self.command_handlers[schema][cmd] = set()
 
             # Add function to the command handler
+            self.logger.debug(f"Binding function {func.__name__} to command {cmd} in {schema.__qualname__} command event manager")
             self.command_handlers[schema][cmd].add(func)
 
         # End on_command binder
@@ -176,6 +185,7 @@ class server:
                 self.exception_handlers[schema][exception_type] = set()
 
             # Add function to the error command handler
+            self.logger.debug(f"Binding function {func.__name__} to exception {exception_type} in {schema.__qualname__} exception event manager")
             self.exception_handlers[schema][exception_type].add(func)
 
         # End on_error_specific binder
@@ -190,6 +200,7 @@ class server:
                 self.disabled_commands_handlers[schema] = set()
 
             # Add function to the error command handler
+            self.logger.debug(f"Binding function {func.__name__} to {schema.__qualname__} disabled command event manager")
             self.disabled_commands_handlers[schema].add(func)
 
         # End on_error_specific binder
@@ -203,6 +214,7 @@ class server:
                 self.protocol_identified_events[schema] = set()
 
             # Add function to the protocol identified event manager
+            self.logger.debug(f"Binding function {func.__name__} to {schema.__qualname__} protocol identified event manager")
             self.protocol_identified_events[schema].add(func)
 
         # End on_protocol_identified binder
@@ -216,6 +228,7 @@ class server:
                 self.protocol_disconnect_events[schema] = set()
 
             # Add function to the protocol disconnect event manager
+            self.logger.debug(f"Binding function {func.__name__} to {schema.__qualname__} protocol disconnected event manager")
             self.protocol_disconnect_events[schema].add(func)
 
         # End on_protocol_disconnect binder
