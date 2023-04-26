@@ -64,7 +64,7 @@ class supporter:
 
         # Method default keys and permitted datatypes
         self.keydefaults = {
-            "val": [str, int, float, dict],
+            "val": [str, int, float, list, dict],
             "id": [str, int, dict, set, list],
             "listener": [str, dict, float, int],
             "rooms": [str, list],
