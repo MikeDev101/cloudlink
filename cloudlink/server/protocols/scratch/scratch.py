@@ -136,6 +136,7 @@ class scratch:
             # Guard clause - Room must exist before deleting values from it
             if not server.rooms_manager.exists(message["project_id"]):
                 server.logger.warning(f"Error: room {message['project_id']} does not exist yet")
+                
                 # Abort the connection
                 server.close_connection(
                     client,
@@ -180,6 +181,7 @@ class scratch:
             # Guard clause - Room must exist before deleting values from it
             if not server.rooms_manager.exists(message["project_id"]):
                 server.logger.warning(f"Error: room {message['project_id']} does not exist yet")
+                
                 # Abort the connection
                 server.close_connection(
                     client,
@@ -216,6 +218,7 @@ class scratch:
             # Guard clause - Room must exist before adding to it
             if not server.rooms_manager.exists(message["project_id"]):
                 server.logger.warning(f"Error: room {message['project_id']} does not exist yet")
+                
                 # Abort the connection
                 server.close_connection(
                     client,

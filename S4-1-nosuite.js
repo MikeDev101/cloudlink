@@ -110,7 +110,7 @@ class CloudLink {
 		// Status stuff
 		this.isRunning = false;
 		this.isLinked = false;
-		this.version = "S4.0";
+		this.version = "S4.1";
 		this.link_status = 0;
 		this.username = "";
 		this.tmp_username = "";

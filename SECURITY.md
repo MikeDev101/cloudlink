@@ -4,8 +4,8 @@ You are to keep your instance of Cloudlink as up-to-date as possible. You are to
 ## Supported Versions
 | Version number    | Supported? | Note                                                                 |
 |-------------------|------------|----------------------------------------------------------------------|
-| 0.2.0             | 🟢 Yes     | Final CL4 rewrite.                                                   | 
-| 0.1.9.x           | 🟡 Yes     | CL4 Optimized. Support will end on April 30, 2023.                   |
+| 0.2.0             | 🟢 Yes     | Latest version.                                                      | 
+| 0.1.9.x           | 🟡 Yes     | CL4 Optimized. Support will end on May 30, 2023.                     |
 | 0.1.8.x           | 🔴 No      | Pre-CL4 optimized. EOL.                                              |
 | 0.1.7.x and older | 🔴 No      | CL3/CL Legacy - EOL.                                                 |
 

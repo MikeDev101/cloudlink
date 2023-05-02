@@ -7,7 +7,7 @@ The CloudLink 4.1 Protocol retains full support for CLPv4.
 Each packet format is compliant with UPLv2 formatting rules.
 
 Documentation for the CLPv4.1 protocol can be found here:
-https://hackmd.io/@MikeDEV/HJiNYwOfo
+https://github.com/MikeDev101/cloudlink/wiki/The-CloudLink-Protocol
 """
 
 

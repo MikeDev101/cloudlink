@@ -89,7 +89,7 @@ class rooms_manager:
         # Log deletion
         self.parent.logger.debug(f"Deleted room {room_id}")
 
-    def exists(self, room_id):
+    def exists(self, room_id) -> bool:
         # Rooms may only have string names
         if type(room_id) != str:
             raise TypeError("Room IDs only support strings!")
@@ -207,7 +207,7 @@ class rooms_manager:
         else:
             raise self.exceptions.NoResultsFound
 
-    def generate_userlist(self, room_id, protocol):
+    def generate_userlist(self, room_id, protocol) -> list:
         userlist = list()
 
         room = self.get(room_id)["clients"][protocol]["all"]
@@ -224,13 +224,13 @@ class rooms_manager:
 
         return userlist
 
-    def get_snowflakes(self, room):
+    def get_snowflakes(self, room) -> set:
         return set(obj for obj in room["snowflakes"])
 
-    def get_uuids(self, room):
+    def get_uuids(self, room) -> set:
         return set(obj for obj in room["uuids"])
 
-    async def get_all_in_rooms(self, rooms, protocol):
+    async def get_all_in_rooms(self, rooms, protocol) -> set:
         obj_set = set()
 
         # Validate types
@@ -251,7 +251,7 @@ class rooms_manager:
 
         return obj_set
 
-    async def get_specific_in_room(self, room, protocol, queries):
+    async def get_specific_in_room(self, room, protocol, queries) -> set:
         obj_set = set()
 
         # Validate types
