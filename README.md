@@ -77,4 +77,4 @@ Feel free to test-drive the extension in any of these Scratch mods:
 - [Ogadaki's Adacraft (Beta)](https://beta.adacraft.org/studio/)
 
 # 📃 The CloudLink Protocol 📃
-Documentation of the CL4 protocol can be found in the Cloudlink Repository's Wiki page.
+Documentation of the CL4 protocol can be found in the CloudLink Repository's Wiki page.
