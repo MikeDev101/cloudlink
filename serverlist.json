@@ -4,11 +4,11 @@
 		"url": "ws://127.0.0.1:3000/"
 	},
 	"1": {
-		"id": "CloudLink 4 Demo Server - Provided by Meower Media Co.",
+		"id": "CL4 Demo - Hosted by Meower Media",
 		"url": "wss://cl4-test.meower.org/"
 	},
 	"2": {
-	       "id": "Cloudlink 4 - Suite demo server",
+	       "id": "(Deprecated) CL4 Suite Demo",
 	       "url":"wss://Cloudlink.showierdata9971.repl.co"
 	},
 	"3": {
