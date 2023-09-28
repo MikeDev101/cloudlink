@@ -1,6 +1,6 @@
 from cloudlink import server
-from cloudlink.server.plugins import cl_admin
 from cloudlink.server.protocols import clpv4, scratch
+
 
 if __name__ == "__main__":
     # Initialize the server
@@ -14,9 +14,6 @@ if __name__ == "__main__":
     # Load protocols
     clpv4 = clpv4(server)
     scratch = scratch(server)
-
-    # Load plugins
-    cl_admin = cl_admin(server, clpv4)
 
     # Initialize SSL support
     # server.enable_ssl(certfile="cert.pem", keyfile="privkey.pem")

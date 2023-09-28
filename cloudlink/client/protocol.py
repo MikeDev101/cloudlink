@@ -65,6 +65,10 @@ class clpv4:
             # Send the handshake request with a listener and wait for a response
             response = await parent.send_packet_and_wait({
                 "cmd": "handshake",
+                "val": {
+                    "language": "Python",
+                    "version": parent.version
+                },
                 "listener": "init_handshake"
             })
 
@@ -79,7 +83,7 @@ class clpv4:
 
             else:
                 # Log the connection error
-                parent.logger.error(f"Failed to connect to the server. Got response code: {message['code']}")
+                parent.logger.error(f"Failed to connect to the server. Got response code: {response['code']}")
 
                 # Disconnect
                 parent.asyncio.create_task(

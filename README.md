@@ -13,7 +13,6 @@ CloudLink can run on minimal resources. At least 25MB of RAM and any reasonably 
 * Unicast and multicast packets across clients
 * Expandable functionality with a built-in method loader
 * Support for bridging servers
-* Admin functionality for management
 
 ### 📦 Minimal dependencies
 All dependencies below can be installed using `pip install -r requirements.txt`.
