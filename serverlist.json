@@ -4,15 +4,15 @@
 		"url": "ws://127.0.0.1:3000/"
 	},
 	"1": {
-		"id": "CL4 0.2.0  Demo Server - By MikeDEV",
-		"url": "wss://cloudlink.ddns.net:3000/"
+		"id": "CL4 Demo - Hosted by Meower Media",
+		"url": "wss://cl4-test.meower.org/"
 	},
 	"2": {
-	       "id": "Cloudlink 4 - Suite demo server",
+	       "id": "(Deprecated) CL4 Suite Demo",
 	       "url":"wss://Cloudlink.showierdata9971.repl.co"
 	},
 	"3": {
 		"id": "Tnix's Oceania Server",
-		"url": "wss://cl4.tnix.dev//"
+		"url": "wss://cl4.tnix.dev/"
 	}
 }
