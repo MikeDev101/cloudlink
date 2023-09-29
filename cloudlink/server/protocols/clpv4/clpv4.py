@@ -44,6 +44,7 @@ class clpv4:
 
         # Exposes the schema of the protocol.
         self.schema = cl4_protocol
+        self.__qualname__ = "clpv4"
 
         # Define various status codes for the protocol.
         class statuscodes:

@@ -8,6 +8,7 @@ See https://github.com/TurboWarp/cloud-server/blob/master/doc/protocol.md for de
 
 class scratch:
     def __init__(self, server):
+        self.__qualname__ = "scratch"
 
         # Define various status codes for the protocol.
         class statuscodes:

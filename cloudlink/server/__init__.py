@@ -153,20 +153,9 @@ class server:
     
     # Event binder for on_command events
     def on_command(self, cmd, schema):
+
         def bind_event(func):
-
-            # Create schema category for command event manager
-            if schema not in self.command_handlers:
-                self.logger.debug(f"Creating protocol {schema.__qualname__} command event manager")
-                self.command_handlers[schema] = dict()
-
-            # Create command event handler
-            if cmd not in self.command_handlers[schema]:
-                self.command_handlers[schema][cmd] = set()
-
-            # Add function to the command handler
-            self.logger.debug(f"Binding function {func.__name__} to command {cmd} in {schema.__qualname__} command event manager")
-            self.command_handlers[schema][cmd].add(func)
+            self.bind_callback(cmd, schema, func)
 
         # End on_command binder
         return bind_event
@@ -236,18 +225,22 @@ class server:
 
     # Event binder for on_message events
     def on_message(self, func):
+        self.logger.debug(f"Binding function {func.__name__} to on_message events")
         self.on_message_events.add(func)
 
     # Event binder for on_connect events.
     def on_connect(self, func):
+        self.logger.debug(f"Binding function {func.__name__} to on_connect events")
         self.on_connect_events.add(func)
 
     # Event binder for on_disconnect events.
     def on_disconnect(self, func):
+        self.logger.debug(f"Binding function {func.__name__} to on_disconnect events")
         self.on_disconnect_events.add(func)
 
     # Event binder for on_error events.
     def on_error(self, func):
+        self.logger.debug(f"Binding function {func.__name__} to on_error events")
         self.on_error_events.add(func)
 
     # Friendly version of send_packet_unicast / send_packet_multicast
@@ -708,3 +701,30 @@ class server:
         events = [self.execute_close_single(client, code, reason) for client in clients]
         group = self.asyncio.gather(*events)
         await group
+
+    # Deprecated. Provides semi-backwards compatibility for callback functions from 0.1.9.2.
+    def bind_callback(self, cmd, schema, method):
+        # Create schema category for command event manager
+        if schema not in self.command_handlers:
+            self.logger.debug(f"Creating protocol {schema.__qualname__} command event manager")
+            self.command_handlers[schema] = dict()
+
+        # Create command event handler
+        if cmd not in self.command_handlers[schema]:
+            self.command_handlers[schema][cmd] = set()
+
+        # Add function to the command handler
+        self.logger.debug(f"Binding function {method.__name__} to command {cmd} in {schema.__qualname__} command event manager")
+        self.command_handlers[schema][cmd].add(method)
+    
+    # Deprecated. Provides semi-backwards compatibility for event functions from 0.1.9.2.
+    def bind_event(self, event, func):
+        match (event):
+            case self.on_connect:
+                self.on_connect(func)
+            case self.on_disconnect:
+                self.on_disconnect(func)
+            case self.on_error:
+                self.on_error(func)
+            case self.on_message:
+                self.on_message(func)

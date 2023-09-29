@@ -83,6 +83,24 @@ class client:
         self.listener_events_await_specific = dict()
         self.listener_events_decorator_specific = dict()
         self.listener_responses = dict()
+        self.on_username_set_events = set()
+
+        # Prepare command event handlers
+        self.protocol_command_handlers = dict()
+        for cmd in [
+            "ping", 
+            "gmsg", 
+            "gvar", 
+            "pmsg", 
+            "pvar",
+            "statuscode",
+            "client_obj",
+            "client_ip",
+            "server_version",
+            "ulist",
+            "direct"
+        ]:
+            self.protocol_command_handlers[cmd] = set()
 
         # Create method handlers
         self.command_handlers = dict()
@@ -176,6 +194,9 @@ class client:
         # Return the response
         return response
 
+    def on_username_set(self, func):
+        self.on_username_set_events.add(func)
+
     # Version of the wait for listener tool for decorator usage.
     def on_listener(self, listener_id):
         def bind_event(func):
@@ -223,6 +244,58 @@ class client:
     # Event binder for on_error events.
     def on_error(self, func):
         self.on_error_events.add(func)
+
+    # CL4 client-specific command events
+
+    # Event binder for gmsg events.
+    def on_gmsg(self, func):
+        self.logger.debug(f"Binding function {func.__name__} to gmsg command event manager")
+        self.protocol_command_handlers["gmsg"].add(func)
+    
+    # Event binder for pmsg events.
+    def on_pmsg(self, func):
+        self.logger.debug(f"Binding function {func.__name__} to pmsg command event manager")
+        self.protocol_command_handlers["pmsg"].add(func)
+    
+    # Event binder for gvar events.
+    def on_gvar(self, func):
+        self.logger.debug(f"Binding function {func.__name__} to gvar command event manager")
+        self.protocol_command_handlers["gvar"].add(func)
+    
+    # Event binder for pvar events.
+    def on_pvar(self, func):
+        self.logger.debug(f"Binding function {func.__name__} to pvar command event manager")
+        self.protocol_command_handlers["pvar"].add(func)
+    
+    # Event binder for direct events.
+    def on_direct(self, func):
+        self.logger.debug(f"Binding function {func.__name__} to direct command event manager")
+        self.protocol_command_handlers["direct"].add(func)
+    
+    # Event binder for statuscode events.
+    def on_statuscode(self, func):
+        self.logger.debug(f"Binding function {func.__name__} to statuscode command event manager")
+        self.protocol_command_handlers["statuscode"].add(func)
+    
+    # Event binder for client_obj events.
+    def on_client_obj(self, func):
+        self.logger.debug(f"Binding function {func.__name__} to client_obj command event manager")
+        self.protocol_command_handlers["client_obj"].add(func)
+
+    # Event binder for client_ip events.
+    def on_client_ip(self, func):
+        self.logger.debug(f"Binding function {func.__name__} to client_ip command event manager")
+        self.protocol_command_handlers["client_ip"].add(func)
+    
+    # Event binder for server_version events.
+    def on_server_version(self, func):
+        self.logger.debug(f"Binding function {func.__name__} to server_version command event manager")
+        self.protocol_command_handlers["server_version"].add(func)
+    
+    # Event binder for ulist events.
+    def on_ulist(self, func):
+        self.logger.debug(f"Binding function {func.__name__} to ulist command event manager")
+        self.protocol_command_handlers["ulist"].add(func)
 
     # Send message
     def send_packet(self, message):
@@ -435,6 +508,11 @@ class client:
             await self.connection_handler()
 
     # Asyncio event-handling coroutines
+
+    async def execute_on_username_set_events(self, id, username, uuid):
+        events = [event(id, username, uuid) for event in self.on_username_set_events]
+        group = self.asyncio.gather(*events)
+        await group
 
     async def execute_on_disconnect_events(self):
         events = [event() for event in self.on_disconnect_events]

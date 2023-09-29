@@ -57,6 +57,33 @@ class clpv4:
         # Expose username object generator function for extension usage
         self.generate_user_object = generate_user_object
 
+        async def set_username(username):
+            parent.logger.debug(f"Setting username to {username}...")
+
+            # Send the set username request with a listener and wait for a response
+            response = await parent.send_packet_and_wait({
+                "cmd": "setid",
+                "val": username,
+                "listener": "init_username"
+            })
+
+            if response["code_id"] == statuscodes.ok[1]:
+                # Log the successful connection
+                parent.logger.info(f"Successfully set username to {username}.")
+
+                # Fire all on_connect events
+                val = response["val"]
+                parent.asyncio.create_task(
+                    parent.execute_on_username_set_events(val["id"], val["username"], val["uuid"])
+                )
+
+            else:
+                # Log the connection error
+                parent.logger.error(f"Failed to set username. Got response code: {response['code']}")
+
+        # Expose the username set command
+        self.set_username = set_username
+
         # The CLPv4 command set
         @parent.on_initial_connect
         async def on_initial_connect():
@@ -92,27 +119,39 @@ class clpv4:
 
         @parent.on_command(cmd="ping")
         async def on_ping(message):
-            pass
+            events = [event(message) for event in parent.protocol_command_handlers["ping"]]
+            group = parent.asyncio.gather(*events)
+            await group
 
         @parent.on_command(cmd="gmsg")
         async def on_gmsg(message):
-            pass
+            events = [event(message) for event in parent.protocol_command_handlers["gmsg"]]
+            group = parent.asyncio.gather(*events)
+            await group
 
         @parent.on_command(cmd="pmsg")
         async def on_pmsg(message):
-            pass
+            events = [event(message) for event in parent.protocol_command_handlers["pmsg"]]
+            group = parent.asyncio.gather(*events)
+            await group
 
         @parent.on_command(cmd="gvar")
         async def on_gvar(message):
-            pass
+            events = [event(message) for event in parent.protocol_command_handlers["gvar"]]
+            group = parent.asyncio.gather(*events)
+            await group
 
         @parent.on_command(cmd="pvar")
         async def on_pvar(message):
-            pass
+            events = [event(message) for event in parent.protocol_command_handlers["pvar"]]
+            group = parent.asyncio.gather(*events)
+            await group
 
         @parent.on_command(cmd="statuscode")
         async def on_statuscode(message):
-            pass
+            events = [event(message) for event in parent.protocol_command_handlers["statuscode"]]
+            group = parent.asyncio.gather(*events)
+            await group
 
         @parent.on_command(cmd="client_obj")
         async def on_client_obj(message):
@@ -128,8 +167,12 @@ class clpv4:
 
         @parent.on_command(cmd="ulist")
         async def on_ulist(message):
-            pass
+            events = [event(message) for event in parent.protocol_command_handlers["ulist"]]
+            group = parent.asyncio.gather(*events)
+            await group
 
         @parent.on_command(cmd="direct")
         async def on_direct(message):
-            pass
+            events = [event(message) for event in parent.protocol_command_handlers["direct"]]
+            group = parent.asyncio.gather(*events)
+            await group
