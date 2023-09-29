@@ -4,7 +4,7 @@ This is a *work-in-progress* port of CloudLink to the Go Programming Language!
 ## 💡 Features 💡
 
 ### 🪶 Even faster and more lightweight
-CloudLink Golang can run on (abysmally) minimal resources. At least 10MB of RAM and a potato capable CPU can run a CloudLink Golang!
+CloudLink Golang can run on (abysmally) minimal resources. At least 10MB of RAM and a potato CPU can run a CloudLink Golang server!
 
 ### 📦 Minimal dependencies
 Use `go mod tidy`.
