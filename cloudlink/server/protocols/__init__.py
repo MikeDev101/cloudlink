@@ -1,2 +1,2 @@
-from .cl_methods import *
-from .scratch_methods import *
+from .clpv4.clpv4 import *
+from .scratch.scratch import *
