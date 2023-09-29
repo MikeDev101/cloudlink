@@ -22,6 +22,7 @@ CloudLink was originally created for Scratch 3.0. You can view the latest versio
 - [SheepTester's E 羊 icques](https://sheeptester.github.io/scratch-gui/?url=https://mikedev101.github.io/cloudlink/S4-0-nosuite.js)
 - [Ogadaki's Adacraft](https://adacraft.org/studio/)
 - [Ogadaki's Adacraft (Beta)](https://beta.adacraft.org/studio/)
+- [PenguinMod](https://studio.penguinmod.site/editor.html?extension=https://extensions.turbowarp.org/cloudlink.js)
 
 CloudLink is also available as a Python module, which comes bundled with the CloudLink Server.
 There is even a web-friendly version of CloudLink available as CLJS. 
