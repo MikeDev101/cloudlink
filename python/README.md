@@ -1,7 +1,7 @@
 # CloudLink Python
 This is the original, Python-based codebase for CloudLink server.
 
-##💡 Features 💡
+## 💡 Features 💡
 
 ### 🪶 Fast and lightweight
 CloudLink can run on minimal resources. At least 25MB of RAM and any reasonably capable CPU can run a CloudLink server.
