@@ -55,7 +55,7 @@ class myplugin:
     def __init__(self, server, protocol):
         
         # Example command - client sends { "cmd": "foo" } to the server, this function will execute
-        @server.on_command(cmd="foo", schema=clpv4.schema)
+        @server.on_command(cmd="foo", schema=protocol.schema)
         async def foobar(client, message):
             print("Foobar!")
 
