@@ -19,4 +19,4 @@ Feel free to test-drive the extension in any of these Scratch mods:
 - [PenguinMod](https://studio.penguinmod.site/editor.html?extension=https://mikedev101.github.io/cloudlink/S4-1-nosuite.js)
 
 # 📃 The CloudLink Protocol 📃
-Documentation of the CL4 protocol can be found in the CloudLink Repository's Wiki page.
+Documentation of the CL4 protocol can be found in the CloudLink Repository's [Wiki page.](https://github.com/MikeDev101/cloudlink/wiki)
