@@ -11,6 +11,6 @@ Use `go mod tidy`.
 * 🔵 Golang >=1.20
 * 📃 [goccy/go-json](https://github.com/goccy/go-json)
 * 🪪 [google/uuid](https://github.com/google/uuid)
-* ❄️ [bwmarrin/snowflake](github.com/bwmarrin/snowflake)
-* 🌐 [gofiber/contrib/websocket](https://github.com/gofiber/contrib/websocket)
+* ❄️ [bwmarrin/snowflake](https://github.com/bwmarrin/snowflake)
+* 🌐 [gofiber/contrib/websocket](https://github.com/gofiber/contrib/tree/main/websocket)
 * 🌐 [gofiber/fiber](https://github.com/gofiber/fiber)
