@@ -2,3 +2,13 @@ __pycache__
 .vscode
 *.bak
 .idea
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+*.pem
+*.zip
