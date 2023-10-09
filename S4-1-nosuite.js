@@ -120,6 +120,11 @@ class CloudLink {
 		this.wasConnectionDropped = false;
 		this.didConnectionFail = false;
 		this.protocolOk = false;
+		this.protocolAttempted = false;
+		this.handshakeMetadata = {
+			"language": "Scratch",
+            "version": this.version
+		};
 
 		// Listeners stuff
 		this.enableListener = false;
@@ -969,6 +974,13 @@ class CloudLink {
 		const self = this;
 		if (self.connect_hat == 0 && self.isRunning && self.protocolOk) {
 			self.connect_hat = 1;
+			
+			if (!(this.protocolAttempted)) {
+				// Send the handshake request to get server to detect client protocol
+				self.protocolAttempted = true;
+				mWS.send(JSON.stringify({"cmd": "handshake", "val": this.handshakeMetadata, "listener": "setprotocol"}))
+			}
+			
 			return true;
 		} else {
 			return false;
@@ -1032,6 +1044,12 @@ class CloudLink {
 	};
 
 	getComState(){
+		const self = this;
+		if ((this.link_status == 2) && !(this.protocolAttempted)) {
+			// Send the handshake request to get server to detect client protocol
+			self.protocolAttempted = true;
+			mWS.send(JSON.stringify({"cmd": "handshake", "val": this.handshakeMetadata, "listener": "setprotocol"}))
+		}
 		return String((this.link_status == 2) || this.protocolOk);
 	};
 
@@ -1111,9 +1129,6 @@ class CloudLink {
 				self.isRunning = true;
 				self.packet_queue = {};
 				self.link_status = 2;
-
-				// Send the handshake request to get server to detect client protocol
-				mWS.send(JSON.stringify({"cmd": "handshake", "listener": "setprotocol"}))
 
 				console.log("Successfully opened socket.");
 			};
@@ -1209,6 +1224,7 @@ class CloudLink {
 				self.connect_hat = 0;
 				self.packet_hat = 0;
 				self.protocolOk = false;
+				self.protocolAttempted = false;
 				if (self.close_hat == 1) {
 					self.close_hat = 0;
 				};
