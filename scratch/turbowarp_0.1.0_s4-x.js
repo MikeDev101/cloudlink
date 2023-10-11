@@ -343,6 +343,7 @@
     clVars.socket.send(outgoing);
   }
 
+  // Only sends the handshake command.
   function sendHandshake() {
     if (clVars.handshakeAttempted) return;
     console.log("[CloudLink] Sending handshake...");
@@ -539,7 +540,7 @@
   // Basic netcode needed to make the extension work
   async function newCloudLinkClient(url) {
     if (!(await Scratch.canFetch(url))) {
-      console.warn("[CloudLink] Did not get permission to connect, aborting.");
+      console.warn("[CloudLink] Did not get permission to connect, aborting...");
       return;
     }
 
@@ -552,7 +553,7 @@
     try {
       clVars.socket = new WebSocket(url);
     } catch (e) {
-      console.warn("[CloudLink]] An exception has occurred:", e);
+      console.warn("[CloudLink] An exception has occurred:", e);
       return;
     }
 
@@ -562,13 +563,15 @@
       // Set the link state to connected.
       console.log("[CloudLink] Connected.");
       clVars.linkState.status = 2;
-      vm.runtime.startHats('cloudlink_onConnect');
 
       // If a server_version message hasn't been received in over half a second, try to broadcast a handshake
       clVars.handshakeTimeout = window.setTimeout(function() {
-        console.log("[CloudLink]` Hmm... This server hasn't sent us it's server info. Going to attempt a handshake.");
+        console.log("[CloudLink] Hmm... This server hasn't sent us it's server info. Going to attempt a handshake.");
         sendHandshake();
       }, 500);
+
+      // Fire event hats
+      vm.runtime.startHats('cloudlink_onConnect');
 
       // Return promise (during setup)
       return;
