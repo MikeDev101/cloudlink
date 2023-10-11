@@ -211,7 +211,13 @@
       disconnectType: 0,
       identifiedProtocol: 0,
     },
-    handshakeAttempt: null,
+
+    // Timeout of 500ms upon connection to try and handshake. Automatically aborted if server_version is received.
+    handshakeTimeout: null,
+
+    // Prevent accidentally sending the handshake more than once per connection.
+    handshakeAttempted: false,
+
 
     // Storage for the publically available CloudLink instances.
     serverList: {},
@@ -236,6 +242,8 @@
 
   // Clears out and resets the various values of clVars upon disconnect.
   function resetValuesOnClose() {
+    window.clearTimeout(clVars.handshakeTimeout);
+    clVars.handshakeAttempted = false;
     clVars.socket = null;
     clVars.motd = "";
     clVars.client_ip = "";
@@ -336,6 +344,7 @@
   }
 
   function sendHandshake() {
+    if (clVars.handshakeAttempted) return;
     console.log("[CloudLink] Sending handshake...");
     sendCloudLinkMessage({
       cmd: "handshake",
@@ -349,6 +358,7 @@
       },
       listener: "handshake_cfg"
     });
+    clVars.handshakeAttempted = true;
   }
 
   // Compare the version string of the server to known compatible variants to configure clVars.linkState.identifiedProtocol.
@@ -454,6 +464,7 @@
           switch (packet.val.cmd) {
             // Server 0.1.5 (at least)
             case "vers":
+              window.clearTimeout(clVars.handshakeTimeout);
               setServerVersion(packet.val.val);
               return;
 
@@ -491,6 +502,7 @@
         break;
 
       case "server_version":
+        window.clearTimeout(clVars.handshakeTimeout);
         setServerVersion(packet.val);
         break;
 
@@ -551,7 +563,12 @@
       console.log("[CloudLink] Connected.");
       clVars.linkState.status = 2;
       vm.runtime.startHats('cloudlink_onConnect');
-      sendHandshake();
+
+      // If a server_version message hasn't been received in over half a second, try to broadcast a handshake
+      clVars.handshakeTimeout = window.setTimeout(function() {
+        console.log("[CloudLink]` Hmm... This server hasn't sent us it's server info. Going to attempt a handshake.");
+        sendHandshake();
+      }, 500);
 
       // Return promise (during setup)
       return;
