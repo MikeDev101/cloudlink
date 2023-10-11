@@ -71,7 +71,7 @@
   version.compatibleVariants - A list of per-block, fully-compatible older Scratch Extension versions this extension supports.
   version.compatibleVariantsShorthand - Shortened version of version.compatibleVariants. Intended for generating version strings within the extension.
 
-  The extension will auto-generate a version string by using getVariantVersionString().
+  The extension will auto-generate a version string by using generateVersionString().
 
   DO NOT MODIFY:
   * compatibleVariants
@@ -174,6 +174,17 @@
       varStates: {}
     },
 
+    // rooms.enablerState - Set to true when "selectRoomsInNextPacket" is used.
+    // rooms.enablerValue - Set to a new list of rooms when "selectRoomsInNextPacket" is used.
+    // rooms.current - Keeps track of all current rooms being used.
+    // rooms.varStates - Storage for all per-room messages.
+    rooms: {
+      enablerState: false,
+      enablerValue: "",
+      current: [],
+      varStates: {},
+    },
+
     // Temporary username storage
     tempUsername: "",
 
@@ -223,7 +234,7 @@
     serverList: {},
   }
 
-  function getVariantVersionString() {
+  function generateVersionString() {
     return `${version.editorType}_${version.versionString}_${version.compatibleVariantsShorthand}`;
   }
 
@@ -241,7 +252,7 @@
   }
 
   // Clears out and resets the various values of clVars upon disconnect.
-  function resetValuesOnClose() {
+  function resetOnClose() {
     window.clearTimeout(clVars.handshakeTimeout);
     clVars.handshakeAttempted = false;
     clVars.socket = null;
@@ -291,12 +302,18 @@
       enablerState: false,
       enablerValue: "",
       current: [],
-      varStates: {}
+      varStates: {},
+    };
+    clVars.rooms = {
+      enablerState: false,
+      enablerValue: "",
+      current: [],
+      varStates: {},
     };
   }
 
   // CL-specific netcode needed for sending messages
-  async function sendCloudLinkMessage(message) {
+  async function sendMessage(message) {
     // Prevent running this while disconnected
     if (clVars.socket == null) {
       console.warn("[CloudLink] Ignoring attempt to send a packet while disconnected.");
@@ -347,12 +364,12 @@
   function sendHandshake() {
     if (clVars.handshakeAttempted) return;
     console.log("[CloudLink] Sending handshake...");
-    sendCloudLinkMessage({
+    sendMessage({
       cmd: "handshake",
       val: {
         language: "Scratch",
         version: {
-          fullString: getVariantVersionString(),
+          fullString: generateVersionString(),
           editorType: version.editorType,
           versionNumber: version.versionNumber,
         },
@@ -363,7 +380,7 @@
   }
 
   // Compare the version string of the server to known compatible variants to configure clVars.linkState.identifiedProtocol.
-  function setServerVersion(version) {
+  async function setServerVersion(version) {
     console.log(`[CloudLink] Server version: ${String(version)}`);
     clVars.server_version = version;
 
@@ -408,6 +425,10 @@
               console.warn("[CloudLink] Enabling legacy support. Listeners and rooms will be disabled. It is recommended to upgrade your server.");
               break;
           }
+
+          if (clVars.linkState.identifiedProtocol < 4) {
+            alert(`You have connected to an old CloudLink server, running version ${version}.\n\nWe recommend you connect to an up-to-date server for your security and privacy.`);
+          }
         }
       }
     });
@@ -418,7 +439,7 @@
   }
 
   // CL-specific netcode needed to make the extension work
-  async function messageHandlerCloudLinkClient(data) {
+  async function handleMessage(data) {
     // Parse the message JSON
     let packet = {};
     try {
@@ -489,17 +510,10 @@
 
       case "statuscode":
         // TODO: finish statuscode handling
-
-        // Detect older versions
-        if (packet.hasOwnProperty("val")) {
-
-        }
-
         break;
 
       case "ulist":
-
-
+        // TODO: finish ulist handling.
         break;
 
       case "server_version":
@@ -538,7 +552,7 @@
   }
 
   // Basic netcode needed to make the extension work
-  async function newCloudLinkClient(url) {
+  async function newClient(url) {
     if (!(await Scratch.canFetch(url))) {
       console.warn("[CloudLink] Did not get permission to connect, aborting...");
       return;
@@ -579,7 +593,7 @@
 
     // Bind message handler event
     clVars.socket.onmessage = function (event) {
-      messageHandlerCloudLinkClient(event.data);
+      handleMessage(event.data);
     };
 
     // Bind connection closed event
@@ -608,7 +622,7 @@
       }
 
       // Reset clVars values
-      resetValuesOnClose();
+      resetOnClose();
 
       // Run all onClose event blocks
       vm.runtime.startHats('cloudlink_onClose');
@@ -1312,7 +1326,7 @@
 
     // Reporter - Returns current client version.
     returnVersionData() {
-      return getVariantVersionString();
+      return generateVersionString();
     }
 
     // Reporter - Returns reported server version.
@@ -1411,11 +1425,24 @@
 
     // Boolean - Returns true if a username/ID/UUID/object exists in the userlist.
     // ID - String (username or user object)
-    checkForID(args) { } // TODO: Finish this
+    checkForID(args) { 
+      if (this.isValidJSON(args.ID) && (isNaN(args.ID))) {
+        return clVars.ulist.some(o => ((o.username === JSON.parse(ID).username) && (o.id == JSON.parse(ID).id)));
+      } else {
+        return clVars.ulist.some(o => ((o.username === String(ID)) || (o.id == ID)));
+      }
+    }
 
     // Boolean - Returns true if the input JSON is valid.
     // JSON_STRING - String
-    isValidJSON(args) { } // TODO: Finish this
+    isValidJSON(args) { 
+      try {
+        JSON.parse(args.JSON_STRING);
+        return true;
+      } catch {
+        return false;
+      };
+    }
 
     // Command - Establishes a connection to a server.
     // IP - String (websocket URL)
@@ -1424,7 +1451,7 @@
         console.warn("[CloudLink] Already connected to a server.");
         return;
       };
-      return newCloudLinkClient(args.IP);
+      return newClient(args.IP);
     }
 
     // Command - Establishes a connection to a selected server.
@@ -1438,7 +1465,7 @@
         console.warn("[CloudLink] Not a valid server ID!");
         return;
       };
-      return newCloudLinkClient(clVars.serverList[String(args.ID)]["url"]);
+      return newClient(clVars.serverList[String(args.ID)]["url"]);
     }
 
     // Command - Closes the connection.
@@ -1455,7 +1482,7 @@
     // Command - Sets the username of the client on the server.
     // NAME - String
     setMyName(args) {
-      return sendCloudLinkMessage({ cmd: "setid", val: args.NAME });
+      return sendMessage({ cmd: "setid", val: args.NAME });
     }
 
     // Command - Prepares the next transmitted message to have a listener ID attached to it.
@@ -1471,49 +1498,60 @@
 
     // Command - Subscribes to various rooms on a server.
     // ROOMS - String (JSON Array or single string)
-    linkToRooms(args) { } // TODO: Finish this
+    linkToRooms(args) { 
+      return sendMessage({ cmd: "link", val: args.ROOMS });
+    }
 
     // Command - Specifies specific subscribed rooms to transmit messages to.
     // ROOMS - String (JSON Array or single string)
-    selectRoomsInNextPacket(args) { } // TODO: Finish this
+    selectRoomsInNextPacket(args) { 
+      if (clVars.rooms.enablerState) {
+        console.warn("[CloudLink] Cannot use the room selector more than once at a time!");
+        return;
+      }
+      clVars.rooms.enablerState = true;
+      clVars.rooms.enablerValue = args.ROOMS;
+    } 
 
     // Command - Unsubscribes from all rooms and re-subscribes to the the "default" room on the server.
-    unlinkFromRooms() { } // TODO: Finish this
+    unlinkFromRooms() { 
+      return sendMessage({ cmd: "unlink", val: args.ROOMS });
+    }
 
     // Command - Sends a gmsg value.
     // DATA - String
     sendGData(args) {
-      return sendCloudLinkMessage({ cmd: "gmsg", val: args.DATA });
+      return sendMessage({ cmd: "gmsg", val: args.DATA });
     }
 
     // Command - Sends a pmsg value.
     // DATA - String, ID - String (recipient ID)
     sendPData(args) {
-      return sendCloudLinkMessage({ cmd: "pmsg", val: args.DATA, id: args.ID });
+      return sendMessage({ cmd: "pmsg", val: args.DATA, id: args.ID });
     }
 
     // Command - Sends a gvar value.
     // DATA - String, VAR - String (variable name)
     sendGDataAsVar(args) {
-      return sendCloudLinkMessage({ cmd: "gvar", val: args.DATA, name: args.VAR });
+      return sendMessage({ cmd: "gvar", val: args.DATA, name: args.VAR });
     }
 
     // Command - Sends a pvar value.
     // DATA - String, VAR - String (variable name), ID - String (recipient ID)
     sendPDataAsVar(args) {
-      return sendCloudLinkMessage({ cmd: "pvar", val: args.DATA, name: args.VAR, id: args.ID });
+      return sendMessage({ cmd: "pvar", val: args.DATA, name: args.VAR, id: args.ID });
     }
 
     // Command - Sends a raw-format command without specifying an ID.
     // CMD - String (command), DATA - String
     runCMDnoID(args) {
-      return sendCloudLinkMessage({ cmd: args.CMD, val: args.DATA });
+      return sendMessage({ cmd: args.CMD, val: args.DATA });
     }
 
     // Command - Sends a raw-format command with an ID.
     // CMD - String (command), DATA - String, ID - String (recipient ID)
     runCMD(args) {
-      return sendCloudLinkMessage({ cmd: args.CMD, val: args.DATA, ID: args.ID });
+      return sendMessage({ cmd: args.CMD, val: args.DATA, ID: args.ID });
     }
 
     // Command - Resets the "returnIsNewData" boolean state.
