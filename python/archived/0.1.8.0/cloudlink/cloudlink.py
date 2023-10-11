@@ -96,6 +96,6 @@ if __name__ == "__main__":
     server.callback(server.on_close, dummy.on_close)
 
     server.loadCustomCommands(customCommands)
-    server.disableCommands(["gmsg"])
+    #server.disableCommands(["gmsg"])
 
     server.run(host="0.0.0.0", port=3000)

@@ -82,7 +82,7 @@
   const version = {
     editorType: "TurboWarp",
     versionNumber: 0,
-    versionString: "0.1.0", 
+    versionString: "0.1.0",
     compatibleVariants: ["S4.1", "S4.0", "B4.0"],
     compatibleVariantsShorthand: "S4-X"
   };
@@ -173,7 +173,7 @@
       current: [],
       varStates: {}
     },
-    
+
     // Temporary username storage
     tempUsername: "",
 
@@ -191,6 +191,8 @@
       3 - Disconnected, gracefully (OK)
       4 - Disconnected, abruptly (Connection failed / dropped)
     
+    linkState.isAttemptingGracefulDisconnect - Boolean used to ignore any websocket codes other than 1000 (going away) when disconnecting.
+
     linkstate.disconnectType - Type of disconnect that has occurred.
       0 - Safely disconnected (connected OK and gracefully disconnected)
       1 - Connection dropped (connected OK but lost connection afterwards)
@@ -199,20 +201,22 @@
     linkstate.identifiedProtocol - Enables backwards compatibility for CL servers.
       0 - CL3 0.1.5 "S2.2" - Doesn't support listeners, MOTD, or statuscodes.
       1 - CL3 0.1.7 - Doesn't support listeners, has early MOTD support, and early statuscode support.
-      2 - CL4 0.1.8.x - First version to support listeners, and modern server_version support.
+      2 - CL4 0.1.8.x - First version to support listeners, and modern server_version support. First version to implement rooms support.
       3 - CL4 0.1.9.x - First version to implement the handshake command and better ulist events.
-      4 - CL4 0.2.0 (default) - Latest version. First version to implement client_obj and enhanced ulists.
+      4 - CL4 0.2.0 - Latest version. First version to implement client_obj and enhanced ulists.
     */
     linkState: {
       status: 0,
+      isAttemptingGracefulDisconnect: false,
       disconnectType: 0,
-      identifiedProtocol: 4,
+      identifiedProtocol: 0,
     },
+    handshakeAttempt: null,
 
     // Storage for the publically available CloudLink instances.
     serverList: {},
   }
-  
+
   function getVariantVersionString() {
     return `${version.editorType}_${version.versionString}_${version.compatibleVariantsShorthand}`;
   }
@@ -232,13 +236,15 @@
 
   // Clears out and resets the various values of clVars upon disconnect.
   function resetValuesOnClose() {
+    clearInterval(clVars.handshakeAttempt);
     clVars.socket = null;
     clVars.motd = "";
     clVars.client_ip = "";
     clVars.server_version = "";
     clVars.tempUsername = "";
     clVars.myUsername = "";
-    clVars.linkState.identifiedProtocol = 4;
+    clVars.linkState.identifiedProtocol = 0;
+    clVars.linkState.isAttemptingGracefulDisconnect = false;
     clVars.myUserObject = {};
     clVars.gmsg = {
       queue: [],
@@ -294,7 +300,7 @@
     if (message.hasOwnProperty("val")) {
       try {
         message.val = JSON.parse(message.val);
-      } catch (e) {}
+      } catch { }
     }
 
     // Attach listeners
@@ -309,6 +315,13 @@
       clVars.listeners.enablerState = false;
     }
 
+    // Check if server supports rooms
+    if (((message.cmd == "link") || (message.cmd == "unlink")) && (clVars.linkState.identifiedProtocol < 2)) {
+      // 0.1.8.x was the first server version to support rooms.
+      console.warn("[CloudLink] Server is too old! Must be at least 0.1.8.x to support room linking/unlinking.");
+      return;
+    }
+
     // Convert the outgoing message to JSON
     let outgoing = "";
     try {
@@ -321,6 +334,77 @@
     // Send the message
     console.log("[CloudLink] TX:", message);
     clVars.socket.send(outgoing);
+  }
+
+  function sendHandshake() {
+    console.log("[CloudLink] Sending handshake...");
+    sendCloudLinkMessage({
+      cmd: "handshake",
+      val: {
+        language: "Scratch",
+        version: {
+          fullString: getVariantVersionString(),
+          editorType: version.editorType,
+          versionNumber: version.versionNumber,
+        },
+      },
+      listener: "handshake_cfg"
+    });
+  }
+
+  // Compare the version string of the server to known compatible variants to configure clVars.linkState.identifiedProtocol.
+  function setServerVersion(version) {
+    console.log(`[CloudLink] Server version: ${String(version)}`);
+    clVars.server_version = version;
+
+    // Auto-detect versions
+    const versions = {
+      "0.2.": 4,
+      "0.1.9": 3,
+      "0.1.8": 2,
+      "0.1.7": 1,
+      "S2.2": 0, // 0.1.5
+      "0.1.": 0, // 0.1.5 or legacy
+      "S2.": 0, // Legacy
+      "S1.": -1 // Obsolete
+    };
+
+    Object.entries(versions).forEach(([key, value]) => {
+      if (String(version).toLowerCase().includes(key)) {
+        if (clVars.linkState.identifiedProtocol < value) {
+
+          // Disconnect if protcol is too old
+          if (value == -1) {
+            console.warn(`[CloudLink] Server is too old to enable leagacy support. Disconnecting.`);
+            return clVars.socket.close(1000, "");
+          }
+          
+          // Set the identified protocol variant
+          console.log(`[CloudLink] Configuring identified protocol variant to v${value}.`);
+          clVars.linkState.identifiedProtocol = value;
+
+          // Display warning messages depending upon features supported by the server.
+          switch (value) {
+            case 3:
+              console.warn("[CloudLink] Enabling legacy support. Some features may be modified, but they should continue to function as intended. It is recommended to upgrade your server.");
+              break;
+            case 2:
+              console.warn("[CloudLink] Enabling legacy support. Some features may be modified, but they should continue to function as intended. It is recommended to upgrade your server.");
+              break;
+            case 1:
+              console.warn("[CloudLink] Enabling legacy support. Listeners and rooms will be disabled. It is recommended to upgrade your server.");
+              break;
+            case 0:
+              console.warn("[CloudLink] Enabling legacy support. Listeners and rooms will be disabled. It is recommended to upgrade your server.");
+              break;
+          }
+        }
+      }
+    });
+
+    // Send handshake command (if server supports it)
+    if (clVars.linkState.identifiedProtocol < 3) return;
+    sendHandshake();
   }
 
   // CL-specific netcode needed to make the extension work
@@ -340,56 +424,44 @@
       return;
     }
     console.log("[CloudLink] RX:", packet);
-    switch(packet.cmd) {
+    switch (packet.cmd) {
       case "gmsg":
         clVars.gmsg.varState = packet.val;
         clVars.gmsg.hasNew = true;
         clVars.gmsg.queue.push(packet);
         break;
-      
+
       case "pmsg":
         clVars.pmsg.varState = packet.val;
         clVars.pmsg.hasNew = true;
         clVars.pmsg.queue.push(packet);
         break;
-      
+
       case "gvar":
         clVars.gvar.varStates[packet.name] = packet.val;
         clVars.gvar.hasNew = true;
         clVars.gvar.queue.push(packet);
         break;
-      
+
       case "pvar":
         clVars.pvar.varStates[packet.name] = packet.val;
         clVars.pvar.hasNew = true;
         clVars.pvar.queue.push(packet);
         break;
-      
-      case "direct":
 
-        // Detect old server versions
+      case "direct":
+        // Handle events from older server versions
         if (packet.val.hasOwnProperty("cmd")) {
           switch (packet.val.cmd) {
-            // Server is at least 0.1.5
+            // Server 0.1.5 (at least)
             case "vers":
-              console.log("[CloudLink] Server version:", packet.val.val);
-              clVars.server_version = packet.val.val;
-
-              // Downgrade protocol
-              if (clVars.linkState.identifiedProtocol == 0) return; // Don't repeat downgrades to 0.1.5 spec
-              console.log("[CloudLink] This server is old. Setting protocol to 0.1.5 spec.")
-              clVars.linkState.identifiedProtocol = 0;
+              setServerVersion(packet.val.val);
               return;
 
-            // Server is at least 0.1.7
+            // Server 0.1.7 (at least)
             case "motd":
               console.log("[CloudLink] Message of the day:", packet.val.val);
               clVars.motd = packet.val.val;
-
-              // Downgrade protocol
-              if (clVars.linkState.identifiedProtocol <= 1) return; // Don't repeat downgrades to 0.1.7 spec but allow downgrading to 0.1.5 spec
-              console.log("[CloudLink] This server is old. Setting protocol to 0.1.7 spec.")
-              clVars.linkState.identifiedProtocol = 1;
               return;
           }
         }
@@ -399,7 +471,7 @@
         clVars.direct.hasNew = true;
         clVars.direct.queue.push(packet);
         break;
-      
+
       case "client_obj":
         clVars.myUserObject = packet.val;
         break;
@@ -409,43 +481,31 @@
 
         // Detect older versions
         if (packet.hasOwnProperty("val")) {
-          
+
         }
 
         break;
-      
+
       case "ulist":
-        // TODO: implement ulist handling
 
-        if (packet.hasOwnProperty("val") && (!packet.hasOwnProperty("method"))) {
-          console.warn("[CloudLink] This server appears to be old. Downgrading protocol version.");
-        }
-
-        // Check if the ulist value is a string (0.1.5)
-        switch (typeof packet.val) {
-          case "string": // 0.1.5
-            break;
-          case "function": // 0.1.8.x - 0.1.9.x
-            break;
-        }
 
         break;
-      
+
       case "server_version":
-        console.log("[CloudLink] Server version:", packet.val);
-        clVars.server_version = packet.val;
+        window.clearTimeout(clVars.handshakeAttempt);
+        setServerVersion(packet.val);
         break;
-      
+
       case "client_ip":
         console.log("[CloudLink] Client IP address:", packet.val);
         clVars.client_ip = packet.val;
         break;
-      
+
       case "motd":
         console.log("[CloudLink] Message of the day:", packet.val);
         clVars.motd = packet.val;
         break;
-      
+
       default:
         console.warn("[CloudLink] Unrecognised incoming command:", packet.cmd);
         return;
@@ -487,54 +547,47 @@
     }
 
     // Bind connection established event
-    clVars.socket.onopen = function(event) {
+    clVars.socket.onopen = function (event) {
+      
       // Set the link state to connected.
       console.log("[CloudLink] Connected.");
       clVars.linkState.status = 2;
       vm.runtime.startHats('cloudlink_onConnect');
 
-      // Send handshake command
-      console.log("[CloudLink] Sending handshake...");
-      sendCloudLinkMessage({
-        cmd: "handshake",
-        val: {
-          language: "Scratch",
-          version: {
-            fullString: getVariantVersionString(),
-            editorType: version.editorType,
-            versionNumber: version.versionNumber,
-          },
-        }, 
-        listener: "handshake_cfg"});
+      // If a handshake response hasn't been received in over a second, try to send it anyways
+      clVars.handshakeAttempt = window.setTimeout(function() {
+        console.log("[CloudLink] Hmm... This server hasn't sent us it's server info. Going to attempt a handshake.");
+        sendHandshake();
+      }, 1000);
 
       // Return promise (during setup)
       return;
     };
 
     // Bind message handler event
-    clVars.socket.onmessage = function(event) {
+    clVars.socket.onmessage = function (event) {
       messageHandlerCloudLinkClient(event.data);
     };
 
     // Bind connection closed event
-    clVars.socket.onclose = function(event) {
-      switch(clVars.linkState.status) {
+    clVars.socket.onclose = function (event) {
+      switch (clVars.linkState.status) {
         case 1: // Was connecting
           // Set the link state to ungraceful disconnect.
-          console.log("[CloudLink] Connection failed. Code:", event.code);
+          console.log(`[CloudLink] Connection failed (${event.code}).`);
           clVars.linkState.status = 4;
           clVars.linkState.disconnectType = 1;
           break;
-        
+
         case 2: // Was already connected
-          if (event.wasClean) {
+          if (event.wasClean || clVars.linkState.isAttemptingGracefulDisconnect) {
             // Set the link state to graceful disconnect.
-            console.log("[CloudLink] Disconnected. Code:", event.code, "reason:", event.reason);
+            console.log(`[CloudLink] Disconnected (${event.code} ${event.reason}).`);
             clVars.linkState.status = 3;
             clVars.linkState.disconnectType = 0;
           } else {
             // Set the link state to ungraceful disconnect.
-            console.log("[CloudLink] Lost connection. Code:", event.code, "reason:", event.reason);
+            console.log(`[CloudLink] Lost connection (${event.code} ${event.reason}).`);
             clVars.linkState.status = 4;
             clVars.linkState.disconnectType = 2;
           }
@@ -556,16 +609,16 @@
     Scratch.fetch(
       "https://mikedev101.github.io/cloudlink/serverlist.json"
     )
-    .then((response) => {
-      return response.text();
-    })
-    .then((data) => {
-      clVars.serverList = JSON.parse(data);
-    })
-    .catch((err) => {
-      console.log("[CloudLink] An error has occurred while parsing the public server list:", err);
-      clVars.serverList = {};
-    });
+      .then((response) => {
+        return response.text();
+      })
+      .then((data) => {
+        clVars.serverList = JSON.parse(data);
+      })
+      .catch((err) => {
+        console.log("[CloudLink] An error has occurred while parsing the public server list:", err);
+        clVars.serverList = {};
+      });
   } catch (err) {
     console.log("[CloudLink] An error has occurred while fetching the public server list:", err);
     clVars.serverList = {};
@@ -1240,7 +1293,7 @@
     }
 
     // Reporter - Returns currently set username.
-    returnUsernameData() { 
+    returnUsernameData() {
       return makeValueScratchSafe(clVars.myUsername);
     }
 
@@ -1281,7 +1334,7 @@
     // Reporter - Returns the size of the message queue.
     // TYPE - String (menu allmenu)
     readQueueSize(args) { } // TODO: Finish this
-    
+
     // Reporter - Returns all values of the message queue.
     // TYPE - String (menu allmenu)
     readQueueData(args) { } // TODO: Finish this
@@ -1301,7 +1354,7 @@
     // Reporter - Returns a RESTful GET promise.
     // url - String
     fetchURL(args) { } // TODO: Finish this
-    
+
     // Reporter - Returns a RESTful request promise.
     // url - String, method - String, data - String, headers - String
     requestURL(args) { } // TODO: Finish this
@@ -1382,18 +1435,19 @@
         return;
       };
       console.log("[CloudLink] Disconnecting...");
+      clVars.linkState.isAttemptingGracefulDisconnect = true;
       clVars.socket.close(1000, "Client going away");
     }
 
     // Command - Sets the username of the client on the server.
     // NAME - String
-    setMyName(args) { 
-      return sendCloudLinkMessage({cmd: "setid", val: args.DATA});
+    setMyName(args) {
+      return sendCloudLinkMessage({ cmd: "setid", val: args.DATA });
     }
 
     // Command - Prepares the next transmitted message to have a listener ID attached to it.
     // ID - String (listener ID)
-    createListener(args) { 
+    createListener(args) {
       if (clVars.listeners.enablerState) {
         console.warn("[CloudLink] Cannot create multiple listeners at a time!");
         return;
@@ -1408,62 +1462,62 @@
 
     // Command - Specifies specific subscribed rooms to transmit messages to.
     // ROOMS - String (JSON Array or single string)
-    selectRoomsInNextPacket(args) {} // TODO: Finish this
+    selectRoomsInNextPacket(args) { } // TODO: Finish this
 
     // Command - Unsubscribes from all rooms and re-subscribes to the the "default" room on the server.
-    unlinkFromRooms() {} // TODO: Finish this
+    unlinkFromRooms() { } // TODO: Finish this
 
     // Command - Sends a gmsg value.
     // DATA - String
     sendGData(args) {
-      return sendCloudLinkMessage({cmd: "gmsg", val: args.DATA});
+      return sendCloudLinkMessage({ cmd: "gmsg", val: args.DATA });
     }
 
     // Command - Sends a pmsg value.
     // DATA - String, ID - String (recipient ID)
     sendPData(args) {
-      return sendCloudLinkMessage({cmd: "pmsg", val: args.DATA, id: args.ID});
+      return sendCloudLinkMessage({ cmd: "pmsg", val: args.DATA, id: args.ID });
     }
 
     // Command - Sends a gvar value.
     // DATA - String, VAR - String (variable name)
     sendGDataAsVar(args) {
-      return sendCloudLinkMessage({cmd: "gvar", val: args.DATA, name: args.VAR});
+      return sendCloudLinkMessage({ cmd: "gvar", val: args.DATA, name: args.VAR });
     }
 
     // Command - Sends a pvar value.
     // DATA - String, VAR - String (variable name), ID - String (recipient ID)
     sendPDataAsVar(args) {
-      return sendCloudLinkMessage({cmd: "pvar", val: args.DATA, name: args.VAR, id: args.ID});
+      return sendCloudLinkMessage({ cmd: "pvar", val: args.DATA, name: args.VAR, id: args.ID });
     }
 
     // Command - Sends a raw-format command without specifying an ID.
     // CMD - String (command), DATA - String
     runCMDnoID(args) {
-      return sendCloudLinkMessage({cmd: args.CMD, val: args.DATA});
+      return sendCloudLinkMessage({ cmd: args.CMD, val: args.DATA });
     }
 
     // Command - Sends a raw-format command with an ID.
     // CMD - String (command), DATA - String, ID - String (recipient ID)
     runCMD(args) {
-      return sendCloudLinkMessage({cmd: args.CMD, val: args.DATA, ID: args.ID});
+      return sendCloudLinkMessage({ cmd: args.CMD, val: args.DATA, ID: args.ID });
     }
 
     // Command - Resets the "returnIsNewData" boolean state.
     // TYPE - String (menu datamenu)
-    resetNewData(args) {} // TODO: Finish this
+    resetNewData(args) { } // TODO: Finish this
 
     // Command - Resets the "returnIsNewVarData" boolean state.
     // TYPE - String (menu datamenu), VAR - String (variable name)
-    resetNewVarData(args) {} // TODO: Finish this
+    resetNewVarData(args) { } // TODO: Finish this
 
     // Command - Resets the "returnIsNewListener" boolean state.
     // ID - Listener ID
-    resetNewListener(args) {} // TODO: Finish this
+    resetNewListener(args) { } // TODO: Finish this
 
     // Command - Clears all packet queues.
     // TYPE - String (menu allmenu)
-    clearAllPackets(args) {} // TODO: Finish this
+    clearAllPackets(args) { } // TODO: Finish this
   }
   Scratch.extensions.register(new CloudLink());
 })(Scratch);

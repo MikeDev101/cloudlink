@@ -1,0 +1,95 @@
+08:29 48.17 rx
+{
+  "cmd": "pvar",
+  "name": "b",
+  "val": "a",
+  "origin": "0.1.5_test"
+}
+08:29 48.16 tx
+{
+  "cmd": "pvar",
+  "val": "a",
+  "name": "b",
+  "id": "0.1.5_test",
+  "origin": "0.1.5_test"
+}
+08:29 35.58 rx
+{
+  "cmd": "gvar",
+  "name": "b",
+  "val": "a"
+}
+08:29 35.58 tx
+{
+  "cmd": "gvar",
+  "val": "a",
+  "name": "b",
+  "id": "0.1.5_test"
+}
+08:29 18.22 rx
+{
+  "cmd": "pmsg",
+  "val": "a",
+  "origin": "0.1.5_test"
+}
+08:29 18.21 tx
+{
+  "cmd": "pmsg",
+  "val": "a",
+  "id": "0.1.5_test",
+  "origin": "0.1.5_test"
+}
+08:28 42.99 tx
+{
+  "cmd": "pmsg",
+  "val": "a",
+  "id": "0.1.5_test"
+}
+08:28 26.77 tx
+{
+  "cmd": "pmsg",
+  "val": "a",
+  "id": "0.1.5_test"
+}
+08:28 09.66 rx
+{
+  "cmd": "ulist",
+  "val": "0.1.5_test;"
+}
+08:28 09.65 tx
+{
+  "cmd": "setid",
+  "val": "0.1.5_test"
+}
+08:27 56.06 rx
+{
+  "cmd": "gmsg",
+  "val": ""
+}
+08:27 56.05 tx
+{
+  "cmd": "gmsg",
+  "val": ""
+}
+08:27 51.52 rx
+{
+  "cmd": "direct",
+  "val": {
+    "cmd": "vers",
+    "val": "0.1.5"
+  }
+}
+08:27 51.51 rx
+{
+  "cmd": "gmsg",
+  "val": ""
+}
+08:27 51.50 rx
+{
+  "cmd": "ulist",
+  "val": ""
+}
+08:27 51.50
+Connected to ws://127.0.0.1:3000
+08:27 51.48
+Connecting to ws://127.0.0.1:3000

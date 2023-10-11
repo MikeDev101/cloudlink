@@ -1,0 +1,136 @@
+08:54 18.47 rx
+{
+  "cmd": "ulist",
+  "val": [
+    {
+      "username": "0.1.8.1_test",
+      "id": 1
+    }
+  ],
+  "room": "default"
+}
+08:54 18.46 rx
+{
+  "cmd": "statuscode",
+  "code": "I:100 | OK"
+}
+08:54 18.45 tx
+{
+  "cmd": "unlink",
+  "val": ""
+}
+08:53 52.93 rx
+{
+  "cmd": "ulist",
+  "val": [
+    {
+      "username": "0.1.8.1_test",
+      "id": 1
+    }
+  ],
+  "room": "apples"
+}
+08:53 52.91 rx
+{
+  "cmd": "statuscode",
+  "code": "I:100 | OK"
+}
+08:53 52.91 tx
+{
+  "cmd": "link",
+  "val": [
+    "apples"
+  ]
+}
+08:53 17.29 rx
+{
+  "cmd": "statuscode",
+  "code": "I:100 | OK"
+}
+08:53 17.28 rx
+{
+  "cmd": "pmsg",
+  "val": "a",
+  "origin": {
+    "username": "0.1.8.1_test",
+    "id": 1
+  },
+  "room": "default"
+}
+08:53 17.27 tx
+{
+  "cmd": "pmsg",
+  "val": "a",
+  "id": "0.1.8.1_test"
+}
+08:51 58.89 rx
+{
+  "cmd": "ulist",
+  "val": [
+    {
+      "username": "0.1.8.1_test",
+      "id": 1
+    }
+  ],
+  "room": "default"
+}
+08:51 58.88 rx
+{
+  "cmd": "statuscode",
+  "code": "I:100 | OK",
+  "val": {
+    "username": "0.1.8.1_test",
+    "id": 1
+  }
+}
+08:51 58.87 tx
+{
+  "cmd": "setid",
+  "val": "0.1.8.1_test"
+}
+08:51 36.53 rx
+{
+  "cmd": "gmsg",
+  "val": "a",
+  "room": "default"
+}
+08:51 36.53 tx
+{
+  "cmd": "gmsg",
+  "val": "a"
+}
+08:51 19.45 rx
+{
+  "cmd": "motd",
+  "val": "CloudLink 4 Test",
+  "room": "default"
+}
+08:51 19.45 rx
+{
+  "cmd": "ulist",
+  "val": [],
+  "room": "default"
+}
+08:51 19.44 rx
+{
+  "cmd": "gmsg",
+  "val": "",
+  "room": "default"
+}
+08:51 19.43 rx
+{
+  "cmd": "server_version",
+  "val": "0.1.8.1",
+  "room": "default"
+}
+
+08:51 19.43 rx
+{
+  "cmd": "client_ip",
+  "val": "127.0.0.1:53441",
+  "room": "default"
+}
+08:51 19.43
+Connected to ws://127.0.0.1:3000
+08:51 19.42
+Connecting to ws://127.0.0.1:3000
