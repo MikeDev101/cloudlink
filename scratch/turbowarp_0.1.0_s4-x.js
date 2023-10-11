@@ -8,6 +8,13 @@
   /*
   CloudLink Scratch Extension v0.1.0 - TurboWarp, S4.0/S4.1 backward-compatible
 
+  Server versions supported via backward compatibility:
+  - 0.1.5 (internally S2.2)
+  - 0.1.7
+  - 0.1.8.x
+  - 0.1.9.x
+  - 0.2.0 (latest)
+
   MIT License
   Copyright 2023 Mike J. Renaker / "MikeDEV".
   Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
@@ -189,16 +196,17 @@
       1 - Connection dropped (connected OK but lost connection afterwards)
       2 - Connection failed (attempted connection but did not succeed)
     
-    linkstate.identifiedProtocol - Older versions of the server don't handle the handshake request, or use older formatting schemes. (WIP, might get removed)
-      0 - Server doesn't understand the handshake request, uses the old nested CMD scheme, or uses very old formatting (Assume older than 0.1.7)
-      1 - Server understands the handshake request, uses an older statuscode format, and doesn't understand listeners (at least 0.1.8)
-      2 - Server understands the handshake request, uses an older statuscode format, but understands listeners and/or uses new ulist methods (at least 0.1.9)
-      3 - Server understands the handshake request, uses the newer statuscode format, understands listeners and/or uses new ulist methods. (0.2.0 or newer)
+    linkstate.identifiedProtocol - Enables backwards compatibility for CL servers.
+      0 - CL3 0.1.5 "S2.2" - Doesn't support listeners, MOTD, or statuscodes.
+      1 - CL3 0.1.7 - Doesn't support listeners, has early MOTD support, and early statuscode support.
+      2 - CL4 0.1.8.x - First version to support listeners, and modern server_version support.
+      3 - CL4 0.1.9.x - First version to implement the handshake command and better ulist events.
+      4 - CL4 0.2.0 (default) - Latest version. First version to implement client_obj and enhanced ulists.
     */
     linkState: {
       status: 0,
       disconnectType: 0,
-      identifiedProtocol: 0,
+      identifiedProtocol: 4,
     },
 
     // Storage for the publically available CloudLink instances.
@@ -230,7 +238,7 @@
     clVars.server_version = "";
     clVars.tempUsername = "";
     clVars.myUsername = "";
-    clVars.linkState.identifiedProtocol = 0;
+    clVars.linkState.identifiedProtocol = 4;
     clVars.myUserObject = {};
     clVars.gmsg = {
       queue: [],
@@ -287,6 +295,18 @@
       try {
         message.val = JSON.parse(message.val);
       } catch (e) {}
+    }
+
+    // Attach listeners
+    if (clVars.listeners.enablerState) {
+
+      // 0.1.8.x was the first server version to support listeners.
+      if (clVars.linkState.identifiedProtocol >= 2) {
+        message.listener = clVars.listeners.enablerValue;
+      } else {
+        console.warn("[CloudLink] Server is too old! Must be at least 0.1.8.x to support listeners.");
+      }
+      clVars.listeners.enablerState = false;
     }
 
     // Convert the outgoing message to JSON
@@ -346,6 +366,35 @@
         break;
       
       case "direct":
+
+        // Detect old server versions
+        if (packet.val.hasOwnProperty("cmd")) {
+          switch (packet.val.cmd) {
+            // Server is at least 0.1.5
+            case "vers":
+              console.log("[CloudLink] Server version:", packet.val.val);
+              clVars.server_version = packet.val.val;
+
+              // Downgrade protocol
+              if (clVars.linkState.identifiedProtocol == 0) return; // Don't repeat downgrades to 0.1.5 spec
+              console.log("[CloudLink] This server is old. Setting protocol to 0.1.5 spec.")
+              clVars.linkState.identifiedProtocol = 0;
+              return;
+
+            // Server is at least 0.1.7
+            case "motd":
+              console.log("[CloudLink] Message of the day:", packet.val.val);
+              clVars.motd = packet.val.val;
+
+              // Downgrade protocol
+              if (clVars.linkState.identifiedProtocol <= 1) return; // Don't repeat downgrades to 0.1.7 spec but allow downgrading to 0.1.5 spec
+              console.log("[CloudLink] This server is old. Setting protocol to 0.1.7 spec.")
+              clVars.linkState.identifiedProtocol = 1;
+              return;
+          }
+        }
+
+        // Store direct value
         clVars.direct.varState = packet.val;
         clVars.direct.hasNew = true;
         clVars.direct.queue.push(packet);
@@ -356,17 +405,30 @@
         break;
 
       case "statuscode":
-        // TODO: implement statuscode handling
+        // TODO: finish statuscode handling
 
-        // Check the server version
-        if (packet.hasOwnProperty("val") && (!packet.hasOwnProperty("code"))) {
-          console.warn("[CloudLink] This server appears to be old: It doesn't support newer statuscode formatting. Downgrading protocol version.");
+        // Detect older versions
+        if (packet.hasOwnProperty("val")) {
+          
         }
 
         break;
       
       case "ulist":
         // TODO: implement ulist handling
+
+        if (packet.hasOwnProperty("val") && (!packet.hasOwnProperty("method"))) {
+          console.warn("[CloudLink] This server appears to be old. Downgrading protocol version.");
+        }
+
+        // Check if the ulist value is a string (0.1.5)
+        switch (typeof packet.val) {
+          case "string": // 0.1.5
+            break;
+          case "function": // 0.1.8.x - 0.1.9.x
+            break;
+        }
+
         break;
       
       case "server_version":
@@ -397,6 +459,7 @@
       case "handshake_cfg":
         // The handshake request has been returned.
         break;
+
       case "username_cfg":
         // The set username request has been returned.
         break;
@@ -1324,11 +1387,20 @@
 
     // Command - Sets the username of the client on the server.
     // NAME - String
-    setMyName(args) { } // TODO: Finish this
+    setMyName(args) { 
+      return sendCloudLinkMessage({cmd: "setid", val: args.DATA});
+    }
 
     // Command - Prepares the next transmitted message to have a listener ID attached to it.
     // ID - String (listener ID)
-    createListener(args) { } // TODO: Finish this
+    createListener(args) { 
+      if (clVars.listeners.enablerState) {
+        console.warn("[CloudLink] Cannot create multiple listeners at a time!");
+        return;
+      }
+      clVars.listeners.enablerState = true;
+      clVars.listeners.enablerValue = args.ID;
+    }
 
     // Command - Subscribes to various rooms on a server.
     // ROOMS - String (JSON Array or single string)
