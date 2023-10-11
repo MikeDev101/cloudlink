@@ -236,7 +236,7 @@
 
   // Clears out and resets the various values of clVars upon disconnect.
   function resetValuesOnClose() {
-    clearInterval(clVars.handshakeAttempt);
+    window.clearTimeout(clVars.handshakeAttempt);
     clVars.socket = null;
     clVars.motd = "";
     clVars.client_ip = "";
@@ -554,11 +554,11 @@
       clVars.linkState.status = 2;
       vm.runtime.startHats('cloudlink_onConnect');
 
-      // If a handshake response hasn't been received in over a second, try to send it anyways
+      // If a server_version message hasn't been received in over half a second, try to broadcast a handshake
       clVars.handshakeAttempt = window.setTimeout(function() {
         console.log("[CloudLink] Hmm... This server hasn't sent us it's server info. Going to attempt a handshake.");
         sendHandshake();
-      }, 1000);
+      }, 500);
 
       // Return promise (during setup)
       return;
