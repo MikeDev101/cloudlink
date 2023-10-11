@@ -1452,7 +1452,7 @@
     // Command - Sets the username of the client on the server.
     // NAME - String
     setMyName(args) {
-      return sendCloudLinkMessage({ cmd: "setid", val: args.DATA });
+      return sendCloudLinkMessage({ cmd: "setid", val: args.NAME });
     }
 
     // Command - Prepares the next transmitted message to have a listener ID attached to it.
