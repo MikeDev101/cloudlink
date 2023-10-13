@@ -12,11 +12,13 @@ See ./golang for the WIP Go-based server.
 You can learn about the protocol using the original Scratch 3.0 client extension.
 Feel free to test-drive the extension in any of these Scratch mods:
 
-- [TurboWarp](https://turbowarp.org/editor?extension=https://mikedev101.github.io/cloudlink/S4-1-nosuite.js)
-- [SheepTester's E羊icques](https://sheeptester.github.io/scratch-gui/?url=https://mikedev101.github.io/cloudlink/S4-1-nosuite.js)
+- [PenguinMod](https://studio.penguinmod.site/editor.html?extension=https://extensions.penguinmod.site/extensions/MikeDev101/cloudlink.js)
+- [TurboWarp](https://turbowarp.org/editor) _(You'll need to import the [extension code](https://mikedev101.github.io/cloudlink/scratch/cloudlink_turbowarp_0.1.0.js) as a file.)_
+- [SheepTester's E羊icques](https://sheeptester.github.io/scratch-gui) _(You'll need to inject the [extension code](https://mikedev101.github.io/cloudlink/scratch/cloudlink_epicques_0.1.0.js) manually.)_
+
+_Currently not supported (I'm working on it!):_
 - [Ogadaki's Adacraft](https://adacraft.org/studio/)
-- [Ogadaki's Adacraft (Beta)](https://beta.adacraft.org/studio/)
-- [PenguinMod](https://studio.penguinmod.site/editor.html?extension=https://mikedev101.github.io/cloudlink/S4-1-nosuite.js)
+- [Ogadaki's Adacraft (Beta)](https://beta.adacraft.org/studio/) 
 
 # 📃 The CloudLink Protocol 📃
 Documentation of the CL4 protocol can be found in the CloudLink Repository's [Wiki page.](https://github.com/MikeDev101/cloudlink/wiki)
