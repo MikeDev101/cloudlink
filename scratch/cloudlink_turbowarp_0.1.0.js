@@ -172,9 +172,15 @@
     // rooms.enablerValue - Set to a new list of rooms when "selectRoomsInNextPacket" is used.
     // rooms.current - Keeps track of all current rooms being used.
     // rooms.varStates - Storage for all per-room messages.
+    // rooms.isLinked - Set to true when a room link request is successful. False when unlinked.
+    // rooms.isAttemptingLink - Set to true when running "linkToRooms()".
+    // rooms.isAttemptingUnlink - Set to true when running "unlinkFromRooms()".
     rooms: {
       enablerState: false,
       enablerValue: "",
+      isLinked: false,
+      isAttemptingLink: false,
+      isAttemptingUnlink: false,
       current: [],
       varStates: {},
     },
@@ -301,6 +307,9 @@
     clVars.rooms = {
       enablerState: false,
       enablerValue: "",
+      isLinked: false,
+      isAttemptingLink: false,
+      isAttemptingUnlink: false,
       current: [],
       varStates: {},
     };
@@ -586,24 +595,54 @@
 
           // Handle setup listeners
           if (packet.hasOwnProperty("listener")) {
-            if (packet.listener == "username_cfg") {
+            switch (packet.listener) {
+              case "username_cfg":
 
-              // Username accepted
-              if (packet.code.includes("I:100")) {
-                clVars.myUserObject = packet.val;
-                clVars.username.value = packet.val.username;
-                clVars.username.accepted = true;
-                console.log(`[CloudLink] Username has been set to \"${clVars.username.value}\" successfully!`);
+                // Username accepted
+                if (packet.code.includes("I:100")) {
+                  clVars.myUserObject = packet.val;
+                  clVars.username.value = packet.val.username;
+                  clVars.username.accepted = true;
+                  console.log(`[CloudLink] Username has been set to \"${clVars.username.value}\" successfully!`);
 
-              // Username rejected / error
-              } else {
-                console.log(`[CloudLink] Username rejected by the server! Error code ${packet.code}.}`);
-              }
-              break;
-            } else if (packet.listener == "handshake_cfg") {
-              // Prevent handshake responses being stored in the statuscode variables
-              console.log("[CloudLink] Server responded to our handshake!");
-              break;
+                // Username rejected / error
+                } else {
+                  console.log(`[CloudLink] Username rejected by the server! Error code ${packet.code}.}`);
+                }
+                return;
+              
+              case "handshake_cfg":
+                // Prevent handshake responses being stored in the statuscode variables
+                console.log("[CloudLink] Server responded to our handshake!");
+                return;
+              
+              case "link":
+                // Room link accepted
+                if (!clVars.rooms.isAttemptingLink) return;
+                if (packet.code.includes("I:100")) {
+                  clVars.rooms.isAttemptingLink = false;
+                  clVars.rooms.isLinked = true;
+                  console.log("[CloudLink] Room linked successfully!");
+
+                // Room link rejected / error
+                } else {
+                  console.log(`[CloudLink] Room link rejected! Error code ${packet.code}.}`);
+                }
+                return;
+              
+              case "unlink":
+                // Room unlink accepted
+                if (!clVars.rooms.isAttemptingUnlink) return;
+                if (packet.code.includes("I:100")) {
+                  clVars.rooms.isAttemptingUnlink = false;
+                  clVars.rooms.isLinked = false;
+                  console.log("[CloudLink] Room unlinked successfully!");
+
+                // Room link rejected / error
+                } else {
+                  console.log(`[CloudLink] Room unlink rejected! Error code ${packet.code}.}`);
+                }
+                return;
             }
           }
 
@@ -1696,24 +1735,82 @@
           return "";
         }
         return clVars.pvar.varStates[String(args.VAR)].varState;
-    }}
+      }
+    }
 
     // Reporter - Gets a JSON key value from a JSON string.
     // PATH - String, JSON_STRING - String
-    parseJSON(args) { } // TODO: Finish this
+    parseJSON(args) { 
+      try {
+        const path = args.PATH.toString().split('/').map(prop => decodeURIComponent(prop));
+        if (path[0] === '') path.splice(0, 1);
+        if (path[path.length - 1] === '') path.splice(-1, 1);
+        let json;
+        try {
+          json = JSON.parse(' ' + args.JSON_STRING);
+        } catch (e) {
+          return e.message;
+        };
+        path.forEach(prop => json = json[prop]);
+        if (json === null) return 'null';
+        else if (json === undefined) return '';
+        else if (typeof json === 'object') return JSON.stringify(json);
+        else return json.toString();
+      } catch (err) {
+        return '';
+      };
+    }
 
     // Reporter - Returns an entry from a JSON array (0-based).
     // NUM - Number, ARRAY - String (JSON Array)
-    getFromJSONArray(args) { } // TODO: Finish this
+    getFromJSONArray(args) {
+      var json_array = JSON.parse(args.ARRAY);
+      if (json_array[args.NUM] == "undefined") {
+        return "";
+      } else {
+        let data = json_array[args.NUM];
+  
+        if (typeof (data) == "object") {
+          data = JSON.stringify(data); // Make the JSON safe for Scratch
+        }
+  
+        return data;
+      }
+    }
 
     // Reporter - Returns a RESTful GET promise.
     // url - String
-    fetchURL(args) { } // TODO: Finish this
+    fetchURL(args) {
+      return fetch(args.url, {method: "GET"})
+      .then(response => response.text())
+      .catch(error => {
+        console.warn(`[CloudLink] Fetch error: ${error}`);
+      });
+    }
 
     // Reporter - Returns a RESTful request promise.
     // url - String, method - String, data - String, headers - String
-    requestURL(args) { } // TODO: Finish this
-
+    requestURL(args) {
+      if (args.method == "GET" || args.method == "HEAD") {
+        return fetch(args.url, {
+          method: args.method,
+          headers: JSON.parse(args.headers)
+        }).then(response => response.text())
+        .catch(error => {
+          console.warn(`[CloudLink] Request error: ${error}`);
+        });
+      } else {
+        return fetch(args.url, {
+          method: args.method,
+          headers: JSON.parse(args.headers),
+          body: JSON.parse(args.data)
+        }).then(response => response.text())
+        .catch(error => {
+          console.warn(`[CloudLink] Request error: ${error}`);
+        });
+      }
+    }
+    
     // Event - Currently a temporary fix until startHats is fixed.
     // ID - String (listener)
     onListener(args) {
@@ -1822,7 +1919,20 @@
 
     // Reporter - Returns a JSON-ified value.
     // toBeJSONified - String
-    makeJSON(args) { } // TODO: Finish this
+    makeJSON(args) {
+      if (typeof(args.toBeJSONified) == "string") {
+        try {
+          JSON.parse(args.toBeJSONified);
+          return String(args.toBeJSONified);
+        } catch(err) {
+          return "Not JSON!";
+        }
+      } else if (typeof(args.toBeJSONified) == "object") {
+        return JSON.stringify(args.toBeJSONified);
+      } else {
+        return "Not JSON!";
+      };
+    }
 
     // Boolean - Returns true if connected.
     getComState() {
@@ -1830,7 +1940,9 @@
     }
 
     // Boolean - Returns true if linked to rooms (other than "default")
-    getRoomState() { } // TODO: Finish this
+    getRoomState() {
+      return ((clVars.socket != null) && (clVars.rooms.isLinked));
+    }
 
     // Boolean - Returns true if the connection was dropped.
     getComLostConnectionState() {
@@ -2042,7 +2154,20 @@
         return;
       };
 
-      return sendMessage({ cmd: "link", val: args.ROOMS });
+      // Prevent running if already linked.
+      if (clVars.rooms.isLinked) {
+        console.warn("[CloudLink] Already linked to rooms!");
+        return;
+      };
+
+      // Prevent running if a room link is in progress.
+      if (clVars.rooms.isAttemptingLink) {
+        console.warn("[CloudLink] Currently linking to rooms! Please wait!");
+        return;
+      };
+
+      clVars.rooms.isAttemptingLink = true;
+      return sendMessage({ cmd: "link", val: args.ROOMS, listener: "link" });
     }
 
     // Command - Specifies specific subscribed rooms to transmit messages to.
@@ -2069,6 +2194,13 @@
         console.warn("[CloudLink] Cannot use the room selector more than once at a time!");
         return;
       }
+
+      // Prevent running if not linked.
+      if (!clVars.rooms.isLinked) {
+        console.warn("[CloudLink] Cannot use room selector while not linked to rooms!");
+        return;
+      };
+
       clVars.rooms.enablerState = true;
       clVars.rooms.enablerValue = args.ROOMS;
     } 
@@ -2091,7 +2223,20 @@
         return;
       };
 
-      return sendMessage({ cmd: "unlink", val: "" });
+      // Prevent running if already unlinked.
+      if (!clVars.rooms.isLinked) {
+        console.warn("[CloudLink] Already unlinked from rooms!");
+        return;
+      };
+
+      // Prevent running if a room unlink is in progress.
+      if (clVars.rooms.isAttemptingUnlink) {
+        console.warn("[CloudLink] Currently unlinking from rooms! Please wait!");
+        return;
+      };
+
+      clVars.rooms.isAttemptingUnlink = true;
+      return sendMessage({ cmd: "unlink", val: "", listener: "unlink" });
     }
 
     // Command - Sends a gmsg value.
