@@ -1696,24 +1696,82 @@
           return "";
         }
         return clVars.pvar.varStates[String(args.VAR)].varState;
-    }}
+      }
+    }
 
     // Reporter - Gets a JSON key value from a JSON string.
     // PATH - String, JSON_STRING - String
-    parseJSON(args) { } // TODO: Finish this
+    parseJSON(args) { 
+      try {
+        const path = args.PATH.toString().split('/').map(prop => decodeURIComponent(prop));
+        if (path[0] === '') path.splice(0, 1);
+        if (path[path.length - 1] === '') path.splice(-1, 1);
+        let json;
+        try {
+          json = JSON.parse(' ' + args.JSON_STRING);
+        } catch (e) {
+          return e.message;
+        };
+        path.forEach(prop => json = json[prop]);
+        if (json === null) return 'null';
+        else if (json === undefined) return '';
+        else if (typeof json === 'object') return JSON.stringify(json);
+        else return json.toString();
+      } catch (err) {
+        return '';
+      };
+    }
 
     // Reporter - Returns an entry from a JSON array (0-based).
     // NUM - Number, ARRAY - String (JSON Array)
-    getFromJSONArray(args) { } // TODO: Finish this
+    getFromJSONArray(args) {
+      var json_array = JSON.parse(args.ARRAY);
+      if (json_array[args.NUM] == "undefined") {
+        return "";
+      } else {
+        let data = json_array[args.NUM];
+  
+        if (typeof (data) == "object") {
+          data = JSON.stringify(data); // Make the JSON safe for Scratch
+        }
+  
+        return data;
+      }
+    }
 
     // Reporter - Returns a RESTful GET promise.
     // url - String
-    fetchURL(args) { } // TODO: Finish this
+    fetchURL(args) {
+      return fetch(args.url, {method: "GET"})
+      .then(response => response.text())
+      .catch(error => {
+        console.warn(`[CloudLink] Fetch error: ${error}`);
+      });
+    }
 
     // Reporter - Returns a RESTful request promise.
     // url - String, method - String, data - String, headers - String
-    requestURL(args) { } // TODO: Finish this
-
+    requestURL(args) {
+      if (args.method == "GET" || args.method == "HEAD") {
+        return fetch(args.url, {
+          method: args.method,
+          headers: JSON.parse(args.headers)
+        }).then(response => response.text())
+        .catch(error => {
+          console.warn(`[CloudLink] Request error: ${error}`);
+        });
+      } else {
+        return fetch(args.url, {
+          method: args.method,
+          headers: JSON.parse(args.headers),
+          body: JSON.parse(args.data)
+        }).then(response => response.text())
+        .catch(error => {
+          console.warn(`[CloudLink] Request error: ${error}`);
+        });
+      }
+    }
+    
     // Event - Currently a temporary fix until startHats is fixed.
     // ID - String (listener)
     onListener(args) {
@@ -1822,7 +1880,20 @@
 
     // Reporter - Returns a JSON-ified value.
     // toBeJSONified - String
-    makeJSON(args) { } // TODO: Finish this
+    makeJSON(args) {
+      if (typeof(args.toBeJSONified) == "string") {
+        try {
+          JSON.parse(args.toBeJSONified);
+          return String(args.toBeJSONified);
+        } catch(err) {
+          return "Not JSON!";
+        }
+      } else if (typeof(args.toBeJSONified) == "object") {
+        return JSON.stringify(args.toBeJSONified);
+      } else {
+        return "Not JSON!";
+      };
+    }
 
     // Boolean - Returns true if connected.
     getComState() {
