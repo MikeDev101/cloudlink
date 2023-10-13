@@ -15,6 +15,10 @@ It is recommended to keep your copy of CloudLink up-to-date for improved securit
 | S1.1              | 🔴 No      | End of life.                                                         |
 | S1.0              | 🔴 No      | End of life.                                                         |
 
+#### *Notice for Meower Variants of CloudLink*
+Special exceptions are given to Meower-specific builds of CloudLink. They will be maintained as long as
+Meower supports APIv0 or the CloudLink protocol.
+
 ## Servers
 You are to keep your instance of Cloudlink as up-to-date as possible. You are to assume that support can be discontinued at any time, with or without reason. 
 ### Supported Versions
@@ -26,7 +30,7 @@ You are to keep your instance of Cloudlink as up-to-date as possible. You are to
 | 0.1.8.x           | 🔴 No      | Pre-CL4 optimized. EOL.                                              |
 | 0.1.7.x and older | 🔴 No      | CL3/CL Legacy - EOL.                                                 |
 
-#### Notice for public server hosts
+#### *Notice for public server providers*
 Public server hosts should maintain the latest version. If a public server host has been found to be running on a Deprecated release, or a version that has not been upgraded in over 30 days, your public host will be removed from the public server list and you will be notified to update your server.
 
 ### Reporting vulnerabilities
