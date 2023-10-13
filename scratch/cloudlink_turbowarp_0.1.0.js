@@ -31,9 +31,6 @@
   FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
   WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-  === CURRENT BUGS ===
-  * Event hats aren't working.
-  * vm.runtime.startHats() don't work with arguments (for some reason). Possible fix: https://docs.turbowarp.org/development/extensions/hats#predicate-based-hat-blocks
   */
 
   // Require extension to be unsandboxed.
@@ -50,6 +47,7 @@
 
   // Declare VM
   const vm = Scratch.vm;
+  const runtime = vm.runtime;
 
   /*
   This versioning system is intended for future use with CloudLink.
@@ -96,7 +94,7 @@
     // gmsg.hasNew - Returns true if a new gmsg value has been received.
     gmsg: {
       queue: [],
-      varState: {},
+      varState: "",
       hasNew: false,
       eventHatTick: false,
     },
@@ -106,7 +104,7 @@
     // pmsg.hasNew - Returns true if a new pmsg value has been received.
     pmsg: {
       queue: [],
-      varState: {},
+      varState: "",
       hasNew: false,
       eventHatTick: false,
     },
@@ -132,7 +130,7 @@
     // direct.hasNew - Returns true if a new direct value has been received.
     direct: {
       queue: [],
-      varState: {},
+      varState: "",
       hasNew: false,
       eventHatTick: false,
     },
@@ -142,7 +140,7 @@
     // statuscode.hasNew - Returns true if a new statuscode value has been received.
     statuscode: {
       queue: [],
-      varState: {},
+      varState: "",
       hasNew: false,
       eventHatTick: false,
     },
@@ -261,13 +259,13 @@
     clVars.myUserObject = {};
     clVars.gmsg = {
       queue: [],
-      varState: {},
+      varState: "",
       hasNew: false,
       eventHatTick: false,
     };
     clVars.pmsg = {
       queue: [],
-      varState: {},
+      varState: "",
       hasNew: false,
       eventHatTick: false,
     };
@@ -283,13 +281,13 @@
     };
     clVars.direct = {
       queue: [],
-      varState: {},
+      varState: "",
       hasNew: false,
       eventHatTick: false,
     };
     clVars.statuscode = {
       queue: [],
-      varState: {},
+      varState: "",
       hasNew: false,
       eventHatTick: false,
     };
@@ -337,7 +335,7 @@
         message.listener = clVars.listeners.enablerValue;
 
         // Create listener
-        clVars.listeners.varStates[args.ID] = {
+        clVars.listeners.varStates[String(args.ID)] = {
           hasNew: false,
           varState: {},
           eventHatTick: false,
@@ -466,13 +464,11 @@
         clVars.gmsg.queue.push(packet);
         clVars.gmsg.eventHatTick = true;
 
-        // Fire event hats (currently broken)
-        /*
-        vm.runtime.startHats('cloudlink_onNewPacket', {
+        // Fire event hats
+        runtime.startHats('cloudlink_onNewPacket', {
           TYPE: 'Global data',
           VAR: packet.name
         });
-        */
 
         break;
 
@@ -482,18 +478,18 @@
         clVars.pmsg.queue.push(packet);
         clVars.pmsg.eventHatTick = true;
 
-        // Fire event hats (currently broken)
-        /*
-        vm.runtime.startHats('cloudlink_onNewPacket', {
+        // Fire event hats
+        runtime.startHats('cloudlink_onNewPacket', {
           TYPE: 'Private data',
           VAR: packet.name
         });
-        */
 
         break;
 
       case "gvar":
-        clVars.gvar.varStates[packet.name] = {
+        console.log(`[CloudLink] Got new global variable: \"${packet.name}\" with value ${packet.val}`);
+
+        clVars.gvar.varStates[String(packet.name)] = {
           hasNew: true,
           varState: packet.val,
           eventHatTick: true,
@@ -501,22 +497,22 @@
         clVars.gvar.queue.push(packet);
         clVars.gvar.eventHatTick = true;
 
-        // Fire event hats (currently broken)
-        /*
-        vm.runtime.startHats('cloudlink_onNewVar', {
+        console.log(clVars.gvar.varStates);
+
+        // Fire event hats
+        runtime.startHats('cloudlink_onNewVar', {
           TYPE: 'Global variables',
           VAR: packet.name
         });
-        vm.runtime.startHats('cloudlink_onNewPacket', {
+        runtime.startHats('cloudlink_onNewPacket', {
           TYPE: 'Global variables',
           VAR: packet.name
         });
-        */
 
         break;
 
       case "pvar":
-        clVars.pvar.varStates[packet.name] = {
+        clVars.pvar.varStates[String(packet.name)] = {
           hasNew: true,
           varState: packet.val,
           eventHatTick: true,
@@ -524,17 +520,17 @@
         clVars.pvar.queue.push(packet);
         clVars.pvar.eventHatTick = true;
 
-        // Fire event hats (currently broken)
         /*
-        vm.runtime.startHats('cloudlink_onNewVar', {
-          TYPE: 'Private variables',
-          VAR: packet.name
-        });
-        vm.runtime.startHats('cloudlink_onNewPacket', {
+        // Fire event hats
+        runtime.startHats('cloudlink_onNewVar', {
           TYPE: 'Private variables',
           VAR: packet.name
         });
         */
+        runtime.startHats('cloudlink_onNewPacket', {
+          TYPE: 'Private variables',
+          VAR: packet.name
+        });
 
         break;
 
@@ -562,13 +558,11 @@
         clVars.direct.queue.push(packet);
         clVars.direct.eventHatTick = true;
 
-        // Fire event hats (currently broken)
-        /*
-        vm.runtime.startHats('cloudlink_onNewPacket', {
+        // Fire event hats
+        runtime.startHats('cloudlink_onNewPacket', {
           TYPE: 'Direct data',
           VAR: packet.name
         });
-        */
 
         break;
 
@@ -626,13 +620,11 @@
         clVars.statuscode.queue.push(packet);
         clVars.statuscode.eventHatTick = true;
 
-        // Fire event hats (currently broken)
-        /*
-        vm.runtime.startHats('cloudlink_onNewPacket', {
+        // Fire event hats
+        runtime.startHats('cloudlink_onNewPacket', {
           TYPE: 'Status code',
           VAR: packet.name
         });
-        */
 
         break;
 
@@ -712,16 +704,16 @@
 
     // Handle listeners
     if (packet.hasOwnProperty("listener")) {
-      if (clVars.listeners.current.includes(packet.listener)) {
+      if (clVars.listeners.current.includes(String(packet.listener))) {
 
         // Remove the listener from the currently listening list
         clVars.listeners.current.splice(
-          clVars.listeners.current.indexOf(packet.listener), 
+          clVars.listeners.current.indexOf(String(packet.listener)), 
           1
         );
 
         // Update listener states
-        clVars.listeners.varStates[packet.listener] = {
+        clVars.listeners.varStates[String(packet.listener)] = {
           hasNew: true,
           varState: packet,
           eventHatTick: true,
@@ -766,7 +758,7 @@
       }, 500);
 
       // Fire event hats (only one not broken)
-      vm.runtime.startHats('cloudlink_onConnect');
+      runtime.startHats('cloudlink_onConnect');
 
       // Return promise (during setup)
       return;
@@ -806,7 +798,7 @@
       resetOnClose();
 
       // Run all onClose event blocks
-      vm.runtime.startHats('cloudlink_onClose');
+      runtime.startHats('cloudlink_onClose');
       // Return promise (during setup)
       return;
     }
@@ -1099,26 +1091,26 @@
             opcode: "onConnect",
             blockType: Scratch.BlockType.EVENT,
             text: "When connected",
-            isEdgeActivated: false, // Gets called by vm.runtime.startHats
-            // shouldRestartExistingThreads: true,
+            isEdgeActivated: false, // Gets called by runtime.startHats
+            shouldRestartExistingThreads: true,
           },
 
           {
             opcode: "onClose",
             blockType: Scratch.BlockType.EVENT,
             text: "When disconnected",
-            isEdgeActivated: false, // Gets called by vm.runtime.startHats
-            // shouldRestartExistingThreads: true,
+            isEdgeActivated: false, // Gets called by runtime.startHats
+            shouldRestartExistingThreads: true,
           },
 
           "---",
 
           {
             opcode: "onListener",
-            blockType: Scratch.BlockType.EVENT,
+            blockType: Scratch.BlockType.HAT,
             text: "When I receive new message with listener [ID]",
-            isEdgeActivated: true, // Set to false when vm.runtime.startHats is fixed
-            // shouldRestartExistingThreads: true,
+            isEdgeActivated: true, // Set to false when runtime.startHats is fixed
+            shouldRestartExistingThreads: true,
             arguments: {
               ID: {
                 type: Scratch.ArgumentType.STRING,
@@ -1129,10 +1121,10 @@
 
           {
             opcode: "onNewPacket",
-            blockType: Scratch.BlockType.EVENT,
+            blockType: Scratch.BlockType.HAT,
             text: "When I receive new [TYPE] message",
-            isEdgeActivated: true, // Set to false when vm.runtime.startHats is fixed
-            // shouldRestartExistingThreads: true,
+            isEdgeActivated: true, // Set to false when runtime.startHats is fixed
+            shouldRestartExistingThreads: false,
             arguments: {
               TYPE: {
                 type: Scratch.ArgumentType.STRING,
@@ -1144,10 +1136,10 @@
 
           {
             opcode: "onNewVar",
-            blockType: Scratch.BlockType.EVENT,
+            blockType: Scratch.BlockType.HAT,
             text: "When I receive new [TYPE] data for [VAR]",
-            isEdgeActivated: true, // Set to false when vm.runtime.startHats is fixed
-            // shouldRestartExistingThreads: true,
+            isEdgeActivated: true, // Set to false when runtime.startHats is fixed
+            shouldRestartExistingThreads: true,
             arguments: {
               TYPE: {
                 type: Scratch.ArgumentType.STRING,
@@ -1629,11 +1621,11 @@
     // Reporter - Returns data for a specific listener ID.
     // ID - String (listener ID)
     returnListenerData(args) {
-      if (!clVars.listeners.varStates.hasOwnProperty(args.ID)) {
+      if (!clVars.listeners.varStates.hasOwnProperty(String(args.ID))) {
         console.warn(`[CloudLink] Listener ID ${args.ID} does not exist!`);
         return "";
       }
-      return clVars.listeners.varStates[args.ID].varState;
+      return clVars.listeners.varStates[String(args.ID)].varState;
     }
 
     // Reporter - Returns the size of the message queue.
@@ -1697,17 +1689,17 @@
     returnVarData(args) {
       switch (args.TYPE) {
       case 'Global variables':
-        if (!clVars.gvar.varStates.hasOwnProperty(args.VAR)) {
+        if (!clVars.gvar.varStates.hasOwnProperty(String(args.VAR))) {
           console.warn(`[CloudLink] Global variable ${args.VAR} does not exist!`);
           return "";
         }
-        return clVars.gvar.varStates[args.ID].varState;
+        return clVars.gvar.varStates[String(args.VAR)].varState;
       case 'Private variables':
-        if (!clVars.pvar.varStates.hasOwnProperty(args.VAR)) {
+        if (!clVars.pvar.varStates.hasOwnProperty(String(args.VAR))) {
           console.warn(`[CloudLink] Private variable ${args.VAR} does not exist!`);
           return "";
         }
-        return clVars.pvar.varStates[args.ID].varState;
+        return clVars.pvar.varStates[String(args.VAR)].varState;
     }}
 
     // Reporter - Gets a JSON key value from a JSON string.
@@ -1810,9 +1802,9 @@
         case 'Global variables':
 
           // Variable must exist
-          if (!clVars.gvar.varStates.hasOwnProperty(args.VAR)) break;
-          if (clVars.gvar.varStates[args.VAR].eventHatTick) {
-            clVars.gvar.varStates[args.VAR].eventHatTick = false;
+          if (!clVars.gvar.varStates.hasOwnProperty(String(args.VAR))) break;
+          if (clVars.gvar.varStates[String(args.VAR)].eventHatTick) {
+            clVars.gvar.varStates[String(args.VAR)].eventHatTick = false;
             return true;
           }
 
@@ -1821,9 +1813,9 @@
         case 'Private variables':
 
           // Variable must exist
-          if (!clVars.pvar.varStates.hasOwnProperty(args.VAR)) break;
-          if (clVars.pvar.varStates[args.VAR].eventHatTick) {
-            clVars.pvar.varStates[args.VAR].eventHatTick = false;
+          if (!clVars.pvar.varStates.hasOwnProperty(String(args.VAR))) break;
+          if (clVars.pvar.varStates[String(args.VAR)].eventHatTick) {
+            clVars.pvar.varStates[String(args.VAR)].eventHatTick = false;
             return true;
           }
 
@@ -1867,13 +1859,6 @@
       if (clVars.socket == null) return false;
 
       // Run event
-      if (args.TYPE === 'Global data') return clVars.gmsg.hasNew;
-      else if (args.TYPE === 'Private data') return clVars.pmsg.hasNew;
-      else if (args.TYPE === 'Direct data') return clVars.direct.hasNew;
-      else if (args.TYPE === 'Status code') return clVars.statuscode.hasNew;
-      else return false;
-
-      /*
       switch (args.TYPE) {
         case 'Global data':
           return clVars.gmsg.hasNew;
@@ -1883,7 +1868,7 @@
           return clVars.direct.hasNew;
         case 'Status code':
           return clVars.statuscode.hasNew;
-      } */
+      }
     }
 
     // Boolean - Returns true if there is new gvar/pvar data.
@@ -1891,28 +1876,28 @@
     returnIsNewVarData(args) {
       switch (args.TYPE) {
         case 'Global variables':
-          if (!clVars.gvar.varStates.hasOwnProperty(args.VAR)) {
+          if (!clVars.gvar.varStates.hasOwnProperty(String(args.VAR))) {
             console.warn(`[CloudLink] Global variable ${args.VAR} does not exist!`);
             return false;
           }
-          return clVars.gvar.varStates[args.ID].hasNew;
+          return clVars.gvar.varStates[String(args.ID)].hasNew;
         case 'Private variables':
-          if (!clVars.pvar.varStates.hasOwnProperty(args.VAR)) {
+          if (!clVars.pvar.varStates.hasOwnProperty(String(args.VAR))) {
             console.warn(`[CloudLink] Private variable ${args.VAR} does not exist!`);
             return false;
           }
-          return clVars.pvar.varStates[args.ID].hasNew;
+          return clVars.pvar.varStates[String(args.ID)].hasNew;
       }
     }
 
     // Boolean - Returns true if a listener has a new value.
     // ID - String (listener ID)
     returnIsNewListener(args) {
-      if (!clVars.listeners.varStates.hasOwnProperty(args.ID)) {
+      if (!clVars.listeners.varStates.hasOwnProperty(String(args.ID))) {
         console.warn(`[CloudLink] Listener ID ${args.ID} does not exist!`);
         return false;
       }
-      return clVars.listeners.varStates[args.ID].hasNew;
+      return clVars.listeners.varStates[String(args.ID)].hasNew;
     }
 
     // Boolean - Returns true if a username/ID/UUID/object exists in the userlist.
@@ -2215,28 +2200,28 @@
     resetNewVarData(args) {
       switch (args.TYPE) {
         case 'Global variables':
-          if (!clVars.gvar.varStates.hasOwnProperty(args.VAR)) {
+          if (!clVars.gvar.varStates.hasOwnProperty(String(args.VAR))) {
             console.warn(`[CloudLink] Global variable ${args.VAR} does not exist!`);
             return;
           }
-          clVars.gvar.varStates[args.ID].hasNew = false;
+          clVars.gvar.varStates[String(args.ID)].hasNew = false;
         case 'Private variables':
-          if (!clVars.pvar.varStates.hasOwnProperty(args.VAR)) {
+          if (!clVars.pvar.varStates.hasOwnProperty(String(args.VAR))) {
             console.warn(`[CloudLink] Private variable ${args.VAR} does not exist!`);
             return false;
           }
-          clVars.pvar.varStates[args.ID].hasNew = false;
+          clVars.pvar.varStates[String(args.ID)].hasNew = false;
       }
     }
 
     // Command - Resets the "returnIsNewListener" boolean state.
     // ID - Listener ID
     resetNewListener(args) {
-      if (!clVars.listeners.varStates.hasOwnProperty(args.ID)) {
+      if (!clVars.listeners.varStates.hasOwnProperty(String(args.ID))) {
         console.warn(`[CloudLink] Listener ID ${args.ID} does not exist!`);
         return;
       }
-      clVars.listeners.varStates[args.ID].hasNew = false;
+      clVars.listeners.varStates[String(args.ID)].hasNew = false;
     }
 
     // Command - Clears all packet queues.
