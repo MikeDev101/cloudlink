@@ -6,14 +6,17 @@
 (function (Scratch) {
 
   /*
-  CloudLink Scratch Extension v0.1.0 - TurboWarp, S4.0/S4.1 backward-compatible
+  CloudLink Extension for TurboWarp v0.1.0.
+
+  This extension should be fully compatible with projects developed using
+  extensions S4.1, S4.0, and B3.0.
 
   Server versions supported via backward compatibility:
-  - 0.1.5 (internally S2.2)
-  - 0.1.7
-  - 0.1.8.x
-  - 0.1.9.x
-  - 0.2.0 (latest)
+  - CL3 0.1.5 (was called S2.2)
+  - CL3 0.1.7
+  - CL4 0.1.8.x
+  - CL4 0.1.9.x
+  - CL4 0.2.0 (latest)
 
   MIT License
   Copyright 2023 Mike J. Renaker / "MikeDEV".
@@ -27,6 +30,10 @@
   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE
   FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
   WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+  === CURRENT BUGS ===
+  * Event hats aren't working.
+  * vm.runtime.startHats() don't work with arguments (for some reason). Possible fix: https://docs.turbowarp.org/development/extensions/hats#predicate-based-hat-blocks
   */
 
   // Require extension to be unsandboxed.
@@ -46,7 +53,6 @@
 
   /*
   This versioning system is intended for future use with CloudLink.
-  This looks scary - But don't be afraid. It's rather simple, actually.
 
   When the client sends the handshake request, it will provide the server with the following details:
   {
@@ -55,43 +61,28 @@
       "language": "Scratch",
       "version": {
         "editorType": String,
-        "fullString": String,
-        "versionNumber": Number
+        "fullString": String
       }
     }
   }
 
-  Why?
-  A problem with previous versions of CloudLink clients/servers is that they do not implement a proper version check system.
-  Starting with the Scratch Extension rewrite, this new system will be enforced.
-
   version.editorType - Provides info regarding the Scratch IDE this Extension variant natively supports. Intended for server-side version identification.
   version.versionNumber - Numerical version info. Increment by 1 every Semantic Versioning Patch. Intended for server-side version identification.
   version.versionString - Semantic Versioning string. Intended for source-code versioning only.
-  version.compatibleVariants - A list of per-block, fully-compatible older Scratch Extension versions this extension supports.
-  version.compatibleVariantsShorthand - Shortened version of version.compatibleVariants. Intended for generating version strings within the extension.
 
   The extension will auto-generate a version string by using generateVersionString().
-
-  DO NOT MODIFY:
-  * compatibleVariants
-  * compatibleVariantsShorthand
-  ...without modifying versionNumber, or modifying editorType!
-  I intend to support multiple IDEs and they could have completely different versionNumbers or versionStrings!
   */
   const version = {
     editorType: "TurboWarp",
     versionNumber: 0,
     versionString: "0.1.0",
-    compatibleVariants: ["S4.1", "S4.0", "B4.0"],
-    compatibleVariantsShorthand: "S4-X"
   };
 
   // Store extension state
   var clVars = {
 
     // Editor-specific variable for hiding old, legacy-support blocks.
-    hideOldBlocks: true,
+    hideCLDeprecatedBlocks: true,
 
     // WebSocket object.
     socket: null,
@@ -107,6 +98,7 @@
       queue: [],
       varState: {},
       hasNew: false,
+      eventHatTick: false,
     },
 
     // pmsg.queue - An array of all currently queued pmsg values.
@@ -116,6 +108,7 @@
       queue: [],
       varState: {},
       hasNew: false,
+      eventHatTick: false,
     },
 
     // gvar.queue - An array of all currently queued gvar values.
@@ -123,6 +116,7 @@
     gvar: {
       queue: [],
       varStates: {},
+      eventHatTick: false,
     },
 
     // pvar.queue - An array of all currently queued pvar values.
@@ -130,6 +124,7 @@
     pvar: {
       queue: [],
       varStates: {},
+      eventHatTick: false,
     },
 
     // direct.queue - An array of all currently queued direct values.
@@ -139,6 +134,7 @@
       queue: [],
       varState: {},
       hasNew: false,
+      eventHatTick: false,
     },
 
     // statuscode.queue - An array of all currently queued statuscode values.
@@ -148,6 +144,7 @@
       queue: [],
       varState: {},
       hasNew: false,
+      eventHatTick: false,
     },
 
     // ulist stores all currently connected client objects in the server/all subscribed room(s).
@@ -170,7 +167,7 @@
       enablerState: false,
       enablerValue: "",
       current: [],
-      varStates: {}
+      varStates: {},
     },
 
     // rooms.enablerState - Set to true when "selectRoomsInNextPacket" is used.
@@ -235,7 +232,7 @@
   }
 
   function generateVersionString() {
-    return `${version.editorType}_${version.versionString}_${version.compatibleVariantsShorthand}`;
+    return `${version.editorType} ${version.versionString}`;
   }
 
   // Makes values safe for Scratch to represent.
@@ -266,29 +263,35 @@
       queue: [],
       varState: {},
       hasNew: false,
+      eventHatTick: false,
     };
     clVars.pmsg = {
       queue: [],
       varState: {},
       hasNew: false,
+      eventHatTick: false,
     };
     clVars.gvar = {
       queue: [],
       varStates: {},
+      eventHatTick: false,
     };
     clVars.pvar = {
       queue: [],
       varStates: {},
+      eventHatTick: false,
     };
     clVars.direct = {
       queue: [],
       varState: {},
       hasNew: false,
+      eventHatTick: false,
     };
     clVars.statuscode = {
       queue: [],
       varState: {},
       hasNew: false,
+      eventHatTick: false,
     };
     clVars.ulist = [];
     clVars.listeners = {
@@ -337,6 +340,7 @@
         clVars.listeners.varStates[args.ID] = {
           hasNew: false,
           varState: {},
+          eventHatTick: false,
         };
 
       } else {
@@ -375,7 +379,6 @@
       val: {
         language: "Scratch",
         version: {
-          fullString: generateVersionString(),
           editorType: version.editorType,
           versionNumber: version.versionNumber,
         },
@@ -461,6 +464,7 @@
         clVars.gmsg.varState = packet.val;
         clVars.gmsg.hasNew = true;
         clVars.gmsg.queue.push(packet);
+        clVars.gmsg.eventHatTick = true;
 
         // Fire event hats (currently broken)
         /*
@@ -476,6 +480,7 @@
         clVars.pmsg.varState = packet.val;
         clVars.pmsg.hasNew = true;
         clVars.pmsg.queue.push(packet);
+        clVars.pmsg.eventHatTick = true;
 
         // Fire event hats (currently broken)
         /*
@@ -490,9 +495,11 @@
       case "gvar":
         clVars.gvar.varStates[packet.name] = {
           hasNew: true,
-          varState: packet.val
+          varState: packet.val,
+          eventHatTick: true,
         };
         clVars.gvar.queue.push(packet);
+        clVars.gvar.eventHatTick = true;
 
         // Fire event hats (currently broken)
         /*
@@ -511,9 +518,11 @@
       case "pvar":
         clVars.pvar.varStates[packet.name] = {
           hasNew: true,
-          varState: packet.val
+          varState: packet.val,
+          eventHatTick: true,
         };
         clVars.pvar.queue.push(packet);
+        clVars.pvar.eventHatTick = true;
 
         // Fire event hats (currently broken)
         /*
@@ -551,6 +560,7 @@
         clVars.direct.varState = packet.val;
         clVars.direct.hasNew = true;
         clVars.direct.queue.push(packet);
+        clVars.direct.eventHatTick = true;
 
         // Fire event hats (currently broken)
         /*
@@ -614,6 +624,7 @@
         // Update state
         clVars.statuscode.hasNew = true;
         clVars.statuscode.queue.push(packet);
+        clVars.statuscode.eventHatTick = true;
 
         // Fire event hats (currently broken)
         /*
@@ -713,6 +724,7 @@
         clVars.listeners.varStates[packet.listener] = {
           hasNew: true,
           varState: packet,
+          eventHatTick: true,
         };
       }
     }
@@ -934,7 +946,7 @@
           {
             opcode: "readQueueSize",
             blockType: Scratch.BlockType.REPORTER,
-            hideFromPalette: clVars.hideOldBlocks,
+            hideFromPalette: clVars.hideCLDeprecatedBlocks,
             text: "Size of queue for [TYPE]",
             arguments: {
               TYPE: {
@@ -948,7 +960,7 @@
           {
             opcode: "readQueueData",
             blockType: Scratch.BlockType.REPORTER,
-            hideFromPalette: clVars.hideOldBlocks,
+            hideFromPalette: clVars.hideCLDeprecatedBlocks,
             text: "Packet queue for [TYPE]",
             arguments: {
               TYPE: {
@@ -983,7 +995,7 @@
           {
             opcode: "parseJSON",
             blockType: Scratch.BlockType.REPORTER,
-            hideFromPalette: clVars.hideOldBlocks,
+            hideFromPalette: clVars.hideCLDeprecatedBlocks,
             text: "[PATH] of [JSON_STRING]",
             arguments: {
               PATH: {
@@ -1000,7 +1012,7 @@
           {
             opcode: "getFromJSONArray",
             blockType: Scratch.BlockType.REPORTER,
-            hideFromPalette: clVars.hideOldBlocks,
+            hideFromPalette: clVars.hideCLDeprecatedBlocks,
             text: 'Get [NUM] from JSON array [ARRAY]',
             arguments: {
               NUM: {
@@ -1017,7 +1029,7 @@
           {
             opcode: "makeJSON",
             blockType: Scratch.BlockType.REPORTER,
-            hideFromPalette: clVars.hideOldBlocks,
+            hideFromPalette: clVars.hideCLDeprecatedBlocks,
             text: "Convert [toBeJSONified] to JSON",
             arguments: {
               toBeJSONified: {
@@ -1030,7 +1042,7 @@
           {
             opcode: "isValidJSON",
             blockType: Scratch.BlockType.BOOLEAN,
-            hideFromPalette: clVars.hideOldBlocks,
+            hideFromPalette: clVars.hideCLDeprecatedBlocks,
             text: "Is [JSON_STRING] valid JSON?",
             arguments: {
               JSON_STRING: {
@@ -1046,7 +1058,7 @@
           {
             opcode: "fetchURL",
             blockType: Scratch.BlockType.REPORTER,
-            hideFromPalette: clVars.hideOldBlocks,
+            hideFromPalette: clVars.hideCLDeprecatedBlocks,
             text: "Fetch data from URL [url]",
             arguments: {
               url: {
@@ -1059,7 +1071,7 @@
           {
             opcode: "requestURL",
             blockType: Scratch.BlockType.REPORTER,
-            hideFromPalette: clVars.hideOldBlocks,
+            hideFromPalette: clVars.hideCLDeprecatedBlocks,
             text: "Send request with method [method] for URL [url] with data [data] and headers [headers]",
             arguments: {
               method: {
@@ -1087,16 +1099,16 @@
             opcode: "onConnect",
             blockType: Scratch.BlockType.EVENT,
             text: "When connected",
-            isEdgeActivated: false,
-            shouldRestartExistingThreads: true,
+            isEdgeActivated: false, // Gets called by vm.runtime.startHats
+            // shouldRestartExistingThreads: true,
           },
 
           {
             opcode: "onClose",
             blockType: Scratch.BlockType.EVENT,
             text: "When disconnected",
-            isEdgeActivated: false,
-            shouldRestartExistingThreads: true,
+            isEdgeActivated: false, // Gets called by vm.runtime.startHats
+            // shouldRestartExistingThreads: true,
           },
 
           "---",
@@ -1105,8 +1117,8 @@
             opcode: "onListener",
             blockType: Scratch.BlockType.EVENT,
             text: "When I receive new message with listener [ID]",
-            isEdgeActivated: false,
-            shouldRestartExistingThreads: true,
+            isEdgeActivated: true, // Set to false when vm.runtime.startHats is fixed
+            // shouldRestartExistingThreads: true,
             arguments: {
               ID: {
                 type: Scratch.ArgumentType.STRING,
@@ -1119,8 +1131,8 @@
             opcode: "onNewPacket",
             blockType: Scratch.BlockType.EVENT,
             text: "When I receive new [TYPE] message",
-            isEdgeActivated: false,
-            shouldRestartExistingThreads: true,
+            isEdgeActivated: true, // Set to false when vm.runtime.startHats is fixed
+            // shouldRestartExistingThreads: true,
             arguments: {
               TYPE: {
                 type: Scratch.ArgumentType.STRING,
@@ -1134,8 +1146,8 @@
             opcode: "onNewVar",
             blockType: Scratch.BlockType.EVENT,
             text: "When I receive new [TYPE] data for [VAR]",
-            isEdgeActivated: false,
-            shouldRestartExistingThreads: true,
+            isEdgeActivated: true, // Set to false when vm.runtime.startHats is fixed
+            // shouldRestartExistingThreads: true,
             arguments: {
               TYPE: {
                 type: Scratch.ArgumentType.STRING,
@@ -1399,7 +1411,7 @@
           {
             opcode: "runCMDnoID",
             blockType: Scratch.BlockType.COMMAND,
-            hideFromPalette: clVars.hideOldBlocks,
+            hideFromPalette: clVars.hideCLDeprecatedBlocks,
             text: "Send command without ID [CMD] [DATA]",
             arguments: {
               CMD: {
@@ -1416,7 +1428,7 @@
           {
             opcode: "runCMD",
             blockType: Scratch.BlockType.COMMAND,
-            hideFromPalette: clVars.hideOldBlocks,
+            hideFromPalette: clVars.hideCLDeprecatedBlocks,
             text: "Send command [CMD] [ID] [DATA]",
             arguments: {
               CMD: {
@@ -1501,14 +1513,14 @@
             func: "showOldBlocks",
             blockType: Scratch.BlockType.BUTTON,
             text: "Show old blocks",
-            hideFromPalette: !clVars.hideOldBlocks,
+            hideFromPalette: !clVars.hideCLDeprecatedBlocks,
           },
 
           {
             func: "hideOldBlocks",
             blockType: Scratch.BlockType.BUTTON,
             text: "Hide old blocks",
-            hideFromPalette: clVars.hideOldBlocks,
+            hideFromPalette: clVars.hideCLDeprecatedBlocks,
           },
 
           "---",
@@ -1538,14 +1550,14 @@
           "Do you want to display old blocks?\n\nThese blocks are not recommended for use in newer CloudLink projects as they are deprecated or have better implementation in other extensions."
         )
       ) {
-        clVars.hideOldBlocks = false;
+        clVars.hideCLDeprecatedBlocks = false;
         vm.extensionManager.refreshBlocks();
       }
     }
 
     // Credit to LilyMakesThings' "Lily's toolbox" for this feature.
     hideOldBlocks() {
-      clVars.hideOldBlocks = true;
+      clVars.hideCLDeprecatedBlocks = true;
       vm.extensionManager.refreshBlocks();
     }
 
@@ -1714,6 +1726,112 @@
     // url - String, method - String, data - String, headers - String
     requestURL(args) { } // TODO: Finish this
 
+    // Event - Currently a temporary fix until startHats is fixed.
+    // ID - String (listener)
+    onListener(args) {
+      // Must be connected
+      if (clVars.socket == null) return false;
+      if (clVars.linkState.status != 2) return false;
+
+      // Listener must exist
+      if (!clVars.listeners.varStates.hasOwnProperty(args.ID)) return false;
+
+      // Run event
+      if (clVars.listeners.varStates[args.ID].eventHatTick) {
+        clVars.listeners.varStates[args.ID].eventHatTick = false;
+        return true;
+      }
+      return false;
+    }
+
+    // Event - Currently a temporary fix until startHats is fixed.
+    // TYPE - String (menu almostallmenu)
+    onNewPacket(args) {
+      // Must be connected
+      if (clVars.socket == null) return false;
+      if (clVars.linkState.status != 2) return false;
+
+      // Run event
+      switch (args.TYPE) {
+        case 'Global data':
+          if (clVars.gmsg.eventHatTick) {
+            clVars.gmsg.eventHatTick = false;
+            return true;
+          }
+          break;
+
+        case 'Private data':
+          if (clVars.pmsg.eventHatTick) {
+            clVars.pmsg.eventHatTick = false;
+            return true;
+          }
+          break;
+
+        case 'Direct data':
+          if (clVars.direct.eventHatTick) {
+            clVars.direct.eventHatTick = false;
+            return true;
+          }
+          break;
+
+        case 'Status code':
+          if (clVars.statuscode.eventHatTick) {
+            clVars.statuscode.eventHatTick = false;
+            return true;
+          }
+          break;
+
+        case 'Global variables':
+          if (clVars.gvar.eventHatTick) {
+            clVars.gvar.eventHatTick = false;
+            return true;
+          }
+          break;
+
+        case 'Private variables':
+          if (clVars.pvar.eventHatTick) {
+            clVars.pvar.eventHatTick = false;
+            return true;
+          }
+          break;
+      }
+      return false;
+    }
+
+    // Event - Currently a temporary fix until startHats is fixed.
+    // TYPE - String (varmenu), VAR - String (variable name)
+    onNewVar(args) {
+      // Must be connected
+      if (clVars.socket == null) return false;
+      if (clVars.linkState.status != 2) return false;
+
+      // Run event
+      switch (args.TYPE) {
+        case 'Global variables':
+
+          // Variable must exist
+          if (!clVars.gvar.varStates.hasOwnProperty(args.VAR)) break;
+          if (clVars.gvar.varStates[args.VAR].eventHatTick) {
+            clVars.gvar.varStates[args.VAR].eventHatTick = false;
+            return true;
+          }
+
+          break;
+
+        case 'Private variables':
+
+          // Variable must exist
+          if (!clVars.pvar.varStates.hasOwnProperty(args.VAR)) break;
+          if (clVars.pvar.varStates[args.VAR].eventHatTick) {
+            clVars.pvar.varStates[args.VAR].eventHatTick = false;
+            return true;
+          }
+
+          break;
+      }
+      return false;
+    }
+
     // Reporter - Returns a JSON-ified value.
     // toBeJSONified - String
     makeJSON(args) { } // TODO: Finish this
@@ -1744,6 +1862,18 @@
     // Boolean - Returns true if there is new gmsg/pmsg/direct/statuscode data.
     // TYPE - String (menu datamenu)
     returnIsNewData(args) {
+
+      // Must be connected
+      if (clVars.socket == null) return false;
+
+      // Run event
+      if (args.TYPE === 'Global data') return clVars.gmsg.hasNew;
+      else if (args.TYPE === 'Private data') return clVars.pmsg.hasNew;
+      else if (args.TYPE === 'Direct data') return clVars.direct.hasNew;
+      else if (args.TYPE === 'Status code') return clVars.statuscode.hasNew;
+      else return false;
+
+      /*
       switch (args.TYPE) {
         case 'Global data':
           return clVars.gmsg.hasNew;
@@ -1753,7 +1883,7 @@
           return clVars.direct.hasNew;
         case 'Status code':
           return clVars.statuscode.hasNew;
-      }
+      } */
     }
 
     // Boolean - Returns true if there is new gvar/pvar data.
@@ -1980,7 +2110,7 @@
         return;
       };
 
-      return sendMessage({ cmd: "unlink", val: args.ROOMS });
+      return sendMessage({ cmd: "unlink", val: "" });
     }
 
     // Command - Sends a gmsg value.
