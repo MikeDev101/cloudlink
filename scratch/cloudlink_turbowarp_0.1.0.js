@@ -487,8 +487,6 @@
         break;
 
       case "gvar":
-        console.log(`[CloudLink] Got new global variable: \"${packet.name}\" with value ${packet.val}`);
-
         clVars.gvar.varStates[String(packet.name)] = {
           hasNew: true,
           varState: packet.val,
@@ -496,8 +494,6 @@
         };
         clVars.gvar.queue.push(packet);
         clVars.gvar.eventHatTick = true;
-
-        console.log(clVars.gvar.varStates);
 
         // Fire event hats
         runtime.startHats('cloudlink_onNewVar', {
