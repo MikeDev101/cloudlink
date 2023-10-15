@@ -4,8 +4,8 @@
 		"url": "ws://127.0.0.1:3000/"
 	},
 	"1": {
-		"id": "CL4 Demo - Hosted by Meower Media",
-		"url": "wss://cl4-test.meower.org/"
+		"id": "CL4 0.2.0 Public Server (New domain, same as server 2)",
+		"url": "wss://cloudlink.mikedev101.us/0.2.0"
 	},
 	"2": {
 	       "id": "CL4 Demo - Hosted by Meower Media (Old project support)",
