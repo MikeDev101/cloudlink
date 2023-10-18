@@ -3,9 +3,12 @@
 // Description: A powerful WebSocket extension for Scratch.
 // By: MikeDEV
 
+/* eslint-disable */
+// prettier-ignore
 (function (Scratch) {
+
   /*
-  CloudLink Extension for SheepTester's E羊icques ("Epicques") v0.1.0.
+  CloudLink Extension for TurboWarp v0.1.0.
 
   This extension should be fully compatible with projects developed using
   extensions S4.1, S4.0, and B3.0.
@@ -31,6 +34,12 @@
   WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
   */
+
+  // Require extension to be unsandboxed.
+  'use strict';
+  if (!Scratch.extensions.unsandboxed) {
+    throw new Error('The CloudLink extension must run unsandboxed.');
+  }
 
   // Declare icons as static SVG URIs
   const cl_icon =
@@ -64,13 +73,16 @@
   The extension will auto-generate a version string by using generateVersionString().
   */
   const version = {
-    editorType: "Epicques",
-    versionNumber: 0,
-    versionString: "0.1.0",
+    editorType: "TurboWarp",
+    versionNumber: 1,
+    versionString: "0.1.1",
   };
 
   // Store extension state
   var clVars = {
+
+    // Editor-specific variable for hiding old, legacy-support blocks.
+    hideCLDeprecatedBlocks: true,
 
     // WebSocket object.
     socket: null,
@@ -323,7 +335,7 @@
     if (message.hasOwnProperty("val")) {
       try {
         message.val = JSON.parse(message.val);
-      } catch { }
+      } catch {}
     }
 
     // Attach listeners
@@ -412,7 +424,7 @@
             console.warn(`[CloudLink] Server is too old to enable leagacy support. Disconnecting.`);
             return clVars.socket.close(1000, "");
           }
-
+          
           // Set the identified protocol variant
           clVars.linkState.identifiedProtocol = value;
         }
@@ -434,7 +446,7 @@
       clVars.socket.close(1000, "Client going away (legacy server rejected by end user)");
       return;
     }
-
+    
     // Don't nag user the next time they connect to this server
     clVars.lastServerUrl = clVars.currentServerUrl;
   }
@@ -462,13 +474,6 @@
         clVars.gmsg.hasNew = true;
         clVars.gmsg.queue.push(packet);
         clVars.gmsg.eventHatTick = true;
-
-        // Fire event hats
-        runtime.startHats('cloudlink_onNewPacket', {
-          TYPE: 'Global data',
-          VAR: packet.name
-        });
-
         break;
 
       case "pmsg":
@@ -476,13 +481,6 @@
         clVars.pmsg.hasNew = true;
         clVars.pmsg.queue.push(packet);
         clVars.pmsg.eventHatTick = true;
-
-        // Fire event hats
-        runtime.startHats('cloudlink_onNewPacket', {
-          TYPE: 'Private data',
-          VAR: packet.name
-        });
-
         break;
 
       case "gvar":
@@ -493,17 +491,6 @@
         };
         clVars.gvar.queue.push(packet);
         clVars.gvar.eventHatTick = true;
-
-        // Fire event hats
-        runtime.startHats('cloudlink_onNewVar', {
-          TYPE: 'Global variables',
-          VAR: packet.name
-        });
-        runtime.startHats('cloudlink_onNewPacket', {
-          TYPE: 'Global variables',
-          VAR: packet.name
-        });
-
         break;
 
       case "pvar":
@@ -514,19 +501,6 @@
         };
         clVars.pvar.queue.push(packet);
         clVars.pvar.eventHatTick = true;
-
-        /*
-        // Fire event hats
-        runtime.startHats('cloudlink_onNewVar', {
-          TYPE: 'Private variables',
-          VAR: packet.name
-        });
-        */
-        runtime.startHats('cloudlink_onNewPacket', {
-          TYPE: 'Private variables',
-          VAR: packet.name
-        });
-
         break;
 
       case "direct":
@@ -552,13 +526,6 @@
         clVars.direct.hasNew = true;
         clVars.direct.queue.push(packet);
         clVars.direct.eventHatTick = true;
-
-        // Fire event hats
-        runtime.startHats('cloudlink_onNewPacket', {
-          TYPE: 'Direct data',
-          VAR: packet.name
-        });
-
         break;
 
       case "client_obj":
@@ -595,17 +562,17 @@
                   clVars.username.accepted = true;
                   console.log(`[CloudLink] Username has been set to \"${clVars.username.value}\" successfully!`);
 
-                  // Username rejected / error
+                // Username rejected / error
                 } else {
                   console.log(`[CloudLink] Username rejected by the server! Error code ${packet.code}.}`);
                 }
                 return;
-
+              
               case "handshake_cfg":
                 // Prevent handshake responses being stored in the statuscode variables
                 console.log("[CloudLink] Server responded to our handshake!");
                 return;
-
+              
               case "link":
                 // Room link accepted
                 if (!clVars.rooms.isAttemptingLink) return;
@@ -614,12 +581,12 @@
                   clVars.rooms.isLinked = true;
                   console.log("[CloudLink] Room linked successfully!");
 
-                  // Room link rejected / error
+                // Room link rejected / error
                 } else {
                   console.log(`[CloudLink] Room link rejected! Error code ${packet.code}.}`);
                 }
                 return;
-
+              
               case "unlink":
                 // Room unlink accepted
                 if (!clVars.rooms.isAttemptingUnlink) return;
@@ -628,7 +595,7 @@
                   clVars.rooms.isLinked = false;
                   console.log("[CloudLink] Room unlinked successfully!");
 
-                  // Room link rejected / error
+                // Room link rejected / error
                 } else {
                   console.log(`[CloudLink] Room unlink rejected! Error code ${packet.code}.}`);
                 }
@@ -644,20 +611,13 @@
         clVars.statuscode.hasNew = true;
         clVars.statuscode.queue.push(packet);
         clVars.statuscode.eventHatTick = true;
-
-        // Fire event hats
-        runtime.startHats('cloudlink_onNewPacket', {
-          TYPE: 'Status code',
-          VAR: packet.name
-        });
-
         break;
 
       case "ulist":
         // Protocol v0-v1 (0.1.5 and legacy - 0.1.7) use a semicolon (;) separated string for the userlist.
         if (
           (clVars.linkState.identifiedProtocol == 0)
-          ||
+          || 
           (clVars.linkState.identifiedProtocol == 1)
         ) {
           // Split the username list string
@@ -733,7 +693,7 @@
 
         // Remove the listener from the currently listening list
         clVars.listeners.current.splice(
-          clVars.listeners.current.indexOf(String(packet.listener)),
+          clVars.listeners.current.indexOf(String(packet.listener)), 
           1
         );
 
@@ -749,6 +709,10 @@
 
   // Basic netcode needed to make the extension work
   async function newClient(url) {
+    if (!(await Scratch.canFetch(url))) {
+      console.warn("[CloudLink] Did not get permission to connect, aborting...");
+      return;
+    }
 
     // Set the link state to connecting
     clVars.linkState.status = 1;
@@ -766,14 +730,14 @@
     // Bind connection established event
     clVars.socket.onopen = function (event) {
       clVars.currentServerUrl = url;
-
+      
       // Set the link state to connected.
       console.log("[CloudLink] Connected.");
 
       clVars.linkState.status = 2;
 
       // If a server_version message hasn't been received in over half a second, try to broadcast a handshake
-      clVars.handshakeTimeout = window.setTimeout(function () {
+      clVars.handshakeTimeout = window.setTimeout(function() {
         console.log("[CloudLink] Hmm... This server hasn't sent us it's server info. Going to attempt a handshake.");
         sendHandshake();
       }, 500);
@@ -827,9 +791,8 @@
 
   // GET the serverList
   try {
-    fetch(
-      "https://mikedev101.github.io/cloudlink/serverlist.json",
-      { method: "GET" }
+    Scratch.fetch(
+      "https://mikedev101.github.io/cloudlink/serverlist.json"
     )
       .then((response) => {
         return response.text();
@@ -859,19 +822,19 @@
 
           {
             opcode: "returnGlobalData",
-            blockType: "reporter",
+            blockType: Scratch.BlockType.REPORTER,
             text: "Global data"
           },
 
           {
             opcode: "returnPrivateData",
-            blockType: "reporter",
+            blockType: Scratch.BlockType.REPORTER,
             text: "Private data"
           },
 
           {
             opcode: "returnDirectData",
-            blockType: "reporter",
+            blockType: Scratch.BlockType.REPORTER,
             text: "Direct data"
           },
 
@@ -879,13 +842,13 @@
 
           {
             opcode: "returnLinkData",
-            blockType: "reporter",
+            blockType: Scratch.BlockType.REPORTER,
             text: "Link status"
           },
 
           {
             opcode: "returnStatusCode",
-            blockType: "reporter",
+            blockType: Scratch.BlockType.REPORTER,
             text: "Status code"
           },
 
@@ -893,13 +856,13 @@
 
           {
             opcode: "returnUserListData",
-            blockType: "reporter",
+            blockType: Scratch.BlockType.REPORTER,
             text: "Usernames"
           },
 
           {
             opcode: "returnUsernameData",
-            blockType: "reporter",
+            blockType: Scratch.BlockType.REPORTER,
             text: "My username"
           },
 
@@ -907,25 +870,25 @@
 
           {
             opcode: "returnVersionData",
-            blockType: "reporter",
+            blockType: Scratch.BlockType.REPORTER,
             text: "Extension version"
           },
 
           {
             opcode: "returnServerVersion",
-            blockType: "reporter",
+            blockType: Scratch.BlockType.REPORTER,
             text: "Server version"
           },
 
           {
             opcode: "returnServerList",
-            blockType: "reporter",
+            blockType: Scratch.BlockType.REPORTER,
             text: "Server list"
           },
 
           {
             opcode: "returnMOTD",
-            blockType: "reporter",
+            blockType: Scratch.BlockType.REPORTER,
             text: "Server MOTD"
           },
 
@@ -933,13 +896,13 @@
 
           {
             opcode: "returnClientIP",
-            blockType: "reporter",
+            blockType: Scratch.BlockType.REPORTER,
             text: "My IP address"
           },
 
           {
             opcode: "returnUserObject",
-            blockType: "reporter",
+            blockType: Scratch.BlockType.REPORTER,
             text: "My user object"
           },
 
@@ -947,11 +910,11 @@
 
           {
             opcode: "returnListenerData",
-            blockType: "reporter",
+            blockType: Scratch.BlockType.REPORTER,
             text: "Response for listener [ID]",
             arguments: {
               ID: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 defaultValue: "example-listener",
               },
             },
@@ -959,12 +922,12 @@
 
           {
             opcode: "readQueueSize",
-            blockType: "reporter",
-
+            blockType: Scratch.BlockType.REPORTER,
+            hideFromPalette: clVars.hideCLDeprecatedBlocks,
             text: "Size of queue for [TYPE]",
             arguments: {
               TYPE: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 menu: "allmenu",
                 defaultValue: "All data",
               },
@@ -973,12 +936,12 @@
 
           {
             opcode: "readQueueData",
-            blockType: "reporter",
-
+            blockType: Scratch.BlockType.REPORTER,
+            hideFromPalette: clVars.hideCLDeprecatedBlocks,
             text: "Packet queue for [TYPE]",
             arguments: {
               TYPE: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 menu: "allmenu",
                 defaultValue: "All data",
               },
@@ -989,15 +952,15 @@
 
           {
             opcode: "returnVarData",
-            blockType: "reporter",
+            blockType: Scratch.BlockType.REPORTER,
             text: "[TYPE] [VAR] data",
             arguments: {
               VAR: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 defaultValue: "Apple",
               },
               TYPE: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 menu: "varmenu",
                 defaultValue: "Global variables",
               },
@@ -1008,16 +971,16 @@
 
           {
             opcode: "parseJSON",
-            blockType: "reporter",
-
+            blockType: Scratch.BlockType.REPORTER,
+            hideFromPalette: clVars.hideCLDeprecatedBlocks,
             text: "[PATH] of [JSON_STRING]",
             arguments: {
               PATH: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 defaultValue: 'fruit/apples',
               },
               JSON_STRING: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 defaultValue: '{"fruit": {"apples": 2, "bananas": 3}, "total_fruit": 5}',
               },
             },
@@ -1025,16 +988,16 @@
 
           {
             opcode: "getFromJSONArray",
-            blockType: "reporter",
-
+            blockType: Scratch.BlockType.REPORTER,
+            hideFromPalette: clVars.hideCLDeprecatedBlocks,
             text: 'Get [NUM] from JSON array [ARRAY]',
             arguments: {
               NUM: {
-                type: "number",
+                type: Scratch.ArgumentType.NUMBER,
                 defaultValue: 0,
               },
               ARRAY: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 defaultValue: '["foo","bar"]',
               }
             }
@@ -1042,12 +1005,12 @@
 
           {
             opcode: "makeJSON",
-            blockType: "reporter",
-
+            blockType: Scratch.BlockType.REPORTER,
+            hideFromPalette: clVars.hideCLDeprecatedBlocks,
             text: "Convert [toBeJSONified] to JSON",
             arguments: {
               toBeJSONified: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 defaultValue: '{"test": true}',
               },
             },
@@ -1055,11 +1018,12 @@
 
           {
             opcode: "isValidJSON",
-            blockType: "Boolean",
+            blockType: Scratch.BlockType.BOOLEAN,
+            hideFromPalette: clVars.hideCLDeprecatedBlocks,
             text: "Is [JSON_STRING] valid JSON?",
             arguments: {
               JSON_STRING: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 defaultValue: '{"fruit": {"apples": 2, "bananas": 3}, "total_fruit": 5}',
               },
             },
@@ -1070,12 +1034,12 @@
 
           {
             opcode: "fetchURL",
-            blockType: "reporter",
-
+            blockType: Scratch.BlockType.REPORTER,
+            hideFromPalette: clVars.hideCLDeprecatedBlocks,
             text: "Fetch data from URL [url]",
             arguments: {
               url: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 defaultValue: "https://extensions.turbowarp.org/hello.txt",
               },
             },
@@ -1083,24 +1047,24 @@
 
           {
             opcode: "requestURL",
-            blockType: "reporter",
-
+            blockType: Scratch.BlockType.REPORTER,
+            hideFromPalette: clVars.hideCLDeprecatedBlocks,
             text: "Send request with method [method] for URL [url] with data [data] and headers [headers]",
             arguments: {
               method: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 defaultValue: "GET",
               },
               url: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 defaultValue: "https://extensions.turbowarp.org/hello.txt",
               },
               data: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 defaultValue: "{}",
               },
               headers: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 defaultValue: "{}",
               },
             },
@@ -1110,31 +1074,28 @@
 
           {
             opcode: "onConnect",
-            blockType: "event",
+            blockType: Scratch.BlockType.EVENT,
             text: "When connected",
             isEdgeActivated: false, // Gets called by runtime.startHats
-            shouldRestartExistingThreads: true,
           },
 
           {
             opcode: "onClose",
-            blockType: "event",
+            blockType: Scratch.BlockType.EVENT,
             text: "When disconnected",
             isEdgeActivated: false, // Gets called by runtime.startHats
-            shouldRestartExistingThreads: true,
           },
 
           "---",
 
           {
             opcode: "onListener",
-            blockType: "hat",
+            blockType: Scratch.BlockType.HAT,
             text: "When I receive new message with listener [ID]",
-            isEdgeActivated: true, // Set to false when runtime.startHats is fixed
-            shouldRestartExistingThreads: true,
+            isEdgeActivated: true,
             arguments: {
               ID: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 defaultValue: "example-listener",
               },
             },
@@ -1142,13 +1103,12 @@
 
           {
             opcode: "onNewPacket",
-            blockType: "hat",
+            blockType: Scratch.BlockType.HAT,
             text: "When I receive new [TYPE] message",
-            isEdgeActivated: true, // Set to false when runtime.startHats is fixed
-            shouldRestartExistingThreads: false,
+            isEdgeActivated: true,
             arguments: {
               TYPE: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 menu: "almostallmenu",
                 defaultValue: "Global data",
               },
@@ -1157,18 +1117,17 @@
 
           {
             opcode: "onNewVar",
-            blockType: "hat",
+            blockType: Scratch.BlockType.HAT,
             text: "When I receive new [TYPE] data for [VAR]",
-            isEdgeActivated: true, // Set to false when runtime.startHats is fixed
-            shouldRestartExistingThreads: true,
+            isEdgeActivated: true,
             arguments: {
               TYPE: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 menu: "varmenu",
                 defaultValue: "Global variables",
               },
               VAR: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 defaultValue: "Apple",
               },
             },
@@ -1178,41 +1137,41 @@
 
           {
             opcode: "getComState",
-            blockType: "Boolean",
+            blockType: Scratch.BlockType.BOOLEAN,
             text: "Connected?",
           },
 
           {
             opcode: "getRoomState",
-            blockType: "Boolean",
+            blockType: Scratch.BlockType.BOOLEAN,
             text: "Linked to rooms?",
           },
 
           {
             opcode: "getComLostConnectionState",
-            blockType: "Boolean",
+            blockType: Scratch.BlockType.BOOLEAN,
             text: "Lost connection?",
           },
 
           {
             opcode: "getComFailedConnectionState",
-            blockType: "Boolean",
+            blockType: Scratch.BlockType.BOOLEAN,
             text: "Failed to connnect?",
           },
 
           {
             opcode: "getUsernameState",
-            blockType: "Boolean",
+            blockType: Scratch.BlockType.BOOLEAN,
             text: "Username synced?",
           },
 
           {
             opcode: "returnIsNewData",
-            blockType: "Boolean",
+            blockType: Scratch.BlockType.BOOLEAN,
             text: "Got New [TYPE]?",
             arguments: {
               TYPE: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 menu: "datamenu",
                 defaultValue: "Global data",
               },
@@ -1221,16 +1180,16 @@
 
           {
             opcode: "returnIsNewVarData",
-            blockType: "Boolean",
+            blockType: Scratch.BlockType.BOOLEAN,
             text: "Got New [TYPE] data for variable [VAR]?",
             arguments: {
               TYPE: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 menu: "varmenu",
                 defaultValue: 'Global variables',
               },
               VAR: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 defaultValue: "Apple",
               },
             },
@@ -1238,11 +1197,11 @@
 
           {
             opcode: "returnIsNewListener",
-            blockType: "Boolean",
+            blockType: Scratch.BlockType.BOOLEAN,
             text: "Got new packet with listener [ID]?",
             arguments: {
               ID: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 defaultValue: "example-listener",
               },
             },
@@ -1250,11 +1209,11 @@
 
           {
             opcode: "checkForID",
-            blockType: "Boolean",
+            blockType: Scratch.BlockType.BOOLEAN,
             text: "ID [ID] connected?",
             arguments: {
               ID: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 defaultValue: "Another name",
               },
             },
@@ -1264,11 +1223,11 @@
 
           {
             opcode: "openSocket",
-            blockType: "command",
+            blockType: Scratch.BlockType.COMMAND,
             text: "Connect to [IP]",
             arguments: {
               IP: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 defaultValue: "ws://127.0.0.1:3000/",
               }
             }
@@ -1276,11 +1235,11 @@
 
           {
             opcode: "openSocketPublicServers",
-            blockType: "command",
+            blockType: Scratch.BlockType.COMMAND,
             text: "Connect to server [ID]",
             arguments: {
               ID: {
-                type: "number",
+                type: Scratch.ArgumentType.NUMBER,
                 defaultValue: 1,
               }
             }
@@ -1288,7 +1247,7 @@
 
           {
             opcode: "closeSocket",
-            blockType: "command",
+            blockType: Scratch.BlockType.COMMAND,
             text: "Disconnect"
           },
 
@@ -1296,11 +1255,11 @@
 
           {
             opcode: "setMyName",
-            blockType: "command",
+            blockType: Scratch.BlockType.COMMAND,
             text: "Set [NAME] as username",
             arguments: {
               NAME: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 defaultValue: "A name",
               },
             },
@@ -1310,11 +1269,11 @@
 
           {
             opcode: "createListener",
-            blockType: "command",
+            blockType: Scratch.BlockType.COMMAND,
             text: "Attach listener [ID] to next packet",
             arguments: {
               ID: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 defaultValue: "example-listener",
               },
             },
@@ -1325,11 +1284,11 @@
 
           {
             opcode: 'linkToRooms',
-            blockType: "command",
+            blockType: Scratch.BlockType.COMMAND,
             text: "Link to room(s) [ROOMS]",
             arguments: {
               ROOMS: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 defaultValue: '["test"]',
               },
             }
@@ -1337,11 +1296,11 @@
 
           {
             opcode: "selectRoomsInNextPacket",
-            blockType: "command",
+            blockType: Scratch.BlockType.COMMAND,
             text: "Select room(s) [ROOMS] for next packet",
             arguments: {
               ROOMS: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 defaultValue: '["test"]',
               },
             },
@@ -1349,7 +1308,7 @@
 
           {
             opcode: "unlinkFromRooms",
-            blockType: "command",
+            blockType: Scratch.BlockType.COMMAND,
             text: "Unlink from all rooms",
           },
 
@@ -1357,11 +1316,11 @@
 
           {
             opcode: "sendGData",
-            blockType: "command",
+            blockType: Scratch.BlockType.COMMAND,
             text: "Send [DATA]",
             arguments: {
               DATA: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 defaultValue: "Apple",
               },
             },
@@ -1369,15 +1328,15 @@
 
           {
             opcode: "sendPData",
-            blockType: "command",
+            blockType: Scratch.BlockType.COMMAND,
             text: "Send [DATA] to [ID]",
             arguments: {
               DATA: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 defaultValue: "Apple",
               },
               ID: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 defaultValue: "Another name",
               },
             },
@@ -1385,15 +1344,15 @@
 
           {
             opcode: "sendGDataAsVar",
-            blockType: "command",
+            blockType: Scratch.BlockType.COMMAND,
             text: "Send variable [VAR] with data [DATA]",
             arguments: {
               DATA: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 defaultValue: "Banana",
               },
               VAR: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 defaultValue: "Apple",
               },
             },
@@ -1401,19 +1360,19 @@
 
           {
             opcode: "sendPDataAsVar",
-            blockType: "command",
+            blockType: Scratch.BlockType.COMMAND,
             text: "Send variable [VAR] to [ID] with data [DATA]",
             arguments: {
               DATA: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 defaultValue: "Banana",
               },
               ID: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 defaultValue: "Another name",
               },
               VAR: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 defaultValue: "Apple",
               },
             },
@@ -1423,16 +1382,16 @@
 
           {
             opcode: "runCMDnoID",
-            blockType: "command",
-
+            blockType: Scratch.BlockType.COMMAND,
+            hideFromPalette: clVars.hideCLDeprecatedBlocks,
             text: "Send command without ID [CMD] [DATA]",
             arguments: {
               CMD: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 defaultValue: "direct",
               },
               DATA: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 defaultValue: "val",
               },
             },
@@ -1440,20 +1399,20 @@
 
           {
             opcode: "runCMD",
-            blockType: "command",
-
+            blockType: Scratch.BlockType.COMMAND,
+            hideFromPalette: clVars.hideCLDeprecatedBlocks,
             text: "Send command [CMD] [ID] [DATA]",
             arguments: {
               CMD: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 defaultValue: "direct",
               },
               ID: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 defaultValue: "id",
               },
               DATA: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 defaultValue: "val",
               },
             },
@@ -1463,11 +1422,11 @@
 
           {
             opcode: "resetNewData",
-            blockType: "command",
+            blockType: Scratch.BlockType.COMMAND,
             text: "Reset got new [TYPE] status",
             arguments: {
               TYPE: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 menu: "datamenu",
                 defaultValue: "Global data",
               },
@@ -1476,16 +1435,16 @@
 
           {
             opcode: "resetNewVarData",
-            blockType: "command",
+            blockType: Scratch.BlockType.COMMAND,
             text: "Reset got new [TYPE] [VAR] status",
             arguments: {
               TYPE: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 menu: "varmenu",
                 defaultValue: "Global variables",
               },
               VAR: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 defaultValue: "Apple",
               },
             },
@@ -1495,11 +1454,11 @@
 
           {
             opcode: "resetNewListener",
-            blockType: "command",
+            blockType: Scratch.BlockType.COMMAND,
             text: "Reset got new [ID] listener status",
             arguments: {
               ID: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 defaultValue: "example-listener",
               },
             },
@@ -1509,15 +1468,31 @@
 
           {
             opcode: "clearAllPackets",
-            blockType: "command",
+            blockType: Scratch.BlockType.COMMAND,
             text: "Clear all packets for [TYPE]",
             arguments: {
               TYPE: {
-                type: "string",
+                type: Scratch.ArgumentType.STRING,
                 menu: "allmenu",
                 defaultValue: "All data",
               },
             }
+          },
+
+          "---",
+
+          {
+            func: "showOldBlocks",
+            blockType: Scratch.BlockType.BUTTON,
+            text: "Show old blocks",
+            hideFromPalette: !clVars.hideCLDeprecatedBlocks,
+          },
+
+          {
+            func: "hideOldBlocks",
+            blockType: Scratch.BlockType.BUTTON,
+            text: "Hide old blocks",
+            hideFromPalette: clVars.hideCLDeprecatedBlocks,
           },
 
           "---",
@@ -1538,6 +1513,24 @@
           },
         }
       };
+    }
+
+    // Credit to LilyMakesThings' "Lily's toolbox" for this feature.
+    showOldBlocks() {
+      if (
+        confirm(
+          "Do you want to display old blocks?\n\nThese blocks are not recommended for use in newer CloudLink projects as they are deprecated or have better implementation in other extensions."
+        )
+      ) {
+        clVars.hideCLDeprecatedBlocks = false;
+        vm.extensionManager.refreshBlocks();
+      }
+    }
+
+    // Credit to LilyMakesThings' "Lily's toolbox" for this feature.
+    hideOldBlocks() {
+      clVars.hideCLDeprecatedBlocks = true;
+      vm.extensionManager.refreshBlocks();
     }
 
     // Reporter - Returns gmsg values.
@@ -1675,24 +1668,24 @@
     // TYPE - String (menu varmenu), VAR - String (variable name)
     returnVarData(args) {
       switch (args.TYPE) {
-        case 'Global variables':
-          if (!clVars.gvar.varStates.hasOwnProperty(String(args.VAR))) {
-            console.warn(`[CloudLink] Global variable ${args.VAR} does not exist!`);
-            return "";
-          }
-          return clVars.gvar.varStates[String(args.VAR)].varState;
-        case 'Private variables':
-          if (!clVars.pvar.varStates.hasOwnProperty(String(args.VAR))) {
-            console.warn(`[CloudLink] Private variable ${args.VAR} does not exist!`);
-            return "";
-          }
-          return clVars.pvar.varStates[String(args.VAR)].varState;
+      case 'Global variables':
+        if (!clVars.gvar.varStates.hasOwnProperty(String(args.VAR))) {
+          console.warn(`[CloudLink] Global variable ${args.VAR} does not exist!`);
+          return "";
+        }
+        return clVars.gvar.varStates[String(args.VAR)].varState;
+      case 'Private variables':
+        if (!clVars.pvar.varStates.hasOwnProperty(String(args.VAR))) {
+          console.warn(`[CloudLink] Private variable ${args.VAR} does not exist!`);
+          return "";
+        }
+        return clVars.pvar.varStates[String(args.VAR)].varState;
       }
     }
 
     // Reporter - Gets a JSON key value from a JSON string.
     // PATH - String, JSON_STRING - String
-    parseJSON(args) {
+    parseJSON(args) { 
       try {
         const path = args.PATH.toString().split('/').map(prop => decodeURIComponent(prop));
         if (path[0] === '') path.splice(0, 1);
@@ -1721,11 +1714,11 @@
         return "";
       } else {
         let data = json_array[args.NUM];
-
+  
         if (typeof (data) == "object") {
           data = JSON.stringify(data); // Make the JSON safe for Scratch
         }
-
+  
         return data;
       }
     }
@@ -1733,7 +1726,7 @@
     // Reporter - Returns a RESTful GET promise.
     // url - String
     fetchURL(args) {
-      return fetch(args.url, { method: "GET" })
+      return Scratch.fetch(args.url, {method: "GET"})
         .then(response => response.text())
         .catch(error => {
           console.warn(`[CloudLink] Fetch error: ${error}`);
@@ -1744,26 +1737,28 @@
     // url - String, method - String, data - String, headers - String
     requestURL(args) {
       if (args.method == "GET" || args.method == "HEAD") {
-        return fetch(args.url, {
+        return Scratch.fetch(args.url, {
           method: args.method,
           headers: JSON.parse(args.headers)
-        }).then(response => response.text())
+        })
+          .then(response => response.text())
           .catch(error => {
             console.warn(`[CloudLink] Request error: ${error}`);
           });
       } else {
-        return fetch(args.url, {
+        return Scratch.fetch(args.url, {
           method: args.method,
           headers: JSON.parse(args.headers),
           body: JSON.parse(args.data)
-        }).then(response => response.text())
+        })
+          .then(response => response.text())
           .catch(error => {
             console.warn(`[CloudLink] Request error: ${error}`);
           });
       }
     }
-
-    // Event - Currently a temporary fix until startHats is fixed.
+    
+    // Event
     // ID - String (listener)
     onListener(args) {
       // Must be connected
@@ -1781,7 +1776,7 @@
       return false;
     }
 
-    // Event - Currently a temporary fix until startHats is fixed.
+    // Event
     // TYPE - String (menu almostallmenu)
     onNewPacket(args) {
       // Must be connected
@@ -1835,7 +1830,7 @@
       return false;
     }
 
-    // Event - Currently a temporary fix until startHats is fixed.
+    // Event
     // TYPE - String (varmenu), VAR - String (variable name)
     onNewVar(args) {
       // Must be connected
@@ -1872,14 +1867,14 @@
     // Reporter - Returns a JSON-ified value.
     // toBeJSONified - String
     makeJSON(args) {
-      if (typeof (args.toBeJSONified) == "string") {
+      if (typeof(args.toBeJSONified) == "string") {
         try {
           JSON.parse(args.toBeJSONified);
           return String(args.toBeJSONified);
-        } catch (err) {
+        } catch(err) {
           return "Not JSON!";
         }
-      } else if (typeof (args.toBeJSONified) == "object") {
+      } else if (typeof(args.toBeJSONified) == "object") {
         return JSON.stringify(args.toBeJSONified);
       } else {
         return "Not JSON!";
@@ -1972,13 +1967,13 @@
         if (this.isValidJSON(args.ID)) {
           return clVars.ulist.some(o => (
             (o.username === JSON.parse(args.ID).username)
-            &&
+            && 
             (o.id == JSON.parse(args.ID).id)
           ));
         } else {
           return clVars.ulist.some(o => (
             (o.username === String(args.ID))
-            ||
+            || 
             (o.id == args.ID)
           ));
         }
@@ -1987,7 +1982,7 @@
 
     // Boolean - Returns true if the input JSON is valid.
     // JSON_STRING - String
-    isValidJSON(args) {
+    isValidJSON(args) { 
       try {
         JSON.parse(args.JSON_STRING);
         return true;
@@ -2063,7 +2058,7 @@
 
       // Must be connected to set a username.
       if (clVars.socket == null) return;
-
+      
       // Require server support
       if (clVars.linkState.identifiedProtocol < 2) {
         console.warn("[CloudLink] Server is too old! Must be at least 0.1.8.x to support listeners.");
@@ -2081,7 +2076,7 @@
         console.warn("[CloudLink] Cannot create multiple listeners at a time!");
         return;
       }
-
+      
       // Update state
       clVars.listeners.enablerState = true;
       clVars.listeners.enablerValue = args.ID;
@@ -2089,7 +2084,7 @@
 
     // Command - Subscribes to various rooms on a server.
     // ROOMS - String (JSON Array or single string)
-    linkToRooms(args) {
+    linkToRooms(args) { 
 
       // Must be connected to set a username.
       if (clVars.socket == null) return;
@@ -2124,7 +2119,7 @@
 
     // Command - Specifies specific subscribed rooms to transmit messages to.
     // ROOMS - String (JSON Array or single string)
-    selectRoomsInNextPacket(args) {
+    selectRoomsInNextPacket(args) { 
 
       // Must be connected to user rooms.
       if (clVars.socket == null) return;
@@ -2155,10 +2150,10 @@
 
       clVars.rooms.enablerState = true;
       clVars.rooms.enablerValue = args.ROOMS;
-    }
+    } 
 
     // Command - Unsubscribes from all rooms and re-subscribes to the the "default" room on the server.
-    unlinkFromRooms() {
+    unlinkFromRooms() { 
 
       // Must be connected to user rooms.
       if (clVars.socket == null) return;
@@ -2266,7 +2261,7 @@
         return;
       };
 
-      return sendMessage({ cmd: args.CMD, val: args.DATA, ID: args.ID });
+      return sendMessage({ cmd: args.CMD, val: args.DATA, id: args.ID });
     }
 
     // Command - Resets the "returnIsNewData" boolean state.
@@ -2350,13 +2345,5 @@
       }
     }
   }
-  if (typeof window === "undefined" || !window.vm) {
-    Scratch.extensions.register(new CloudLink());
-    console.log("[CloudLink] Loaded. Detecting deprecated sandboxed mode. Import CloudLink using a code injector for unsandboxed mode.");
-  } else {
-    var extensionInstance = new CloudLink(window.vm.extensionManager.runtime);
-    var serviceName = window.vm.extensionManager._registerInternalExtension(extensionInstance);
-    window.vm.extensionManager._loadedExtensions.set(extensionInstance.getInfo().id, serviceName);
-    console.log("[CloudLink] Loaded. Detecting unsandboxed mode.");
-  };
+  Scratch.extensions.register(new CloudLink());
 })(Scratch);
