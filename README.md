@@ -13,8 +13,8 @@ You can learn about the protocol using the original Scratch 3.0 client extension
 Feel free to test-drive the extension in any of these Scratch mods:
 
 - [PenguinMod](https://studio.penguinmod.site/editor.html?extension=https://extensions.penguinmod.site/extensions/MikeDev101/cloudlink.js)
-- [TurboWarp](https://turbowarp.org/editor) _(You'll need to import the [extension code](https://mikedev101.github.io/cloudlink/scratch/cloudlink_turbowarp_0.1.0.js) as a file.)_
-- [SheepTester's E羊icques](https://sheeptester.github.io/scratch-gui) _(You'll need to [inject](https://chrome.google.com/webstore/detail/code-injector/edkcmfocepnifkbnbkmlcmegedeikdeb) the [extension code](https://mikedev101.github.io/cloudlink/scratch/cloudlink_epicques_0.1.0.js) manually.)_
+- [TurboWarp](https://turbowarp.org/editor) _(You'll need to import the [extension code](https://mikedev101.github.io/cloudlink/scratch/cloudlink_turbowarp.js) as a file.)_
+- [SheepTester's E羊icques](https://sheeptester.github.io/scratch-gui) _(You'll need to [inject](https://chrome.google.com/webstore/detail/code-injector/edkcmfocepnifkbnbkmlcmegedeikdeb) the [extension code](https://mikedev101.github.io/cloudlink/scratch/cloudlink_epicques.js) manually.)_
 
 _Currently not supported (I'm working on it!):_
 - [Ogadaki's Adacraft](https://adacraft.org/studio/)
