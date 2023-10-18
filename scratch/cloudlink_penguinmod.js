@@ -7,7 +7,7 @@
 (function (Scratch) {
 
   /*
-  CloudLink Extension for PenguinMod v0.1.0.
+  CloudLink Extension for PenguinMod v0.1.1.
 
   This extension should be fully compatible with projects developed using
   extensions S4.1, S4.0, and B3.0.
