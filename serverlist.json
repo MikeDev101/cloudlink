@@ -1,27 +1,26 @@
 {
-	"0": {
-		"id": "Localhost",
-		"url": "ws://127.0.0.1:3000/"
-	},
-	"1": {
-		"id": "CL4 0.2.0 Public Server (New domain, same as server 2)",
-		"url": "wss://cloudlink.mikedev101.cc/0.2.0"
-	},
-	"2": {
-	       "id": "CL4 Demo - Hosted by Meower Media (Old project support)",
-	       "url":"wss://cl4-test.meower.org/"
-	},
-	"3": {
-		"id": "Tnix's Oceania Server",
-		"url": "wss://cl4.tnix.dev/"
-	},
-	"4": {
-		"id": "MubiLop's CL4 Server #1",
-		"url": "wss://cl.ssh.surf/"
-	},
-	"5": {
-		"id": "MubiLop's CL4 Server #2",
-		"url": "wss://cl2.ssh.surf/"
-	},
-		
+    "0": {
+        "id": "Localhost",
+        "url": "ws://127.0.0.1:3000/"
+    },
+    "1": {
+        "id": "CL4 0.2.0 Public Server (New domain, same as server 2)",
+        "url": "wss://cloudlink.mikedev101.cc/0.2.0"
+    },
+    "2": {
+           "id": "CL4 Demo - Hosted by Meower Media (Old project support)",
+           "url":"wss://cl4-test.meower.org/"
+    },
+    "3": {
+        "id": "Tnix's Oceania Server",
+        "url": "wss://cl4.tnix.dev/"
+    },
+    "4": {
+        "id": "MubiLop's CL4 Server #1",
+        "url": "wss://cl.ssh.surf/"
+    },
+    "5": {
+        "id": "MubiLop's CL4 Server #2",
+        "url": "wss://cl2.ssh.surf/"
+    }
 }
