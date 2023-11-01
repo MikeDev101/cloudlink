@@ -12,7 +12,7 @@ See ./golang for the WIP Go-based server.
 You can learn about the protocol using the original Scratch 3.0 client extension.
 Feel free to test-drive the extension in any of these Scratch mods:
 
-- [PenguinMod](https://studio.penguinmod.site/editor.html?extension=https://extensions.penguinmod.site/extensions/MikeDev101/cloudlink.js)
+- [PenguinMod](https://studio.penguinmod.com/editor.html?extension=https://extensions.penguinmod.com/extensions/MikeDev101/cloudlink.js) _(Click and run!)_
 - [TurboWarp](https://turbowarp.org/editor) _(You'll need to import the [extension code](https://mikedev101.github.io/cloudlink/scratch/cloudlink_turbowarp.js) as a file.)_
 - [SheepTester's E羊icques](https://sheeptester.github.io/scratch-gui) _(You'll need to [inject](https://chrome.google.com/webstore/detail/code-injector/edkcmfocepnifkbnbkmlcmegedeikdeb) the [extension code](https://mikedev101.github.io/cloudlink/scratch/cloudlink_epicques.js) manually.)_
 
