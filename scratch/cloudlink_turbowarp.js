@@ -792,7 +792,7 @@
   // GET the serverList
   try {
     Scratch.fetch(
-      "https://mikedev101.github.io/cloudlink/serverlist.json"
+      "https://raw.githubusercontent.com/MikeDev101/cloudlink/master/serverlist.json"
     )
       .then((response) => {
         return response.text();
