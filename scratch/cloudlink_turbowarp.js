@@ -242,7 +242,7 @@
   }
 
   // Makes values safe for Scratch to represent.
-  async function makeValueScratchSafe(data) {
+  function makeValueScratchSafe(data) {
     if (typeof data == "object") {
       try {
         return JSON.stringify(data);
