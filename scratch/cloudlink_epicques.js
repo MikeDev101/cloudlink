@@ -5,7 +5,7 @@
 
 (function (Scratch) {
   /*
-  CloudLink Extension for SheepTester's E羊icques ("Epicques") v0.1.1.
+  CloudLink Extension for SheepTester's E羊icques ("Epicques") v0.1.2.
 
   This extension should be fully compatible with projects developed using
   extensions S4.1, S4.0, and B3.0.
@@ -65,8 +65,8 @@
   */
   const version = {
     editorType: "Epicques",
-    versionNumber: 1,
-    versionString: "0.1.1",
+    versionNumber: 2,
+    versionString: "0.1.2",
   };
 
   // Store extension state
@@ -312,7 +312,7 @@
   }
 
   // CL-specific netcode needed for sending messages
-  async function sendMessage(message) {
+  function sendMessage(message) {
     // Prevent running this while disconnected
     if (clVars.socket == null) {
       console.warn("[CloudLink] Ignoring attempt to send a packet while disconnected.");
@@ -422,6 +422,12 @@
     // Log configured spec version
     console.log(`[CloudLink] Configured protocol spec to v${clVars.linkState.identifiedProtocol}.`);
 
+    // Fix timing bug
+    clVars.linkState.status = 2;
+
+    // Fire event hats (only one not broken)
+    runtime.startHats('cloudlink_onConnect');
+
     // Don't nag user if they already trusted this server
     if (clVars.currentServerUrl === clVars.lastServerUrl) return;
 
@@ -498,7 +504,7 @@
             // Server 0.1.5 (at least)
             case "vers":
               window.clearTimeout(clVars.handshakeTimeout);
-              setServerVersion(packet.val.val);
+              await setServerVersion(packet.val.val);
               return;
 
             // Server 0.1.7 (at least)
@@ -656,7 +662,7 @@
 
       case "server_version":
         window.clearTimeout(clVars.handshakeTimeout);
-        setServerVersion(packet.val);
+        await setServerVersion(packet.val);
         break;
 
       case "client_ip":
@@ -718,16 +724,11 @@
       // Set the link state to connected.
       console.log("[CloudLink] Connected.");
 
-      clVars.linkState.status = 2;
-
       // If a server_version message hasn't been received in over half a second, try to broadcast a handshake
       clVars.handshakeTimeout = window.setTimeout(function () {
         console.log("[CloudLink] Hmm... This server hasn't sent us it's server info. Going to attempt a handshake.");
         sendHandshake();
       }, 500);
-
-      // Fire event hats (only one not broken)
-      runtime.startHats('cloudlink_onConnect');
 
       // Return promise (during setup)
       return;
@@ -776,7 +777,7 @@
   // GET the serverList
   try {
     fetch(
-      "https://mikedev101.github.io/cloudlink/serverlist.json",
+      "https://raw.githubusercontent.com/MikeDev101/cloudlink/master/serverlist.json",
       { method: "GET" }
     )
       .then((response) => {
@@ -846,9 +847,15 @@
           },
 
           {
-            opcode: "returnUsernameData",
+            opcode: "returnUsernameDataNew",
             blockType: "reporter",
             text: "My username"
+          },
+
+          {
+            opcode: "returnUsernameData",
+            blockType: "reporter",
+            text: "(OLD - DO NOT USE IN NEW PROJECTS) My username"
           },
 
           "---",
@@ -1514,8 +1521,18 @@
     }
 
     // Reporter - Returns currently set username.
-    returnUsernameData() {
+    returnUsernameDataNew() {
       return makeValueScratchSafe(clVars.username.value);
+    }
+
+    // Reporter - (OLD) Returns currently set username (returns user object to retain compatibility with old projects)
+    returnUsernameData() {
+      return makeValueScratchSafe(clVars.myUserObject);
+    }
+    
+    // Reporter - Returns the reported user object of the client (Snowflake ID, UUID, Username) - Intended replacement for the old username reporter block.
+    returnUserObject() {
+      return makeValueScratchSafe(clVars.myUserObject);
     }
 
     // Reporter - Returns current client version.
@@ -1541,11 +1558,6 @@
     // Reporter - Returns the reported IP address of the client.
     returnClientIP() {
       return makeValueScratchSafe(clVars.client_ip);
-    }
-
-    // Reporter - Returns the reported user object of the client (Snowflake ID, UUID, Username)
-    returnUserObject() {
-      return makeValueScratchSafe(clVars.myUserObject);
     }
 
     // Reporter - Returns data for a specific listener ID.
