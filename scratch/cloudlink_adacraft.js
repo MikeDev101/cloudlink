@@ -1934,13 +1934,13 @@
             console.warn(`[CloudLink] Global variable ${args.VAR} does not exist!`);
             return false;
           }
-          return clVars.gvar.varStates[String(args.ID)].hasNew;
+          return clVars.gvar.varStates[String(args.VAR)].hasNew;
         case 'Private variables':
           if (!clVars.pvar.varStates.hasOwnProperty(String(args.VAR))) {
             console.warn(`[CloudLink] Private variable ${args.VAR} does not exist!`);
             return false;
           }
-          return clVars.pvar.varStates[String(args.ID)].hasNew;
+          return clVars.pvar.varStates[String(args.VAR)].hasNew;
       }
     }
 
@@ -2291,13 +2291,13 @@
             console.warn(`[CloudLink] Global variable ${args.VAR} does not exist!`);
             return;
           }
-          clVars.gvar.varStates[String(args.ID)].hasNew = false;
+          clVars.gvar.varStates[String(args.VAR)].hasNew = false;
         case 'Private variables':
           if (!clVars.pvar.varStates.hasOwnProperty(String(args.VAR))) {
             console.warn(`[CloudLink] Private variable ${args.VAR} does not exist!`);
             return false;
           }
-          clVars.pvar.varStates[String(args.ID)].hasNew = false;
+          clVars.pvar.varStates[String(args.VAR)].hasNew = false;
       }
     }
 
