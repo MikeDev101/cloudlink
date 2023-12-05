@@ -341,11 +341,14 @@
         message.listener = clVars.listeners.enablerValue;
 
         // Create listener
-        clVars.listeners.varStates[String(args.ID)] = {
+        clVars.listeners.varStates[String(clVars.listeners.enablerValue)] = {
           hasNew: false,
           varState: {},
           eventHatTick: false,
         };
+
+        // Add listener to current listeners being listened for
+        clVars.listeners.current.push(String(clVars.listeners.enablerValue));
 
       } else {
         console.warn("[CloudLink] Server is too old! Must be at least 0.1.8.x to support listeners.");
