@@ -364,6 +364,17 @@
       return;
     }
 
+    // Select rooms
+    if (clVars.rooms.enablerState) {
+      message.rooms = clVars.rooms.enablerValue
+      
+      // Try parse room(s)
+      try {
+        message.rooms = JSON.parse(message.rooms)
+      } catch {}
+      clVars.rooms.enablerState = false
+    }
+
     // Convert the outgoing message to JSON
     let outgoing = "";
     try {
