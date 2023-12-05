@@ -1513,15 +1513,16 @@
           "---",
           
           {
-            opcode: "startLogToConsole",
+            opcode: "changeLogToConsole",
             blockType: Scratch.BlockType.COMMAND,
-            text: "Start log to console",
-          },
-          
-          {
-            opcode: "stopLogToConsole",
-            blockType: Scratch.BlockType.COMMAND,
-            text: "Stop log to console",
+            text: "[BOOL] logging to console",
+            arguments: {
+              BOOL: {
+                type: Scratch.ArgumentType.STRING,
+                menu: "boolmenu",
+                defaultValue: "Enable",
+              },
+            }
           },
           
           "---",
@@ -1556,6 +1557,9 @@
           almostallmenu: {
             items: ['Global data', 'Private data', 'Direct data', 'Status code', "Global variables", "Private variables"]
           },
+          boolmenu: {
+            items: ['Enable', 'Disable']
+          }
         }
       };
     }
@@ -2393,12 +2397,8 @@
       }
     }
     
-    startLogToConsole() {
-      clVars.logToConsole = true;
-    }
-    
-    stopLogToConsole() {
-      clVars.logToConsole = false;
+    changeLogToConsole(args) {
+      clVars.logToConsole = args.BOOL == 'Enable';
     }
   }
   Scratch.extensions.register(new CloudLink());
