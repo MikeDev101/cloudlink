@@ -78,7 +78,9 @@
 
   // Store extension state
   var clVars = {
-
+    // variable for preventing any spammy messages (TX and RX) that CL logs, potentially increasing performance. Noticed by TheShovel and mentioned it in the discord server, so I'm just adding it here
+    logToConsole: true,
+    
     // WebSocket object.
     socket: null,
 
@@ -384,7 +386,9 @@
     }
 
     // Send the message
-    console.log("[CloudLink] TX:", message);
+    if (clVars.logToConsole) {
+      console.log("[CloudLink] TX:", message);
+    }
     clVars.socket.send(outgoing);
   }
 
@@ -482,7 +486,9 @@
       console.error("[CloudLink] Incoming message read failure! This message doesn't contain the required \"cmd\" key. Is this really a CloudLink server?", packet);
       return;
     }
-    console.log("[CloudLink] RX:", packet);
+    if (clVars.logToConsole) {
+      console.log("[CloudLink] RX:", packet);
+    }
     switch (packet.cmd) {
       case "gmsg":
         clVars.gmsg.varState = packet.val;
@@ -1484,6 +1490,21 @@
           },
 
           "---",
+          
+          {
+            opcode: "changeLogToConsole",
+            blockType: BlockType.COMMAND,
+            text: "[BOOL] logging to console",
+            arguments: {
+              BOOL: {
+                type: ArgumentType.STRING,
+                menu: "boolmenu",
+                defaultValue: "Enable",
+              },
+            }
+          },
+          
+          "---",
 
         ],
         menus: {
@@ -1499,6 +1520,9 @@
           almostallmenu: {
             items: ['Global data', 'Private data', 'Direct data', 'Status code', "Global variables", "Private variables"]
           },
+          boolmenu: {
+            items: ['Enable', 'Disable']
+          }
         }
       };
     }
@@ -2318,6 +2342,10 @@
           clVars.pvar.queue = [];
           break;
       }
+    }
+    
+    changeLogToConsole(args) {
+      clVars.logToConsole = args.BOOL == 'Enable';
     }
   }
   console.log("[CloudLink] Extension loaded!");
