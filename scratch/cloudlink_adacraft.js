@@ -1672,13 +1672,13 @@
           console.warn(`[CloudLink] Global variable ${args.VAR} does not exist!`);
           return "";
         }
-        return clVars.gvar.varStates[String(args.VAR)].varState;
+        return makeValueScratchSafe(clVars.gvar.varStates[String(args.VAR)].varState);
       case 'Private variables':
         if (!clVars.pvar.varStates.hasOwnProperty(String(args.VAR))) {
           console.warn(`[CloudLink] Private variable ${args.VAR} does not exist!`);
           return "";
         }
-        return clVars.pvar.varStates[String(args.VAR)].varState;
+        return makeValueScratchSafe(clVars.pvar.varStates[String(args.VAR)].varState);
       }
     }
 
