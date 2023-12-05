@@ -1503,7 +1503,10 @@
                 defaultValue: "Enable",
               },
             }
-          }
+          },
+          
+          "---",
+          
         ],
         menus: {
           datamenu: {
