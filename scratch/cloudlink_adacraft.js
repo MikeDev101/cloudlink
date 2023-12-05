@@ -359,6 +359,17 @@
       console.warn("[CloudLink] Server is too old! Must be at least 0.1.8.x to support room linking/unlinking.");
       return;
     }
+    
+    // Select rooms
+    if (clVars.rooms.enablerState) {
+      message.rooms = clVars.rooms.enablerValue
+      
+      // Try parse room(s)
+      try {
+        message.rooms = JSON.parse(message.rooms)
+      } catch {}
+      clVars.rooms.enablerState = false
+    }
 
     // Convert the outgoing message to JSON
     let outgoing = "";
