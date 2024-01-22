@@ -1,5 +1,8 @@
 ![CLOUDLINK 4 BANNER](https://user-images.githubusercontent.com/12957745/188282246-a221e66a-5d8a-4516-9ae2-79212b745d91.png)
 
+# PROJECT DISCONTINUED
+CL as it stands has been indefinitely discontinued. You are free to fork it and continue development as needed.
+
 # Cloudlink
 CloudLink is a free and open-source websocket solution optimized for Scratch.
 Originally created as a cloud variables alternative, it can function as a multipurpose websocket framework for other projects.
