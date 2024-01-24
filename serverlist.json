@@ -4,12 +4,12 @@
         "url": "ws://127.0.0.1:3000/"
     },
     "1": {
-        "id": "CL4 0.2.0 Public Server (New domain, same as server 2)",
-        "url": "wss://cloudlink.mikedev101.cc/0.2.0"
+        "id": "William horning's VM Server",
+        "url": "wss://iovm-cl.williamhorning.eu.org/"
     },
     "2": {
-           "id": "CL4 Demo - Hosted by Meower Media (Old project support)",
-           "url":"wss://cl4-test.meower.org/"
+           "id": "William horning's Pi 4B Server",
+           "url":"wss://pi4b-cl.williamhorning.eu.org/"
     },
     "3": {
         "id": "Tnix's Oceania Server",
