@@ -22,5 +22,9 @@
     "5": {
         "id": "MubiLop's CL4 Server #2",
         "url": "wss://cl2.ssh.surf/"
+    },
+    "6": {
+        "id": "Milo's CL4 Server",
+        "url": "wss://cl4.milosantos.com/"
     }
 }
