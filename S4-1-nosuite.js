@@ -414,7 +414,7 @@ class CloudLink {
 				{
 					"opcode": 'getComFailedConnectionState',
 					"blockType": "Boolean",
-					"text": 'Failed to connnect?',
+					"text": 'Failed to connect?',
 				},
 				{
 					"opcode": 'getUsernameState',
