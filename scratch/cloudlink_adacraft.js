@@ -78,7 +78,9 @@
 
   // Store extension state
   var clVars = {
-
+    // variable for preventing any spammy messages (TX and RX) that CL logs, potentially increasing performance. Noticed by TheShovel and mentioned it in the discord server, so I'm just adding it here
+    logToConsole: true,
+    
     // WebSocket object.
     socket: null,
 
@@ -341,11 +343,14 @@
         message.listener = clVars.listeners.enablerValue;
 
         // Create listener
-        clVars.listeners.varStates[String(args.ID)] = {
+        clVars.listeners.varStates[String(clVars.listeners.enablerValue)] = {
           hasNew: false,
           varState: {},
           eventHatTick: false,
         };
+
+        // Add listener to current listeners being listened for
+        clVars.listeners.current.push(String(clVars.listeners.enablerValue));
 
       } else {
         console.warn("[CloudLink] Server is too old! Must be at least 0.1.8.x to support listeners.");
@@ -359,6 +364,17 @@
       console.warn("[CloudLink] Server is too old! Must be at least 0.1.8.x to support room linking/unlinking.");
       return;
     }
+    
+    // Select rooms
+    if (clVars.rooms.enablerState) {
+      message.rooms = clVars.rooms.enablerValue
+      
+      // Try parse room(s)
+      try {
+        message.rooms = JSON.parse(message.rooms)
+      } catch {}
+      clVars.rooms.enablerState = false
+    }
 
     // Convert the outgoing message to JSON
     let outgoing = "";
@@ -370,7 +386,9 @@
     }
 
     // Send the message
-    console.log("[CloudLink] TX:", message);
+    if (clVars.logToConsole) {
+      console.log("[CloudLink] TX:", message);
+    }
     clVars.socket.send(outgoing);
   }
 
@@ -468,7 +486,9 @@
       console.error("[CloudLink] Incoming message read failure! This message doesn't contain the required \"cmd\" key. Is this really a CloudLink server?", packet);
       return;
     }
-    console.log("[CloudLink] RX:", packet);
+    if (clVars.logToConsole) {
+      console.log("[CloudLink] RX:", packet);
+    }
     switch (packet.cmd) {
       case "gmsg":
         clVars.gmsg.varState = packet.val;
@@ -1470,6 +1490,21 @@
           },
 
           "---",
+          
+          {
+            opcode: "changeLogToConsole",
+            blockType: BlockType.COMMAND,
+            text: "[BOOL] logging to console",
+            arguments: {
+              BOOL: {
+                type: ArgumentType.STRING,
+                menu: "boolmenu",
+                defaultValue: "Enable",
+              },
+            }
+          },
+          
+          "---",
 
         ],
         menus: {
@@ -1485,6 +1520,9 @@
           almostallmenu: {
             items: ['Global data', 'Private data', 'Direct data', 'Status code', "Global variables", "Private variables"]
           },
+          boolmenu: {
+            items: ['Enable', 'Disable']
+          }
         }
       };
     }
@@ -1634,13 +1672,13 @@
           console.warn(`[CloudLink] Global variable ${args.VAR} does not exist!`);
           return "";
         }
-        return clVars.gvar.varStates[String(args.VAR)].varState;
+        return makeValueScratchSafe(clVars.gvar.varStates[String(args.VAR)].varState);
       case 'Private variables':
         if (!clVars.pvar.varStates.hasOwnProperty(String(args.VAR))) {
           console.warn(`[CloudLink] Private variable ${args.VAR} does not exist!`);
           return "";
         }
-        return clVars.pvar.varStates[String(args.VAR)].varState;
+        return makeValueScratchSafe(clVars.pvar.varStates[String(args.VAR)].varState);
       }
     }
 
@@ -1896,13 +1934,13 @@
             console.warn(`[CloudLink] Global variable ${args.VAR} does not exist!`);
             return false;
           }
-          return clVars.gvar.varStates[String(args.ID)].hasNew;
+          return clVars.gvar.varStates[String(args.VAR)].hasNew;
         case 'Private variables':
           if (!clVars.pvar.varStates.hasOwnProperty(String(args.VAR))) {
             console.warn(`[CloudLink] Private variable ${args.VAR} does not exist!`);
             return false;
           }
-          return clVars.pvar.varStates[String(args.ID)].hasNew;
+          return clVars.pvar.varStates[String(args.VAR)].hasNew;
       }
     }
 
@@ -2253,13 +2291,13 @@
             console.warn(`[CloudLink] Global variable ${args.VAR} does not exist!`);
             return;
           }
-          clVars.gvar.varStates[String(args.ID)].hasNew = false;
+          clVars.gvar.varStates[String(args.VAR)].hasNew = false;
         case 'Private variables':
           if (!clVars.pvar.varStates.hasOwnProperty(String(args.VAR))) {
             console.warn(`[CloudLink] Private variable ${args.VAR} does not exist!`);
             return false;
           }
-          clVars.pvar.varStates[String(args.ID)].hasNew = false;
+          clVars.pvar.varStates[String(args.VAR)].hasNew = false;
       }
     }
 
@@ -2304,6 +2342,10 @@
           clVars.pvar.queue = [];
           break;
       }
+    }
+    
+    changeLogToConsole(args) {
+      clVars.logToConsole = args.BOOL == 'Enable';
     }
   }
   console.log("[CloudLink] Extension loaded!");
