@@ -3,6 +3,9 @@
 # PROJECT DISCONTINUED
 CL as it stands has been indefinitely discontinued. You are free to fork it and continue development as needed.
 
+# SUCCESSOR IN DEVELOPMENT
+[A far superior version of CloudLink is in development.](https://github.com/cloudlink-omega) Please consider giving it a try!
+
 # Cloudlink
 CloudLink is a free and open-source websocket solution optimized for Scratch.
 Originally created as a cloud variables alternative, it can function as a multipurpose websocket framework for other projects.
