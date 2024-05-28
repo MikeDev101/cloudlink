@@ -4,12 +4,8 @@
         "url": "ws://127.0.0.1:3000/"
     },
     "1": {
-        "id": "William horning's VM Server",
+        "id": "Jersey's Server (iovm)",
         "url": "wss://iovm-cl.williamhorning.eu.org/"
-    },
-    "2": {
-           "id": "William horning's Pi 4B Server",
-           "url":"wss://pi4b-cl.williamhorning.eu.org/"
     },
     "3": {
         "id": "Tnix's Oceania Server",
