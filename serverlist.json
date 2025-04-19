@@ -4,27 +4,27 @@
         "url": "ws://127.0.0.1:3000/"
     },
     "1": {
-        "id": "Jersey's Server (iovm)",
-        "url": "wss://iovm-cl.williamhorning.eu.org/"
+        "id": "Mike's Server (For Project Compatibility)",
+        "url": "wss://cl.mikedev101.cc/"
     },
     "3": {
-        "id": "Tnix's Oceania Server",
-        "url": "wss://cl4.tnix.dev/"
+        "id": "Mike's Server (For Project Compatibility)",
+        "url": "wss://cl.mikedev101.cc/"
     },
     "4": {
-        "id": "MubiLop's CL4 Server #1",
+        "id": "MubiLop's CL4 Server",
         "url": "wss://cl1.mubilop.tech/"
     },
     "5": {
-        "id": "MubiLop's CL4 Server #2",
-        "url": "wss://cl2.mubilop.tech/"
+        "id": "Mike's Server (For Project Compatibility)",
+        "url": "wss://cl.mikedev101.cc/"
     },
     "6": {
-        "id": "Milo's CL4 Server",
-        "url": "wss://cl4.milosantos.com/"
+        "id": "Mike's Server (For Project Compatibility)",
+        "url": "wss://cl.mikedev101.cc/"
     },
     "7": {
-        "id": "MikeDEV's Spare CL 0.2.0 Server",
+        "id": "Mike's Server",
         "url": "wss://cl.mikedev101.cc/"
     }
 }
